@@ -58,24 +58,41 @@ namespace Multiplier
 
 
 
-            var myPassphrase = "";
-            var myKey = "";
-            var mySecret = "";
-
-            CBAuthenticationContainer myAuth = new CBAuthenticationContainer(myKey, myPassphrase, mySecret);
-
-            MyOrderBook myOrderBook = new MyOrderBook(myAuth);
-
-            var x = myOrderBook.ListAllOpenOrders();
+            //var myPassphrase = "";
+            //var myKey = "";
+            //var mySecret = "";
 
 
+            testBook();
 
-            Task.Delay(1000000);
+
 
             //TickerClient LtcTickerClient = new TickerClient("LTC-USD");
             //LtcTickerClient.Update += LtcTickerClient_Update;
 
             //btnStart.IsEnabled = false;
+
+
+        }
+
+
+        public async void testBook()
+        {
+
+
+            var myPassphrase = "";
+            var myKey = "";
+            var mySecret = "";
+            CBAuthenticationContainer myAuth = new CBAuthenticationContainer(myKey, myPassphrase, mySecret);
+
+            MyOrderBook myOrderBook = new MyOrderBook(myAuth);
+
+            //var x = await myOrderBook.ListAllOrders();
+            //var delOrder = x[0].id;
+            //var z = await myOrderBook.CancelSingleOrder(delOrder);
+            //var z = await myOrderBook.CancelAllOrders();
+            //await Task.Delay(1000000);
+            var o = myOrderBook.PlaceNewLimitOrder("buy", "LTC-USD", "1.0", "1.0"); 
 
 
         }

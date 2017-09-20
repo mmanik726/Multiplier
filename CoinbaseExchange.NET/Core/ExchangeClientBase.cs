@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Newtonsoft.Json.Linq;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -8,6 +9,7 @@ using System.Net.Http.Headers;
 using System.Security;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace CoinbaseExchange.NET.Core
@@ -76,8 +78,41 @@ namespace CoinbaseExchange.NET.Core
                         response = await httpClient.GetAsync(absoluteUri);
                         break;
                     case "POST":
+
+                        ////jStr.Append()
+                        //var requestString = string.Format("");
+
+                        //JObject jObj = new JObject(
+                        //    new JProperty(
+                        //        "size", "1.0"),
+                        //    new JProperty(
+                        //        "price", "1.0"),
+                        //    new JProperty(
+                        //        "side", "buy"),
+                        //    new JProperty(
+                        //        "product_id","LTC-USD")
+                        //    );
+
+                        //body = jObj.ToString();
+
+                        //var values = new Dictionary<string, string>
+                        //{
+                        //   { "size", "1.0" },
+                        //   { "price", "1.0" },
+                        //   { "side", "buy" },
+                        //   { "product_id", "LTC-USD" },
+                        //};
+
+                        //var content = new FormUrlEncodedContent(values);
+
+
+
                         var requestBody = new StringContent(body, Encoding.UTF8, "application/json");
-                        response = await httpClient.PostAsync(absoluteUri, requestBody);
+                        response = httpClient.PostAsync(absoluteUri, requestBody).Result;
+                        break;
+                    case "DELETE":
+                        //var requestBody = new StringContent(body, Encoding.UTF8, "application/json");
+                        response = await httpClient.DeleteAsync(absoluteUri);
                         break;
                     default:
                         throw new NotImplementedException("The supplied HTTP method is not supported: " + method ?? "(null)");
