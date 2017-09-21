@@ -19,6 +19,7 @@ using CoinbaseExchange.NET.Endpoints.MyOrders;
 using System.Reflection;
 using CoinbaseExchange.NET.Core;
 
+
 namespace Multiplier
 {
     /// <summary>
@@ -89,16 +90,19 @@ namespace Multiplier
             TickerClient LtcTickerClient = new TickerClient("LTC-USD");
             LtcTickerClient.Update += LtcTickerClient_Update;
 
-            MyOrderBook myOrderBook = new MyOrderBook(myAuth);
+            //MyOrderBook myOrderBook = new MyOrderBook(myAuth);
 
             //var x = await myOrderBook.ListAllOrders();
             //var delOrder = x[0].id;
             //var z = await myOrderBook.CancelSingleOrder(delOrder);
             //var z = await myOrderBook.CancelAllOrders();
             //await Task.Delay(1000000);
-            var o = myOrderBook.PlaceNewLimitOrder("buy", "LTC-USD", "1.0", "1.0");
+            //var o = myOrderBook.PlaceNewLimitOrder("buy", "LTC-USD", "1.0", "1.0");
 
-            MessageBox.Show("Order placed, ID: " + o.Result.Id);
+            //MessageBox.Show("Order placed, ID: " + o.Result.Id);
+
+
+
 
         }
 
@@ -111,6 +115,35 @@ namespace Multiplier
             lblCurPrice.Content = tickerData.RealTimePrice.ToString();
 
         }
+
+        private async void Button_Click_1(object sender, RoutedEventArgs e)
+        {
+
+
+            HistoricPrices h = new HistoricPrices();
+            //h.testJson();
+            var x = await h.GetPrices("LTC-USD");
+
+            var data = from t in x
+                       where t.Average > 52
+                       select t;
+            var tmp = (from t in x
+                       select t.Average).Sum();
+
+            var maxDate = (from md in x
+                           select md.Time).Max();
+
+
+            var minDate = (from md in x
+                           select md.Time).Min();
+
+            var avg = tmp / x.Count();
+            MessageBox.Show("Average is " + avg.ToString() + "\nFrom: " + minDate.ToString() + 
+                "\nTo: " + maxDate.ToString() + 
+                "\n hours: " + (maxDate - minDate).Hours);
+            
+        }
+
 
     }
 }

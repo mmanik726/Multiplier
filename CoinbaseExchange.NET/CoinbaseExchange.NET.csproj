@@ -68,6 +68,7 @@
     <Compile Include="Endpoints\OrderBook\GetProductOrderBookResponse.cs" />
     <Compile Include="Endpoints\OrderBook\RealtimeMessage.cs" />
     <Compile Include="Endpoints\OrderBook\RealtimeOrderBookClient.cs" />
+    <Compile Include="Endpoints\PublicData\HistoricPrices.cs" />
     <Compile Include="Endpoints\PublicData\RealtimePrice.cs" />
     <Compile Include="Endpoints\PublicData\TickerClient.cs" />
     <Compile Include="Errors\ExchangeClientError.cs" />

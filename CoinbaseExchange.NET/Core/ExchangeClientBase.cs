@@ -86,18 +86,6 @@ namespace CoinbaseExchange.NET.Core
                         break;
                     case "POST":
 
-                        //JObject jObj = new JObject(
-                        //    new JProperty(
-                        //        "size", "1.5"),
-                        //    new JProperty(
-                        //        "price", "10.0"),
-                        //    new JProperty(
-                        //        "side", "buy"),
-                        //    new JProperty(
-                        //        "product_id", "LTC-USD")
-                        //    );
-
-                        //body = jObj.ToString();
                         timestamp = (request.TimeStamp).ToString(System.Globalization.CultureInfo.InvariantCulture);
                         signature = _authContainer.ComputeSignature(timestamp, relativeUrl, method, body);
                         httpClient.DefaultRequestHeaders.Add("CB-ACCESS-SIGN", signature);
