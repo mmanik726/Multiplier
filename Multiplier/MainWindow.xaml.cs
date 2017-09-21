@@ -58,9 +58,9 @@ namespace Multiplier
 
 
 
-            //var myPassphrase = "";
-            //var myKey = "";
-            //var mySecret = "";
+            var myPassphrase = "";
+            var myKey = "";
+            var mySecret = "";
 
 
             testBook();
@@ -80,10 +80,14 @@ namespace Multiplier
         {
 
 
-            var myPassphrase = "";
-            var myKey = "";
-            var mySecret = "";
+            var myPassphrase = "n6yci6u4i0g";
+            var myKey = "b006d82554b495e227b9e7a1251ad745";
+            var mySecret = "NhAb9pmbZaY9cPb2+eXOGWIILje7iFe/nF+dV9n6FOxazl6Kje2/03GuSiQYTsj3a/smh92m/lrvfu7kYkxQMg==";
             CBAuthenticationContainer myAuth = new CBAuthenticationContainer(myKey, myPassphrase, mySecret);
+
+
+            TickerClient LtcTickerClient = new TickerClient("LTC-USD");
+            LtcTickerClient.Update += LtcTickerClient_Update;
 
             MyOrderBook myOrderBook = new MyOrderBook(myAuth);
 
@@ -92,8 +96,9 @@ namespace Multiplier
             //var z = await myOrderBook.CancelSingleOrder(delOrder);
             //var z = await myOrderBook.CancelAllOrders();
             //await Task.Delay(1000000);
-            var o = myOrderBook.PlaceNewLimitOrder("buy", "LTC-USD", "1.0", "1.0"); 
+            var o = myOrderBook.PlaceNewLimitOrder("buy", "LTC-USD", "1.0", "1.0");
 
+            MessageBox.Show("Order placed, ID: " + o.Result.Id);
 
         }
 

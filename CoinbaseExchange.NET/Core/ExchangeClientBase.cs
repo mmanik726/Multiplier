@@ -59,15 +59,22 @@ namespace CoinbaseExchange.NET.Core
 
                 if (!UsePublicExchange)
                 {
+
                     passphrase = _authContainer.Passphrase;
                     apiKey = _authContainer.ApiKey;
-                    signature = _authContainer.ComputeSignature(timestamp, relativeUrl, method, body);
+
+                    if (method !="POST")
+                    {
+                        signature = _authContainer.ComputeSignature(timestamp, relativeUrl, method, body);
+                        httpClient.DefaultRequestHeaders.Add("CB-ACCESS-SIGN", signature);
+                    }
+
 
                     httpClient.DefaultRequestHeaders.Add("CB-ACCESS-KEY", apiKey);
-                    httpClient.DefaultRequestHeaders.Add("CB-ACCESS-SIGN", signature);
                     httpClient.DefaultRequestHeaders.Add("CB-ACCESS-TIMESTAMP", timestamp);
                     httpClient.DefaultRequestHeaders.Add("CB-ACCESS-PASSPHRASE", passphrase);
                 }
+
 
 
                 httpClient.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0");
@@ -79,33 +86,21 @@ namespace CoinbaseExchange.NET.Core
                         break;
                     case "POST":
 
-                        ////jStr.Append()
-                        //var requestString = string.Format("");
-
                         //JObject jObj = new JObject(
                         //    new JProperty(
-                        //        "size", "1.0"),
+                        //        "size", "1.5"),
                         //    new JProperty(
-                        //        "price", "1.0"),
+                        //        "price", "10.0"),
                         //    new JProperty(
                         //        "side", "buy"),
                         //    new JProperty(
-                        //        "product_id","LTC-USD")
+                        //        "product_id", "LTC-USD")
                         //    );
 
                         //body = jObj.ToString();
-
-                        //var values = new Dictionary<string, string>
-                        //{
-                        //   { "size", "1.0" },
-                        //   { "price", "1.0" },
-                        //   { "side", "buy" },
-                        //   { "product_id", "LTC-USD" },
-                        //};
-
-                        //var content = new FormUrlEncodedContent(values);
-
-
+                        timestamp = (request.TimeStamp).ToString(System.Globalization.CultureInfo.InvariantCulture);
+                        signature = _authContainer.ComputeSignature(timestamp, relativeUrl, method, body);
+                        httpClient.DefaultRequestHeaders.Add("CB-ACCESS-SIGN", signature);
 
                         var requestBody = new StringContent(body, Encoding.UTF8, "application/json");
                         response = httpClient.PostAsync(absoluteUri, requestBody).Result;

@@ -5,30 +5,50 @@ using System.Text;
 using System.Threading.Tasks;
 using CoinbaseExchange.NET.Core;
 using Newtonsoft.Json.Linq;
+using Newtonsoft.Json;
 
+using Newtonsoft.Json.Converters;
 namespace CoinbaseExchange.NET.Endpoints.MyOrders
 {
     public class Order
     {
-        public string id; //: "68e6a28f-ae28-4788-8d4f-5ab4e5e5ae08",
-        public decimal price; 
-        public decimal size; //"size": "1.00000000",
-        public string productId; //"product_id": "BTC-USD",
-        public string side; //"side": "buy",
-        public string stpFlag; //"stp": "dc",
-        public decimal funds;  //"funds": "9.9750623400000000",
-        public decimal specifiedFunds; // "specified_funds": "10.0000000000000000",
-        public string OrderType; // "type": "market",
-        public bool PostOnly; //"post_only": false,
-        public string OrderCreateTime; // "created_at": "2016-12-08T20:09:05.508883Z",
-        public string OrderDoneAt; //"done_at": "2016-12-08T20:09:05.527Z",
-        public string DoneReason; //"done_reason": "filled",
-        public decimal fillFee; //"fill_fees": "0.0249376391550000",
-        public decimal fillSize; //  "filled_size": "0.01291771",
-        public decimal fillValue; // "executed_value": "9.9750556620000000",
-        public string Status; //"status": "done",
-        public bool settled; //"settled": true
+        //sample
+        /*
+         * {{
+          "id": "361f3f36-d11f-4e02-8f69-63e28abf04cb",
+          "price": "1.00000000",
+          "size": "1.00000000",
+          "product_id": "LTC-USD",
+          "side": "buy",
+          "stp": "dc",
+          "type": "limit",
+          "time_in_force": "GTC",
+          "post_only": false,
+          "created_at": "2017-09-20T21:23:51.183885Z",
+          "fill_fees": "0.0000000000000000",
+          "filled_size": "0.00000000",
+          "executed_value": "0.0000000000000000",
+          "status": "pending",
+          "settled": false
+        }}
+         * */
+        public string Id { get; set; } 
+        public string Price { get; set; }
+        public string Size { get; set; } 
+        public string Product_id { get; set; } 
+        public string Side; 
+        public string Stp { get; set; } 
+        public string Type { get; set; } 
+        public string Time_in_force { get; set; }
+        public string Post_only; 
+        public string Created_at; 
+        public string Fill_fees; 
+        public string Filled_size; 
+        public string Executed_value; 
+        public string Status; 
+        public string Settled;
     }
+
 
 
 
@@ -42,10 +62,10 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
 
     public class MyPostOrdersRequest : ExchangeRequestBase
     {
-        public MyPostOrdersRequest(string endPoint) : base("POST")
+        public MyPostOrdersRequest(string endPoint, JObject messageBodyJson) : base("POST")
         {
             this.RequestUrl = String.Format(endPoint);
-            this.RequestBody = "";
+            this.RequestBody = messageBodyJson.ToString(); ;
         }
     }
 
@@ -59,25 +79,24 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
 
     class OrderPlacer: ExchangeClientBase 
     {
-        public string customOrderId { get; set; } // client_oid
-        public string size { get; set; }
-        public string price { get; set; }
-        public string side { get; set; }
-        public string productName { get; set; }
-        public string orderType { get; set; }
+        //public string customOrderId { get; set; } // client_oid
+        //public string size { get; set; }
+        //public string price { get; set; }
+        //public string side { get; set; }
+        //public string productName { get; set; }
+        //public string orderType { get; set; }
 
-        public string selfTradeFlag { get; set; }
+        //public string selfTradeFlag { get; set; }
 
         public OrderPlacer(CBAuthenticationContainer authContainer) : base(authContainer)
         {
         }
 
-        public async Task<Order> PlaceOrder(string endPoint)
+        public async Task<Order> PlaceOrder(JObject messageBody)
         {
+            var orderEndpoint = string.Format(@"/orders");
 
-            MyPostOrdersRequest request = new MyPostOrdersRequest(endPoint);
-
-            
+            MyPostOrdersRequest request = new MyPostOrdersRequest(orderEndpoint, messageBody);
 
             var genericResponse = await this.GetResponse(request);
 
@@ -85,20 +104,15 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
 
             if (genericResponse.IsSuccessStatusCode)
             {
-                JObject obj = JObject.Parse(genericResponse.ContentBody);
-
-                if (obj != null)
+                try
                 {
-                    newOrderDetails = new Order()
-                    {
-                        id = obj["id"].Value<string>(),
-                        price = obj["price"].Value<decimal>(),
-                        size = obj["size"].Value<decimal>(),
-                        side = obj["side"].Value<string>(),
-                        productId = obj["product_id"].Value<string>()
-                    };
+                    newOrderDetails = JsonConvert.DeserializeObject<Order>(genericResponse.ContentBody);
                 }
+                catch (Exception)
+                {
 
+                    throw new Exception("JsonParseError");
+                }
             }
             else
             {
@@ -129,32 +143,30 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
             var genericResponse = await this.GetResponse(new MyGetOrdersRequest(requestEndPoint));
 
             var json = genericResponse.ContentBody;
-            var orders_jArr = JArray.Parse(json);
-
-            var allOrders = GetOrderFromOrderArray(orders_jArr);
+            var allOrders = GetOrderListFromJson(json);
 
             return allOrders;
         }
 
 
-        private static List<Order> GetOrderFromOrderArray(JArray jArray)
+        private static List<Order> GetOrderListFromJson(string jsonString)
         {
+
+            JObject jsonObj = new JObject(jsonString);
+
             List<Order> orders = new List<Order>();
 
-            foreach (var obj in jArray)
+            foreach (var obj in jsonObj)
             {
-                orders.Add
-                    (
-                    new Order()
-                    {
-                        id = obj["id"].Value<string>(),
-                        price = obj["price"].Value<decimal>(),
-                        size = obj["size"].Value<decimal>(),
-                        side = obj["side"].Value<string>(),
-                        productId = obj["product_id"].Value<string>()
-                    }
-                    );
+                try
+                {
+                    orders.Add(JsonConvert.DeserializeObject<Order>(obj.ToString()));
+                }
+                catch (Exception)
+                {
 
+                    throw new Exception("JsonParseError");
+                }
             }
 
             return orders;
@@ -181,21 +193,27 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
             string oSize, string oPrice)
         {
             OrderPlacer limitOrder = new OrderPlacer(_auth);
-            
-            var endPoint = string.Format(@"/orders");
 
-            var newOrder = await limitOrder.PlaceOrder(endPoint); 
+            JObject orderBodyObj = new JObject();
+
+            //orderBodyObj.Add(new JProperty("client_oid", ""));
+
+            orderBodyObj.Add(new JProperty("type", "limit"));
+            orderBodyObj.Add(new JProperty("product_id", oProdName));
+            orderBodyObj.Add(new JProperty("side", oSide));
+            orderBodyObj.Add(new JProperty("price", oPrice));
+            orderBodyObj.Add(new JProperty("size", oSize));
+            //orderBodyObj.Add(new JProperty("", ""));
+            //orderBodyObj.Add(new JProperty("", ""));
+            //orderBodyObj.Add(new JProperty("", ""));
+
+            var newOrder = await limitOrder.PlaceOrder(orderBodyObj); 
 
             return newOrder;
         }
 
 
 
-
-        public bool CancelOrder()
-        {
-            return true;
-        }
 
         public async Task<List<String>> CancelAllOrders()
         {
@@ -240,7 +258,7 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
 
             var genericResponse = await this.GetResponse(request);
 
-            List<string> cancelledOrderList = new List<string>();
+            List<string> cancelledOrder = new List<string>();
 
             if (genericResponse.IsSuccessStatusCode)
             {
@@ -249,7 +267,7 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
 
                 foreach (var obj in orders_jArr)
                 {
-                    cancelledOrderList.Add(obj.Value<string>());
+                    cancelledOrder.Add(obj.Value<string>());
                 }
             }
             else
@@ -264,11 +282,11 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
                 }
             }
 
-            return cancelledOrderList;
+            return cancelledOrder;
         }
 
 
-        public async Task<List<Order>> ListAllOrders() 
+        public async Task<List<Order>> GetAllOrders() 
         {
             var requestEndPoint = string.Format(@"/orders");
             var allorders = await orderList.GetAllOpenOrders(requestEndPoint);
@@ -278,21 +296,21 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
             return allorders;
         }
 
-        public async Task<List<Order>> ListAllOpenOrders()
+        public async Task<List<Order>> GetAllOpenOrders()
         {
             var requestEndPoint = string.Format(@"/orders?status=open");
             var allorders = await orderList.GetAllOpenOrders(requestEndPoint);
             return allorders;
         }
 
-        public async Task<List<Order>> ListAllPendingOrders()
+        public async Task<List<Order>> GetAllPendingOrders()
         {
             var requestEndPoint = string.Format(@"/orders?status=pending");
             var allorders = await orderList.GetAllOpenOrders(requestEndPoint);
             return allorders;
         }
 
-        public async Task<List<Order>> ListAllActiveOrders()
+        public async Task<List<Order>> GetAllActiveOrders()
         {
             var requestEndPoint = string.Format(@"/orders?status=active");
             var allorders = await orderList.GetAllOpenOrders(requestEndPoint);
