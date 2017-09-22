@@ -152,11 +152,13 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
         private static List<Order> GetOrderListFromJson(string jsonString)
         {
 
-            JObject jsonObj = new JObject(jsonString);
+            //JObject jsonObj = new JObject(jsonString);
+
+            var jsonArray = JArray.Parse(jsonString);
 
             List<Order> orders = new List<Order>();
 
-            foreach (var obj in jsonObj)
+            foreach (var obj in jsonArray)
             {
                 try
                 {

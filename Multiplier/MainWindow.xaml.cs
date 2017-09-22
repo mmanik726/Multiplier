@@ -18,7 +18,7 @@ using CoinbaseExchange.NET.Endpoints.OrderBook;
 using CoinbaseExchange.NET.Endpoints.MyOrders;
 using System.Reflection;
 using CoinbaseExchange.NET.Core;
-
+using CoinbaseExchange.NET.Endpoints.Fills;
 
 namespace Multiplier
 {
@@ -77,6 +77,14 @@ namespace Multiplier
         }
 
 
+        public void fillUpdateHandler(object sender, EventArgs args)
+        {
+            
+            var filledOrderId = ((FillEventArgs)args).Fills.FirstOrDefault().OrderId;
+            MessageBox.Show("order filled! " + filledOrderId);
+        }
+
+
         public async void testBook()
         {
 
@@ -90,10 +98,33 @@ namespace Multiplier
             TickerClient LtcTickerClient = new TickerClient("LTC-USD");
             LtcTickerClient.Update += LtcTickerClient_Update;
 
-            //MyOrderBook myOrderBook = new MyOrderBook(myAuth);
+            MyOrderBook myOrderBook = new MyOrderBook(myAuth);
 
-            //var x = await myOrderBook.ListAllOrders();
-            //var delOrder = x[0].id;
+            var x = await myOrderBook.GetAllOrders();
+            var delOrder = x[0].Id;
+
+            FillsClient fillClient = new FillsClient(myAuth);
+            fillClient.FillUpdated += fillUpdateHandler;
+
+            //fillClient.addOrderToWatchList("42643496-1f08-442c-84e3-c9ecd7178f07");
+
+
+            //var fillStat = fillClient.GetFillStatus(delOrder);
+
+            //await Task.Delay(5000);
+            //fillClient.addOrderToWatchList(delOrder);
+
+
+            //await Task.Delay(5000);
+            //fillClient.addOrderToWatchList("42643496-1f08-442c-84e3-c9ecd7178888");
+
+            //await Task.Delay(5000);
+            //fillClient.addOrderToWatchList("42643496-1f08-442c-84e3-c9ecd7178f07");
+
+            //await Task.Delay(5000);
+            //fillClient.removeFromOrderWatchList(delOrder);
+
+
             //var z = await myOrderBook.CancelSingleOrder(delOrder);
             //var z = await myOrderBook.CancelAllOrders();
             //await Task.Delay(1000000);
