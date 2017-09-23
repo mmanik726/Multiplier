@@ -26,7 +26,7 @@ namespace CoinbaseExchange.NET.Endpoints.PublicData
 
     public class TickerClient : ExchangeClientBase
     {
-        public EventHandler Update;
+        public EventHandler PriceUpdated;
         //public decimal CurrentPrice;
 
 
@@ -50,8 +50,8 @@ namespace CoinbaseExchange.NET.Endpoints.PublicData
         private void NotifyListener(TickerMessage message)
         {
 
-            if (Update != null)
-                Update(this, message);
+            if (PriceUpdated != null)
+                PriceUpdated(this, message);
         }
 
         private void onTickerUpdateReceived(RealtimeMessage message)
@@ -87,62 +87,20 @@ namespace CoinbaseExchange.NET.Endpoints.PublicData
             //jStr.Append()
             var requestString = string.Format("");
 
-            //String.Format(@"{{""type"": ""subscribe"",""product_id"": ""{0}""}}", product);
-
-
             //JObject jObj = new JObject(
             //    new JProperty(
             //        "type", "subscribe"),
             //    new JProperty(
             //        "product_ids", new JArray(
-            //        "BTC-USD")),
+            //        "LTC-USD")),
             //    new JProperty(
             //        "channels", new JArray(
-            //        "level2", "heartbeat", new JObject(
-            //            new JProperty(
-            //                "name", "ticker"), new JProperty(
-            //                    "product_ids", new JArray(
-            //                        "BTC-USD"))))));
+            //        "matches")));
 
-            //JObject jObj = new JObject(
-            //    new JProperty(
-            //        "type", "subscribe"),
-            //    new JProperty(
-            //        "product_ids", new JArray(
-            //        "BTC-USD")),
-            //    new JProperty(
-            //        "channels", new JArray(
-            //        "heartbeat", new JObject(
-            //            new JProperty(
-            //                "name", "ticker"), new JProperty(
-            //                    "product_ids", new JArray(
-            //                        "BTC-USD"))))));
-
-
-            //JObject jObj = new JObject(
-            //    new JProperty(
-            //        "type", "subscribe"),
-            //    new JProperty(
-            //        "product_ids", new JArray(
-            //        "BTC-USD")),
-            //    new JProperty(
-            //        "channels", new JArray(
-            //        "matches", "heartbeat", new JObject(
-            //            new JProperty(
-            //                "name", "ticker"), new JProperty(
-            //                    "product_ids", new JArray(
-            //                        "BTC-USD"))))));
-
-
-            JObject jObj = new JObject(
-                new JProperty(
-                    "type", "subscribe"),
-                new JProperty(
-                    "product_ids", new JArray(
-                    "LTC-USD")),
-                new JProperty(
-                    "channels", new JArray(
-                    "matches")));
+            JObject jObj = new JObject();
+            jObj.Add(new JProperty("type", "subscribe"));
+            jObj.Add(new JProperty("product_ids", new JArray(product)));
+            jObj.Add(new JProperty("channels", new JArray("matches")));
 
             Console.WriteLine(jObj.ToString());
 
@@ -174,26 +132,13 @@ namespace CoinbaseExchange.NET.Endpoints.PublicData
 
                     //Console.WriteLine("MSG TYPE: {0}", type);
 
-                    switch (type)
+                    //look for only match messages
+
+                    if (type == "match")
                     {
-                        case "received":
-                            realtimeMessage = new RealtimeReceived(jToken);
-                            break;
-                        case "open":
-                            realtimeMessage = new RealtimeOpen(jToken);
-                            break;
-                        case "done":
-                            realtimeMessage = new RealtimeDone(jToken);
-                            break;
-                        case "match":
-                            realtimeMessage = new RealtimeMatch(jToken);
-                            break;
-                        case "change":
-                            realtimeMessage = new RealtimeChange(jToken);
-                            break;
-                        default:
-                            break;
+                        realtimeMessage = new RealtimeMatch(jToken);
                     }
+
 
                     if (realtimeMessage == null)
                         continue;

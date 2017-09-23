@@ -8,6 +8,10 @@ using Newtonsoft.Json.Linq;
 using Newtonsoft.Json;
 
 using Newtonsoft.Json.Converters;
+
+using CoinbaseExchange.NET.Endpoints.PublicData;
+using CoinbaseExchange.NET.Endpoints.Fills;
+
 namespace CoinbaseExchange.NET.Endpoints.MyOrders
 {
     public class Order
@@ -48,7 +52,6 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
         public string Status; 
         public string Settled;
     }
-
 
 
 
@@ -116,7 +119,8 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
             }
             else
             {
-                throw new Exception("OrderUnsuccessfullError"); 
+
+                throw new Exception("OrderUnsuccessfullError: " + genericResponse.ContentBody); 
             }
 
             return newOrderDetails;
@@ -178,21 +182,189 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
 
     
 
+    public class MyOrder
+    {
+        public string OrderId;
+        public string Productname { get; set; }
+        public bool IsFilled { get; set; }
+        public decimal ProductAmount { get; set; }
+        public decimal UsdAmount { get; set; }
+        public string OrderType { get; set; }
+        public bool ChaseBestPrice { get; set; }
+        public string Side { get; set; }
+
+        public MyOrder(string productName = "")
+        {
+            OrderId = "";
+            Productname = productName;
+            OrderType = "limit";
+            IsFilled = false;
+            UsdAmount = 0;
+            ProductAmount = 0;
+            ChaseBestPrice = false;
+
+        }
+    }
+
+    public class OrderUpdateEventArgs : EventArgs
+    {
+
+        public string OrderId { get; set; }
+        public string Message { get; set; }
+    }
+
 
     public class MyOrderBook : ExchangeClientBase
     {
         private CBAuthenticationContainer _auth { get; set; }
-        private OrderList orderList; 
-        public MyOrderBook (CBAuthenticationContainer authContainer) : base(authContainer)
+        private OrderList orderList;
+
+        private TickerClient PriceTicker;
+        private FillsClient fillsClient;
+
+        private List<MyOrder> MyActiveOrderList;
+
+        public EventHandler OrderUpdateEvent;
+
+        private bool busy;
+
+        private decimal currentPrice;
+
+        private void NotifyOrderUpdateListener(OrderUpdateEventArgs message)
         {
 
-            _auth = authContainer;
-            orderList = new OrderList(_auth);
+            if (OrderUpdateEvent != null)
+                OrderUpdateEvent(this, message);
         }
 
 
+        public MyOrderBook (CBAuthenticationContainer authContainer, string product) : base(authContainer)
+        {
+            busy = false;
+
+            _auth = authContainer;
+            orderList = new OrderList(_auth);
+
+            MyActiveOrderList = new List<MyOrder>();
+
+
+            PriceTicker = new TickerClient(product);
+            PriceTicker.PriceUpdated += PriceUpdateEventHandler;
+
+            fillsClient = new FillsClient(_auth);
+            fillsClient.FillUpdated += OrderFilledEventHandler;
+
+        }
+
+        public async void OrderFilledEventHandler(object sender, EventArgs args)
+        {
+            FillEventArgs filledOrders = (FillEventArgs)args;
+
+            var filledOrder = filledOrders.Fills.FirstOrDefault();
+
+            //remove the order from MyActiveOrderList
+            MyActiveOrderList.RemoveAll(x => x.OrderId == filledOrder.OrderId);
+
+            fillsClient.RemoveFromOrderWatchList(filledOrder.OrderId);
+
+
+            NotifyOrderUpdateListener(new OrderUpdateEventArgs
+            {
+                Message = string.Format("Order id: {0} has been filled", filledOrder.OrderId),
+                OrderId = filledOrder.OrderId
+            });
+
+        }
+
+        public async void PriceUpdateEventHandler(object sender, EventArgs args)
+        {
+
+            var tickerMsg = (TickerMessage)args;
+
+            var tickerPrice = tickerMsg.RealTimePrice;
+            //currentPrice = tickerMsg.RealTimePrice;
+
+            if (tickerPrice == currentPrice)
+                return; // do nothing if price is the same 
+            else
+                currentPrice = tickerPrice;
+
+
+            if (busy || MyActiveOrderList.Count == 0)
+            {
+                return;
+            }
+
+            busy = true;
+
+
+            Task.Delay(5000);
+
+            for (int i = 0; i < MyActiveOrderList.Count; i++)
+            {
+                MyOrder myCurrentOrder = MyActiveOrderList.ElementAt(i);
+
+                if (myCurrentOrder.ChaseBestPrice && !myCurrentOrder.IsFilled)
+                {
+                    
+                    //cancell the current order
+                    List<string> cancelledOrder = new List<string>();
+                    try
+                    {
+                        cancelledOrder = await CancelSingleOrder(myCurrentOrder.OrderId);
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine(ex.Message);
+                        //throw;
+                    }
+
+
+                    
+
+
+                    decimal adjustedPrice;
+                    if (myCurrentOrder.Side == "buy")
+                        adjustedPrice = currentPrice - 0.01m; //m is for decimal
+                    else
+                        adjustedPrice = currentPrice + 0.01m;
+
+
+
+                    //place new order
+                    var orderAtNewPrice = await PlaceNewLimitOrder(
+                        oSide: myCurrentOrder.Side,
+                        oProdName: myCurrentOrder.Productname,
+                        oSize: myCurrentOrder.ProductAmount.ToString(),
+                        oPrice: adjustedPrice.ToString(),
+                        chaseBestPrice: true
+                        );
+
+                    if (orderAtNewPrice.Status != "rejected")
+                    {
+
+                        MyActiveOrderList.RemoveAll(x => x.OrderId == cancelledOrder.FirstOrDefault());
+                    }
+                    else
+                        System.Diagnostics.Debug.WriteLine("Order rejected at " + adjustedPrice.ToString());
+
+                    ////if the order is cancelled successfully
+                    //if (cancelledOrder.FirstOrDefault() == myCurrentOrder.OrderId)
+                    //{
+
+
+                    //}
+                    //take it off the active order list
+                    //MyActiveOrderList.RemoveAll(x => x == filledOrder.OrderId);
+                }
+            }
+
+            busy = false;
+
+        }
+
         public async Task<Order> PlaceNewLimitOrder(string oSide, string oProdName,
-            string oSize, string oPrice)
+            string oSize, string oPrice, bool chaseBestPrice)
         {
             OrderPlacer limitOrder = new OrderPlacer(_auth);
 
@@ -205,11 +377,42 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
             orderBodyObj.Add(new JProperty("side", oSide));
             orderBodyObj.Add(new JProperty("price", oPrice));
             orderBodyObj.Add(new JProperty("size", oSize));
+            orderBodyObj.Add(new JProperty("post_only", "T"));
             //orderBodyObj.Add(new JProperty("", ""));
             //orderBodyObj.Add(new JProperty("", ""));
             //orderBodyObj.Add(new JProperty("", ""));
 
-            var newOrder = await limitOrder.PlaceOrder(orderBodyObj); 
+            var newOrder = await limitOrder.PlaceOrder(orderBodyObj);
+
+            if (newOrder != null)
+            {
+                if (newOrder.Status != "rejected")
+                {
+                    MyActiveOrderList.Add(
+                        new MyOrder
+                        {
+                            OrderId = newOrder.Id,
+                            Productname = newOrder.Product_id,
+                            OrderType = "limit",
+                            IsFilled = false,
+                            UsdAmount = Convert.ToDecimal(newOrder.Price),
+                            ProductAmount = Convert.ToDecimal(newOrder.Size),
+                            Side = newOrder.Side,
+                            ChaseBestPrice = chaseBestPrice
+
+                        });
+
+                    if (chaseBestPrice)
+                    {
+                        fillsClient.AddOrderToWatchList(newOrder.Id);
+                    }
+                }
+
+
+            }
+
+
+
 
             return newOrder;
         }
@@ -282,6 +485,13 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
                 {
                     throw new Exception("CancelOrderError");
                 }
+            }
+
+            if (cancelledOrder.Count() > 0)
+            {
+                //MyActiveOrderList.RemoveAll(x => x.OrderId == cancelledOrder.FirstOrDefault());
+
+                fillsClient.RemoveFromOrderWatchList(cancelledOrder.FirstOrDefault());
             }
 
             return cancelledOrder;

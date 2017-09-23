@@ -27,31 +27,25 @@ namespace Multiplier
     /// </summary>
     public partial class MainWindow : Window
     {
+
+        private const string myPassphrase = "n6yci6u4i0g";
+        private const string myKey = "b006d82554b495e227b9e7a1251ad745";
+        private const string mySecret = "NhAb9pmbZaY9cPb2+eXOGWIILje7iFe/nF+dV9n6FOxazl6Kje2/03GuSiQYTsj3a/smh92m/lrvfu7kYkxQMg==";
+
+        CBAuthenticationContainer myAuth;
+        MyOrderBook myOrderBook;
+
         public MainWindow()
         {
             InitializeComponent();
 
-            //Loaded += MainWindow_Loaded1;
+
+            TestMethod();
+            myAuth = new CBAuthenticationContainer(myKey, myPassphrase, mySecret);
+            myOrderBook = new MyOrderBook(myAuth, "LTC-USD");
+
         }
 
-        private void MainWindow_Loaded1(object sender, RoutedEventArgs e)
-        {
-            //MyBrowser.ObjectForScripting
-
-            try
-            {
-
-                //var fileName = @"c$\Users\bobby\source\repos\CoinbaseExchange.NET-master\CoinbaseExchange.NET-master\Multiplier\Resources\" + "TradeWidgetPage.html"; //System.AppDomain.CurrentDomain.BaseDirectory + @"TradeWidgetPage.html";
-                //MyBrowser.Navigate(new Uri("file://127.0.0.1/" + fileName));
-                var file2 = @"C:\Users\bobby\source\repos\CoinbaseExchange.NET-master\CoinbaseExchange.NET-master\Multiplier\Resources\" + "TradeWidgetPage.html";
-                System.Diagnostics.Process.Start(file2);
-
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show(ex.Message);
-            }
-        }
 
 
         private void Button_Click(object sender, RoutedEventArgs e)
@@ -59,19 +53,8 @@ namespace Multiplier
 
 
 
-            var myPassphrase = "";
-            var myKey = "";
-            var mySecret = "";
+            TestMethod();
 
-
-            testBook();
-
-
-
-            //TickerClient LtcTickerClient = new TickerClient("LTC-USD");
-            //LtcTickerClient.Update += LtcTickerClient_Update;
-
-            //btnStart.IsEnabled = false;
 
 
         }
@@ -84,27 +67,30 @@ namespace Multiplier
             MessageBox.Show("order filled! " + filledOrderId);
         }
 
+        public void OrderUpdateHandler(object sender, EventArgs args)
+        {
 
-        public async void testBook()
+            var orderUpdate = ((OrderUpdateEventArgs)args);
+            MessageBox.Show(orderUpdate.Message);
+        }
+
+        public async void TestMethod()
         {
 
 
-            var myPassphrase = "n6yci6u4i0g";
-            var myKey = "b006d82554b495e227b9e7a1251ad745";
-            var mySecret = "NhAb9pmbZaY9cPb2+eXOGWIILje7iFe/nF+dV9n6FOxazl6Kje2/03GuSiQYTsj3a/smh92m/lrvfu7kYkxQMg==";
             CBAuthenticationContainer myAuth = new CBAuthenticationContainer(myKey, myPassphrase, mySecret);
 
 
             TickerClient LtcTickerClient = new TickerClient("LTC-USD");
-            LtcTickerClient.Update += LtcTickerClient_Update;
+            LtcTickerClient.PriceUpdated += LtcTickerClient_Update;
 
-            MyOrderBook myOrderBook = new MyOrderBook(myAuth);
+            //MyOrderBook myOrderBook = new MyOrderBook(myAuth, "LTC-USD");
 
-            var x = await myOrderBook.GetAllOrders();
-            var delOrder = x[0].Id;
+            //var x = await myOrderBook.GetAllOrders();
+            //var delOrder = x[0].Id;
 
-            FillsClient fillClient = new FillsClient(myAuth);
-            fillClient.FillUpdated += fillUpdateHandler;
+            //FillsClient fillClient = new FillsClient(myAuth);
+            //fillClient.FillUpdated += fillUpdateHandler;
 
             //fillClient.addOrderToWatchList("42643496-1f08-442c-84e3-c9ecd7178f07");
 
@@ -175,6 +161,22 @@ namespace Multiplier
             
         }
 
+        private async void Button_Click_2(object sender, RoutedEventArgs e)
+        {
 
+
+            try
+            {
+                //await myOrderBook.PlaceNewLimitOrder("sell", "LTC-USD", "0.1", "50.00", true);
+                await myOrderBook.PlaceNewLimitOrder("buy", "LTC-USD", "0.01", "10.00", true);
+            }
+            catch (Exception ex)
+            {
+
+                System.Diagnostics.Debug.WriteLine(ex.Message);
+            }
+            
+
+        }
     }
 }

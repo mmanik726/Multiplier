@@ -89,7 +89,7 @@ namespace CoinbaseExchange.NET.Endpoints.Fills
             var result = await Task.Run(() => FillTracker(onFillUpdate)) ;
         }
 
-        public async void addOrderToWatchList(string orderId)
+        public async void AddOrderToWatchList(string orderId)
         {
             lock (_watchListLock)
             {
@@ -99,7 +99,7 @@ namespace CoinbaseExchange.NET.Endpoints.Fills
             //var result = await FillTracker(onFillUpdate);
         }
 
-        public async void removeFromOrderWatchList(string orderId)
+        public async void RemoveFromOrderWatchList(string orderId)
         {
             lock (_watchListLock)
             {
@@ -180,7 +180,7 @@ namespace CoinbaseExchange.NET.Endpoints.Fills
                 for (int i = 0; i < FillWatchList.Count; i++)
                 {
                     var orderStat = await GetFillStatus(FillWatchList.ElementAt(i));
-                    await Task.Delay(300);
+                    await Task.Delay(500);
                     FilledOrdersList.AddRange(orderStat.Fills.ToList());
                 }
 
@@ -205,7 +205,7 @@ namespace CoinbaseExchange.NET.Endpoints.Fills
             
 
 
-            return true;
+            //return true;
         }
 
 
