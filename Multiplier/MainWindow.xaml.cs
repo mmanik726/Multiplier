@@ -167,8 +167,8 @@ namespace Multiplier
 
             try
             {
-                await myOrderBook.PlaceNewLimitOrder("sell", "LTC-USD", "0.01", "80.00", true);
-                //await myOrderBook.PlaceNewLimitOrder("buy", "LTC-USD", "0.01", "10.00", true);
+                //await myOrderBook.PlaceNewLimitOrder("sell", "LTC-USD", "0.01", "80.00", true);
+                await myOrderBook.PlaceNewLimitOrder("buy", "LTC-USD", "0.01", "10.00", true);
             }
             catch (Exception ex)
             {
@@ -177,6 +177,20 @@ namespace Multiplier
             }
             
 
+        }
+
+        private async void Button_Click_3(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                await myOrderBook.PlaceNewLimitOrder("sell", "LTC-USD", "0.01", "80.00", true);
+                //await myOrderBook.PlaceNewLimitOrder("buy", "LTC-USD", "0.01", "10.00", true);
+            }
+            catch (Exception ex)
+            {
+
+                System.Diagnostics.Debug.WriteLine(ex.Message);
+            }
         }
     }
 }

@@ -78,16 +78,19 @@ namespace CoinbaseExchange.NET.Endpoints.Fills
         public EventHandler FillUpdated;
         public List<String> FillWatchList { get; set; }
 
+        private static bool IsBusy; 
+
         public FillsClient(CBAuthenticationContainer authenticationContainer) : base(authenticationContainer)
         {
             FillWatchList = new List<string>();
+            IsBusy = false;
             startTracker();
         }
 
         async void startTracker()
         {
             //await Task.Factory.StartNew(() => FillTracker(onFillUpdate));
-            await Task.Run(() => FillTracker(onFillUpdate));
+            await Task.Run(() => TrackOrder(onFillUpdate));
 
         }
 
@@ -96,6 +99,10 @@ namespace CoinbaseExchange.NET.Endpoints.Fills
             lock (_watchListLock)
             {
                 this.FillWatchList.Add(orderId);
+
+                if (FillWatchList.Count == 1)
+                    TrackOrder(onFillUpdate);
+
             }
 
             //var result = await FillTracker(onFillUpdate);
@@ -107,7 +114,8 @@ namespace CoinbaseExchange.NET.Endpoints.Fills
             {
 
                 this.FillWatchList.RemoveAll(x => x == orderId);
-
+                //TrackOrder(onFillUpdate);
+                
                 //if (this.FillWatchList.Contains(orderId))
                 //    this.FillWatchList.RemoveAt(FillWatchList.IndexOf(orderId));
             }
@@ -147,13 +155,16 @@ namespace CoinbaseExchange.NET.Endpoints.Fills
         }
 
 
-        private async void FillTracker(Action<List<Fill>> onFillReqUpdated)
+        private async void TrackOrder(Action<List<Fill>> onFillReqUpdated)
         {
 
             //if (this.FillWatchList.Count() == 0)
             //{
             //    return false;
             //}
+
+            if (IsBusy)
+                return;
 
 
             if (onFillReqUpdated == null)
@@ -162,10 +173,11 @@ namespace CoinbaseExchange.NET.Endpoints.Fills
 
             System.Diagnostics.Debug.WriteLine("Fill tracker started");
 
-            while (true)
+            if (FillWatchList.Count() > 0)
+                IsBusy = true;
+
+            while (this.FillWatchList.Count() > 0)
             {
-                if (this.FillWatchList.Count() == 0)
-                    continue;
 
                 System.Diagnostics.Debug.WriteLine(string.Format("Watching {0} order(s)", FillWatchList.Count()));
 
@@ -177,6 +189,8 @@ namespace CoinbaseExchange.NET.Endpoints.Fills
                 {
                     var orderStat = await GetFillStatus(FillWatchList.ElementAt(i));
                     //orderStat.Fills.FirstOrDefault();
+
+                    await Task.Delay(400);
 
                     if (orderStat.Fills.Count > 0)
                     {
@@ -190,7 +204,6 @@ namespace CoinbaseExchange.NET.Endpoints.Fills
 
 
 
-                    await Task.Delay(500);
                 }
 
 
@@ -198,7 +211,7 @@ namespace CoinbaseExchange.NET.Endpoints.Fills
 
             }
 
-
+            IsBusy = false;
 
 
             //return true;

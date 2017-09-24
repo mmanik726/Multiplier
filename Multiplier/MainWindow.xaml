@@ -11,7 +11,8 @@
         <Label Content="Current Price" HorizontalAlignment="Left" Margin="133,109,0,0" VerticalAlignment="Top"/>
         <Label x:Name="lblCurPrice" Content="0" HorizontalAlignment="Left" Margin="235,100,0,0" VerticalAlignment="Top" Height="35" Width="245" FontSize="20"/>
         <Button Content="Historic Data" HorizontalAlignment="Left" Margin="10,280,0,0" VerticalAlignment="Top" Width="149" Height="32" Click="Button_Click_1"/>
-        <Button Content="Place 0.1 LTC Order" HorizontalAlignment="Left" Margin="329,199,0,0" VerticalAlignment="Top" Width="151" Click="Button_Click_2"/>
+        <Button Content="Buy 0.01 LTC" HorizontalAlignment="Left" Margin="329,199,0,0" VerticalAlignment="Top" Width="151" Click="Button_Click_2"/>
+        <Button Content="Sell 0.01 LTC" HorizontalAlignment="Left" Margin="329,234,0,0" VerticalAlignment="Top" Width="151" Click="Button_Click_3"/>
 
     </Grid>
 </Window>

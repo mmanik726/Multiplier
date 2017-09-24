@@ -230,6 +230,8 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
 
         private static decimal currentPrice;
 
+        private static DateTime lastTickTIme;  
+
         private static readonly object updateLock = new object();
         private static readonly object filledLock = new object();
 
@@ -250,6 +252,7 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
 
             MyActiveOrderList = new List<MyOrder>();
 
+            lastTickTIme = DateTime.UtcNow;
 
             PriceTicker = new TickerClient(product);
             PriceTicker.PriceUpdated += PriceUpdateEventHandler;
@@ -288,6 +291,18 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
         public async void PriceUpdateEventHandler(object sender, EventArgs args)
         {
 
+            var curTime = DateTime.UtcNow;
+            var timeSincLastTick = (curTime - lastTickTIme).TotalMilliseconds; 
+
+            if (timeSincLastTick < 5000)
+            {
+                return;
+            }
+            else
+            {
+                lastTickTIme = DateTime.UtcNow;
+            }
+
             var tickerMsg = (TickerMessage)args;
 
             var tickerPrice = tickerMsg.RealTimePrice;
@@ -297,6 +312,23 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
                 return; // do nothing if price is the same 
             else
                 currentPrice = tickerPrice;
+
+
+            //check if the new order price is the same as the last placed order
+            if (MyActiveOrderList.Count > 0 )
+            {
+                decimal tempPrice = 0;
+                if (MyActiveOrderList.FirstOrDefault().Side == "buy")
+                    tempPrice = currentPrice - 0.01m; //m is for decimal
+                else
+                    tempPrice = currentPrice + 0.01m;
+
+                if (MyActiveOrderList.FirstOrDefault().UsdAmount == tempPrice)
+                {
+                    return;
+                }
+            }
+
 
             if (busy || MyActiveOrderList.Count == 0)
             {
@@ -312,19 +344,19 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
             }
 
             //await Task.Factory.StartNew(() => cancelAndReorder());
-            await Task.Run(() => cancelAndReorder());
+            await Task.Run(() => CancelAndReorder());
         }
 
 
-        private void cancelAndReorder()
+        private void CancelAndReorder()
         {
             busy = true;
 
             lock (updateLock)
             {
 
-                System.Diagnostics.Debug.WriteLine("waiting 15 sec");
-                Task.Delay(15000);
+                System.Diagnostics.Debug.WriteLine("\t\tcancel order: " + MyActiveOrderList.FirstOrDefault().OrderId);
+                //Task.Delay(15000);
 
                 
                 MyOrder myCurrentOrder = MyActiveOrderList.FirstOrDefault();
@@ -356,9 +388,9 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
 
                 decimal adjustedPrice;
                 if (myCurrentOrder.Side == "buy")
-                    adjustedPrice = currentPrice - 0.01m; //m is for decimal
+                    adjustedPrice = currentPrice;// - 0.01m; //m is for decimal
                 else
-                    adjustedPrice = currentPrice + 0.01m;
+                    adjustedPrice = currentPrice;// + 0.01m;
 
 
 
@@ -400,7 +432,7 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
             orderBodyObj.Add(new JProperty("side", oSide));
             orderBodyObj.Add(new JProperty("price", oPrice));
             orderBodyObj.Add(new JProperty("size", oSize));
-            orderBodyObj.Add(new JProperty("post_only", "T"));
+            //orderBodyObj.Add(new JProperty("post_only", "T"));
             //orderBodyObj.Add(new JProperty("", ""));
             //orderBodyObj.Add(new JProperty("", ""));
             //orderBodyObj.Add(new JProperty("", ""));
