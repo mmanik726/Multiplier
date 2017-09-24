@@ -167,8 +167,8 @@ namespace Multiplier
 
             try
             {
-                //await myOrderBook.PlaceNewLimitOrder("sell", "LTC-USD", "0.1", "50.00", true);
-                await myOrderBook.PlaceNewLimitOrder("buy", "LTC-USD", "0.01", "10.00", true);
+                await myOrderBook.PlaceNewLimitOrder("sell", "LTC-USD", "0.01", "80.00", true);
+                //await myOrderBook.PlaceNewLimitOrder("buy", "LTC-USD", "0.01", "10.00", true);
             }
             catch (Exception ex)
             {

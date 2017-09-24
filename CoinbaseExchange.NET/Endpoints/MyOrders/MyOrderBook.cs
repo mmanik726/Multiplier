@@ -226,9 +226,12 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
 
         public EventHandler OrderUpdateEvent;
 
-        private bool busy;
+        private static bool busy;
 
-        private decimal currentPrice;
+        private static decimal currentPrice;
+
+        private static readonly object updateLock = new object();
+        private static readonly object filledLock = new object();
 
         private void NotifyOrderUpdateListener(OrderUpdateEventArgs message)
         {
@@ -262,11 +265,17 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
 
             var filledOrder = filledOrders.Fills.FirstOrDefault();
 
-            //remove the order from MyActiveOrderList
-            MyActiveOrderList.RemoveAll(x => x.OrderId == filledOrder.OrderId);
 
-            fillsClient.RemoveFromOrderWatchList(filledOrder.OrderId);
+            lock (filledLock)
+            {
+                //remove the order from MyActiveOrderList
+                MyActiveOrderList.RemoveAll(x => x.OrderId == filledOrder.OrderId);
 
+                fillsClient.RemoveFromOrderWatchList(filledOrder.OrderId);
+            }
+
+
+            System.Diagnostics.Debug.WriteLine(string.Format("Order id: {0} has been filled", filledOrder.OrderId));
 
             NotifyOrderUpdateListener(new OrderUpdateEventArgs
             {
@@ -289,78 +298,92 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
             else
                 currentPrice = tickerPrice;
 
-
             if (busy || MyActiveOrderList.Count == 0)
             {
                 return;
             }
 
-            busy = true;
+            //System.Diagnostics.Debug.WriteLine("Orders in ActiveOrderList:");
+            //MyActiveOrderList.ForEach(x => System.Diagnostics.Debug.WriteLine("\t" + x.OrderId));
 
-
-            Task.Delay(5000);
-
-            for (int i = 0; i < MyActiveOrderList.Count; i++)
+            if (MyActiveOrderList.Count == 0)
             {
-                MyOrder myCurrentOrder = MyActiveOrderList.ElementAt(i);
-
-                if (myCurrentOrder.ChaseBestPrice && !myCurrentOrder.IsFilled)
-                {
-                    
-                    //cancell the current order
-                    List<string> cancelledOrder = new List<string>();
-                    try
-                    {
-                        cancelledOrder = await CancelSingleOrder(myCurrentOrder.OrderId);
-                    }
-                    catch (Exception ex)
-                    {
-                        System.Diagnostics.Debug.WriteLine(ex.Message);
-                        //throw;
-                    }
-
-
-                    
-
-
-                    decimal adjustedPrice;
-                    if (myCurrentOrder.Side == "buy")
-                        adjustedPrice = currentPrice - 0.01m; //m is for decimal
-                    else
-                        adjustedPrice = currentPrice + 0.01m;
-
-
-
-                    //place new order
-                    var orderAtNewPrice = await PlaceNewLimitOrder(
-                        oSide: myCurrentOrder.Side,
-                        oProdName: myCurrentOrder.Productname,
-                        oSize: myCurrentOrder.ProductAmount.ToString(),
-                        oPrice: adjustedPrice.ToString(),
-                        chaseBestPrice: true
-                        );
-
-                    if (orderAtNewPrice.Status != "rejected")
-                    {
-
-                        MyActiveOrderList.RemoveAll(x => x.OrderId == cancelledOrder.FirstOrDefault());
-                    }
-                    else
-                        System.Diagnostics.Debug.WriteLine("Order rejected at " + adjustedPrice.ToString());
-
-                    ////if the order is cancelled successfully
-                    //if (cancelledOrder.FirstOrDefault() == myCurrentOrder.OrderId)
-                    //{
-
-
-                    //}
-                    //take it off the active order list
-                    //MyActiveOrderList.RemoveAll(x => x == filledOrder.OrderId);
-                }
+                return;
             }
 
-            busy = false;
+            //await Task.Factory.StartNew(() => cancelAndReorder());
+            await Task.Run(() => cancelAndReorder());
+        }
 
+
+        private void cancelAndReorder()
+        {
+            busy = true;
+
+            lock (updateLock)
+            {
+
+                System.Diagnostics.Debug.WriteLine("waiting 15 sec");
+                Task.Delay(15000);
+
+                
+                MyOrder myCurrentOrder = MyActiveOrderList.FirstOrDefault();
+
+
+                //cancell the current order
+                List<string> cancelledOrder = new List<string>();
+                try
+                {
+                    //Task<List<String>> x = CancelSingleOrder(myCurrentOrder.OrderId).RunSynchronously;
+                    var temp = CancelSingleOrder(myCurrentOrder.OrderId);
+                    temp.Wait();
+                    cancelledOrder = temp.Result;
+
+                    if (cancelledOrder.Count() > 0)
+                    {
+                        MyActiveOrderList.RemoveAll(x => x.OrderId == cancelledOrder.FirstOrDefault());
+
+                        fillsClient.RemoveFromOrderWatchList(cancelledOrder.FirstOrDefault());
+                    }
+
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine(ex.Message);
+                    //throw;
+                }
+
+
+                decimal adjustedPrice;
+                if (myCurrentOrder.Side == "buy")
+                    adjustedPrice = currentPrice - 0.01m; //m is for decimal
+                else
+                    adjustedPrice = currentPrice + 0.01m;
+
+
+
+                //place new order
+                var orderAtNewPrice = PlaceNewLimitOrder(
+                    oSide: myCurrentOrder.Side,
+                    oProdName: myCurrentOrder.Productname,
+                    oSize: myCurrentOrder.ProductAmount.ToString(),
+                    oPrice: adjustedPrice.ToString(),
+                    chaseBestPrice: true
+                    ).Result;
+
+                if (orderAtNewPrice.Status == "rejected")
+                {
+                    System.Diagnostics.Debug.WriteLine("Order rejected at " + adjustedPrice.ToString());
+                }
+                else
+
+                System.Diagnostics.Debug.WriteLine("Orders in ActiveOrderList:");
+                MyActiveOrderList.ForEach(x => System.Diagnostics.Debug.WriteLine("\t" + x.OrderId));
+                
+                busy = false;
+
+
+            }
         }
 
         public async Task<Order> PlaceNewLimitOrder(string oSide, string oProdName,
@@ -410,9 +433,6 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
 
 
             }
-
-
-
 
             return newOrder;
         }

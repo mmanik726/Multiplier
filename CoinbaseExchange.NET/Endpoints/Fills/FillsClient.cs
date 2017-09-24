@@ -8,7 +8,7 @@ using Newtonsoft.Json.Linq;
 
 namespace CoinbaseExchange.NET.Endpoints.Fills
 {
-    
+
 
     public class Fill
     {
@@ -64,7 +64,7 @@ namespace CoinbaseExchange.NET.Endpoints.Fills
 
     public class FillEventArgs : EventArgs
     {
-        public List<Fill> Fills { get;}
+        public List<Fill> Fills { get; }
         public FillEventArgs(List<Fill> fills)
         {
             this.Fills = fills;
@@ -74,9 +74,9 @@ namespace CoinbaseExchange.NET.Endpoints.Fills
 
     public class FillsClient : ExchangeClientBase
     {
-        private object _watchListLock = new object();
+        private static object _watchListLock = new object();
         public EventHandler FillUpdated;
-        public List<String> FillWatchList{ get; set; }
+        public List<String> FillWatchList { get; set; }
 
         public FillsClient(CBAuthenticationContainer authenticationContainer) : base(authenticationContainer)
         {
@@ -86,7 +86,9 @@ namespace CoinbaseExchange.NET.Endpoints.Fills
 
         async void startTracker()
         {
-            var result = await Task.Run(() => FillTracker(onFillUpdate)) ;
+            //await Task.Factory.StartNew(() => FillTracker(onFillUpdate));
+            await Task.Run(() => FillTracker(onFillUpdate));
+
         }
 
         public async void AddOrderToWatchList(string orderId)
@@ -125,13 +127,13 @@ namespace CoinbaseExchange.NET.Endpoints.Fills
         public async Task<FillResponse> GetFillStatus(string orderId)
         {
 
-            var endpoint = string.Format(@"/fills?order_id={0}", orderId); 
+            var endpoint = string.Format(@"/fills?order_id={0}", orderId);
             var request = new GetFillsRequest(endpoint);
 
             var response = await this.GetResponse(request);
             var orderStats = new FillResponse(response);
 
-            return orderStats; 
+            return orderStats;
         }
 
         private void onFillUpdate(List<Fill> fillList)
@@ -144,12 +146,8 @@ namespace CoinbaseExchange.NET.Endpoints.Fills
             FillUpdated(this, fillEvntArgs);
         }
 
-        //public async void TrackFills(string orderId)
-        //{
-        //   var result = await FillTracker(onFillUpdate);
-        //}
 
-        private async Task<bool> FillTracker(Action<List<Fill>> onFillReqUpdated)
+        private async void FillTracker(Action<List<Fill>> onFillReqUpdated)
         {
 
             //if (this.FillWatchList.Count() == 0)
@@ -164,45 +162,43 @@ namespace CoinbaseExchange.NET.Endpoints.Fills
 
             System.Diagnostics.Debug.WriteLine("Fill tracker started");
 
-            List<Fill> FilledOrdersList = new List<Fill>(); 
-
             while (true)
-	        {
+            {
                 if (this.FillWatchList.Count() == 0)
                     continue;
 
-                FilledOrdersList.Clear();
-
                 System.Diagnostics.Debug.WriteLine(string.Format("Watching {0} order(s)", FillWatchList.Count()));
 
-                System.Diagnostics.Debug.WriteLine("checking fill status");
+                //System.Diagnostics.Debug.WriteLine(FillWatchList.FirstOrDefault());
+
+                FillWatchList.ForEach((x) => System.Diagnostics.Debug.WriteLine(x));
 
                 for (int i = 0; i < FillWatchList.Count; i++)
                 {
                     var orderStat = await GetFillStatus(FillWatchList.ElementAt(i));
-                    await Task.Delay(500);
-                    FilledOrdersList.AddRange(orderStat.Fills.ToList());
-                }
+                    //orderStat.Fills.FirstOrDefault();
 
-                if (FilledOrdersList.Count > 0)
-                {
-                    onFillReqUpdated(FilledOrdersList);
-                }
-
-                //remove all oders that are filled from watch list
-                foreach (Fill filledOrder in FilledOrdersList)
-                {
-                    lock (_watchListLock)
+                    if (orderStat.Fills.Count > 0)
                     {
-                        this.FillWatchList.RemoveAll(x => x == filledOrder.OrderId);
+                        lock (_watchListLock)
+                        {
+                            this.FillWatchList.RemoveAll(x => x == orderStat.Fills.FirstOrDefault().OrderId);
+                        }
+
+                        onFillReqUpdated(orderStat.Fills);
                     }
+
+
+
+                    await Task.Delay(500);
                 }
+
 
                 await Task.Delay(1000); //check fills every 1 sec
-                
-	        }
 
-            
+            }
+
+
 
 
             //return true;
