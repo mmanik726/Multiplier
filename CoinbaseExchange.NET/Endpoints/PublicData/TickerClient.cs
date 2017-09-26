@@ -27,7 +27,7 @@ namespace CoinbaseExchange.NET.Endpoints.PublicData
     public class TickerClient : ExchangeClientBase
     {
         public EventHandler PriceUpdated;
-        //public decimal CurrentPrice;
+        public decimal CurrentPrice;
 
 
         public TickerClient(string ProductName) : base()
@@ -60,7 +60,8 @@ namespace CoinbaseExchange.NET.Endpoints.PublicData
 
             if (message is RealtimeMatch)
             {
-                TickerMessage priceData = new TickerMessage(message.Price); ;
+                CurrentPrice = message.Price;
+                TickerMessage priceData = new TickerMessage(message.Price);
                 NotifyListener(priceData);
             }
 

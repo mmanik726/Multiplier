@@ -6,13 +6,16 @@
         xmlns:local="clr-namespace:Multiplier"
         mc:Ignorable="d"
         Title="MainWindow" Height="350" Width="525">
-    <Grid RenderTransformOrigin="0.481,0.279">
-        <Button x:Name="btnStart" Content="Start Monitoring Price" HorizontalAlignment="Left" Margin="10,222,0,0" VerticalAlignment="Top" Width="149" Click="Button_Click" Height="32"/>
-        <Label Content="Current Price" HorizontalAlignment="Left" Margin="133,109,0,0" VerticalAlignment="Top"/>
-        <Label x:Name="lblCurPrice" Content="0" HorizontalAlignment="Left" Margin="235,100,0,0" VerticalAlignment="Top" Height="35" Width="245" FontSize="20"/>
+    <Grid x:Name="lblTickUpdate" RenderTransformOrigin="0.481,0.279">
+        <Label Content="Current Price" HorizontalAlignment="Left" Margin="41,29,0,0" VerticalAlignment="Top" Width="80" Height="35" HorizontalContentAlignment="Center" VerticalContentAlignment="Center"/>
+        <Label x:Name="lblCurPrice" Content="0" HorizontalAlignment="Center" Margin="126,29,95,0" VerticalAlignment="Top" Height="35" Width="299" FontSize="20" HorizontalContentAlignment="Center"/>
         <Button Content="Historic Data" HorizontalAlignment="Left" Margin="10,280,0,0" VerticalAlignment="Top" Width="149" Height="32" Click="Button_Click_1"/>
-        <Button Content="Buy 0.01 LTC" HorizontalAlignment="Left" Margin="329,199,0,0" VerticalAlignment="Top" Width="151" Click="Button_Click_2"/>
-        <Button Content="Sell 0.01 LTC" HorizontalAlignment="Left" Margin="329,234,0,0" VerticalAlignment="Top" Width="151" Click="Button_Click_3"/>
+        <Button Content="Buy 0.01 LTC" HorizontalAlignment="Left" Margin="359,258,0,0" VerticalAlignment="Top" Width="151" Click="Button_Click_2"/>
+        <Button Content="Sell 0.01 LTC" HorizontalAlignment="Left" Margin="359,292,0,0" VerticalAlignment="Top" Width="151" Click="Button_Click_3"/>
+        <Label Content="SMA40" HorizontalAlignment="Left" Margin="52,138,0,0" VerticalAlignment="Top" Height="34" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" RenderTransformOrigin="-0.685,0.412"/>
+        <Label x:Name="lblSma" Content="0" HorizontalAlignment="Left" Margin="105,136,0,0" VerticalAlignment="Top" HorizontalContentAlignment="Center" FontSize="20" Width="331"/>
+        <Label x:Name="lblUpdatedTime" Content="(time)" HorizontalAlignment="Left" Margin="359,195,0,0" VerticalAlignment="Top"/>
+        <Label x:Name="lblTickUpdate1" Content="(time)" HorizontalAlignment="Left" Margin="359,64,0,0" VerticalAlignment="Top"/>
 
     </Grid>
 </Window>

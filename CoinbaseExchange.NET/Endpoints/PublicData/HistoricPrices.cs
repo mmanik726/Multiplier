@@ -16,9 +16,9 @@ namespace CoinbaseExchange.NET.Endpoints.PublicData
         public DateTime Time { get; set; }
         public string Low { get; set; }
         public string High { get; set; }
-        public decimal Average { get; set; }
+        public decimal LocalAvg { get; set; }
         public string Open { get; set; }
-        public string Close { get; set; }
+        public decimal Close { get; set; }
         public string Volume { get; set; }
 
     }
@@ -83,13 +83,13 @@ namespace CoinbaseExchange.NET.Endpoints.PublicData
 
                 result = await Task.Factory.StartNew(() => JsonConvert.DeserializeObject<List<JArray>>(json).Select((x) => new CandleData
                 {
-                    Time = DateTimeUtilities.DateTimeFromUnixTimestampSeconds((x[0].Value<string>())),
+                    Time = DateTimeUtilities.DateTimeFromUnixTimestampSeconds((x[0].Value<string>())).ToLocalTime(),
                     Low = x[1].Value<string>(),
                     High = x[2].Value<string>(),
                     Open = x[3].Value<string>(),
-                    Close = x[4].Value<string>(),
+                    Close = x[4].Value<decimal>(),
                     Volume = x[5].Value<string>(),
-                    Average = ((x[1].Value<decimal>() + x[2].Value<decimal>()) / 2)
+                    LocalAvg = ((x[1].Value<decimal>() + x[2].Value<decimal>()) / 2)
                 }));
 
             }

@@ -19,7 +19,8 @@ using CoinbaseExchange.NET.Endpoints.MyOrders;
 using System.Reflection;
 using CoinbaseExchange.NET.Core;
 using CoinbaseExchange.NET.Endpoints.Fills;
-
+using System.Diagnostics;
+using CoinbaseExchange.NET.Data;
 namespace Multiplier
 {
     /// <summary>
@@ -34,35 +35,25 @@ namespace Multiplier
 
         CBAuthenticationContainer myAuth;
         MyOrderBook myOrderBook;
-
+        TickerClient LtcTickerClient;
         public MainWindow()
         {
             InitializeComponent();
-
 
             TestMethod();
             myAuth = new CBAuthenticationContainer(myKey, myPassphrase, mySecret);
             myOrderBook = new MyOrderBook(myAuth, "LTC-USD");
 
-        }
-
-
-
-        private void Button_Click(object sender, RoutedEventArgs e)
-        {
-
-
-
-            TestMethod();
-
-
 
         }
+
+
+
 
 
         public void fillUpdateHandler(object sender, EventArgs args)
         {
-            
+
             var filledOrderId = ((FillEventArgs)args).Fills.FirstOrDefault().OrderId;
             MessageBox.Show("order filled! " + filledOrderId);
         }
@@ -74,14 +65,10 @@ namespace Multiplier
             MessageBox.Show(orderUpdate.Message);
         }
 
-        public async void TestMethod()
+        public void TestMethod()
         {
 
-
-            CBAuthenticationContainer myAuth = new CBAuthenticationContainer(myKey, myPassphrase, mySecret);
-
-
-            TickerClient LtcTickerClient = new TickerClient("LTC-USD");
+            LtcTickerClient = new TickerClient("LTC-USD");
             LtcTickerClient.PriceUpdated += LtcTickerClient_Update;
 
             //MyOrderBook myOrderBook = new MyOrderBook(myAuth, "LTC-USD");
@@ -129,37 +116,37 @@ namespace Multiplier
             //var z = a.Sells.FirstOrDefault();
             //Console.WriteLine("Update: price {0}", tickerData.CurrentPrice);
 
-            lblCurPrice.Content = tickerData.RealTimePrice.ToString();
+            this.Dispatcher.Invoke(() =>
+            {
+                lblCurPrice.Content = tickerData.RealTimePrice.ToString();
+                lblTickUpdate1.Content = DateTime.UtcNow.ToLocalTime().ToLongTimeString();
+            }
+            );
 
         }
 
-        private async void Button_Click_1(object sender, RoutedEventArgs e)
+        private void Button_Click_1(object sender, RoutedEventArgs e)
+        {
+            MovingAverage sma = new MovingAverage(ref LtcTickerClient);
+            sma.MovingAverageUpdated += SmaUpdateEventHandler;
+        }
+
+        private void SmaUpdateEventHandler(object sender, EventArgs args)
         {
 
-
-            HistoricPrices h = new HistoricPrices();
-            //h.testJson();
-            var x = await h.GetPrices("LTC-USD");
-
-            var data = from t in x
-                       where t.Average > 52
-                       select t;
-            var tmp = (from t in x
-                       select t.Average).Sum();
-
-            var maxDate = (from md in x
-                           select md.Time).Max();
-
-
-            var minDate = (from md in x
-                           select md.Time).Min();
-
-            var avg = tmp / x.Count();
-            MessageBox.Show("Average is " + avg.ToString() + "\nFrom: " + minDate.ToString() + 
-                "\nTo: " + maxDate.ToString() + 
-                "\n hours: " + (maxDate - minDate).Hours);
+            var tickerData = (MAUpdateEventArgs)args;
+            decimal newSmaPrice = tickerData.CurrentMAPrice;
+            this.Dispatcher.Invoke(() => 
+                {
+                    lblSma.SetValue(ContentProperty, newSmaPrice);
+                    lblUpdatedTime.Content = DateTime.UtcNow.ToLocalTime();
+                }
+            );
             
+            //lblSma.Content = newSmaPrice.ToString();
+            //Debug.WriteLine(DateTime.UtcNow.ToString());
         }
+
 
         private async void Button_Click_2(object sender, RoutedEventArgs e)
         {
@@ -175,9 +162,11 @@ namespace Multiplier
 
                 System.Diagnostics.Debug.WriteLine(ex.Message);
             }
-            
+
 
         }
+
+
 
         private async void Button_Click_3(object sender, RoutedEventArgs e)
         {
