@@ -5,6 +5,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
+using CoinbaseExchange.NET.Endpoints.MyOrders;
+using System.Diagnostics;
 
 namespace CoinbaseExchange.NET.Endpoints.Fills
 {
@@ -76,52 +78,27 @@ namespace CoinbaseExchange.NET.Endpoints.Fills
     {
         private static object _watchListLock = new object();
         public EventHandler FillUpdated;
-        public List<String> FillWatchList { get; set; }
+        public List<MyOrder> FillWatchList { get; set; }
 
-        private static bool IsBusy; 
+        private MyOrderBook myActiveOrderBook; 
 
-        public FillsClient(CBAuthenticationContainer authenticationContainer) : base(authenticationContainer)
+        private static bool IsBusy_TrackIngOrder; 
+
+        public FillsClient(CBAuthenticationContainer authenticationContainer, MyOrderBook orderBook) : base(authenticationContainer)
         {
-            FillWatchList = new List<string>();
-            IsBusy = false;
-            startTracker();
+            myActiveOrderBook = orderBook;
+            FillWatchList = orderBook.MyChaseOrderList ;
+            IsBusy_TrackIngOrder = false;
+            //startTracker();
         }
 
-        async void startTracker()
+        public async void startTracker()
         {
             //await Task.Factory.StartNew(() => FillTracker(onFillUpdate));
-            await Task.Run(() => TrackOrder(onFillUpdate));
+            await Task.Run(() => TrackOrder());
 
         }
 
-        public async void AddOrderToWatchList(string orderId)
-        {
-            lock (_watchListLock)
-            {
-                this.FillWatchList.Add(orderId);
-
-                if (FillWatchList.Count == 1)
-                    TrackOrder(onFillUpdate);
-
-            }
-
-            //var result = await FillTracker(onFillUpdate);
-        }
-
-        public async void RemoveFromOrderWatchList(string orderId)
-        {
-            lock (_watchListLock)
-            {
-
-                this.FillWatchList.RemoveAll(x => x == orderId);
-                //TrackOrder(onFillUpdate);
-                
-                //if (this.FillWatchList.Contains(orderId))
-                //    this.FillWatchList.RemoveAt(FillWatchList.IndexOf(orderId));
-            }
-
-            //var result = await FillTracker(onFillUpdate);
-        }
 
         public async Task<FillResponse> GetFills()
         {
@@ -134,7 +111,6 @@ namespace CoinbaseExchange.NET.Endpoints.Fills
 
         public async Task<FillResponse> GetFillStatus(string orderId)
         {
-
             var endpoint = string.Format(@"/fills?order_id={0}", orderId);
             var request = new GetFillsRequest(endpoint);
 
@@ -144,62 +120,59 @@ namespace CoinbaseExchange.NET.Endpoints.Fills
             return orderStats;
         }
 
-        private void onFillUpdate(List<Fill> fillList)
+        private void orderFilledEvent(string orderId)
         {
-            //do other stuff with received data before calling 
-            //attached subscriber method
+            if (FillUpdated != null)
+            {
+                FillUpdated(this, EventArgs.Empty);
+            }
 
-            FillEventArgs fillEvntArgs = new FillEventArgs(fillList);
-
-            FillUpdated(this, fillEvntArgs);
         }
 
 
-        private async void TrackOrder(Action<List<Fill>> onFillReqUpdated)
+        private async void TrackOrder()
         {
 
-            //if (this.FillWatchList.Count() == 0)
-            //{
-            //    return false;
-            //}
 
-            if (IsBusy)
+            if (IsBusy_TrackIngOrder)
                 return;
 
 
-            if (onFillReqUpdated == null)
-                throw new ArgumentNullException("onFillReqUpdated", "fill tracker callback must not be null.");
-
-
-            System.Diagnostics.Debug.WriteLine("Fill tracker started");
+            System.Diagnostics.Debug.WriteLine("Checking fill status...");
 
             if (FillWatchList.Count() > 0)
-                IsBusy = true;
+                IsBusy_TrackIngOrder = true;
 
-            while (this.FillWatchList.Count() > 0)
+            while (FillWatchList.Count() > 0)
             {
 
                 System.Diagnostics.Debug.WriteLine(string.Format("Watching {0} order(s)", FillWatchList.Count()));
 
                 //System.Diagnostics.Debug.WriteLine(FillWatchList.FirstOrDefault());
 
-                FillWatchList.ForEach((x) => System.Diagnostics.Debug.WriteLine(x));
+                FillWatchList.ForEach((x) => System.Diagnostics.Debug.WriteLine(x.OrderId));
 
                 for (int i = 0; i < FillWatchList.Count; i++)
                 {
-                    var orderStat = await GetFillStatus(FillWatchList.ElementAt(i));
+                    if (FillWatchList.Count == 0)
+                        break;
+
+                    var orderStat = await GetFillStatus(FillWatchList.ElementAt(i).OrderId);
                     //orderStat.Fills.FirstOrDefault();
 
                     await Task.Delay(400);
 
                     if (orderStat.Fills.Count > 0)
                     {
-                        lock (_watchListLock)
-                        {
-                            this.FillWatchList.RemoveAll(x => x == orderStat.Fills.FirstOrDefault().OrderId);
-                        }
+                        //busy waiting
+                        while(myActiveOrderBook.isUpdatingOrderList)
+                            Debug.WriteLine("waiting for order list update lock release");
 
-                        onFillReqUpdated(orderStat.Fills);
+                        myActiveOrderBook.isUpdatingOrderList = true; //wait
+                        FillWatchList.RemoveAll(x => x.OrderId == orderStat.Fills.FirstOrDefault().OrderId);
+                        myActiveOrderBook.isUpdatingOrderList = false; //release
+
+                        orderFilledEvent(orderStat.Fills.FirstOrDefault().OrderId);
                     }
 
 
@@ -211,7 +184,7 @@ namespace CoinbaseExchange.NET.Endpoints.Fills
 
             }
 
-            IsBusy = false;
+            IsBusy_TrackIngOrder = false;
 
 
             //return true;
