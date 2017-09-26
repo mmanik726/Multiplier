@@ -127,7 +127,7 @@ namespace Multiplier
 
         private void Button_Click_1(object sender, RoutedEventArgs e)
         {
-            MovingAverage sma = new MovingAverage(ref LtcTickerClient);
+            MovingAverage sma = new MovingAverage(ref LtcTickerClient, 3, 60);
             sma.MovingAverageUpdated += SmaUpdateEventHandler;
         }
 

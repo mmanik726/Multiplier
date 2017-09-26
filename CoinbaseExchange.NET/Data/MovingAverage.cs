@@ -16,6 +16,9 @@ namespace CoinbaseExchange.NET.Data
 
     public class MovingAverage
     {
+        private int SLICES;
+        private int TIME_INTERVAL;
+
         public TickerClient TickerPriceClient { get; set; }
 
         private List<CandleData> MADataPoints;
@@ -24,24 +27,28 @@ namespace CoinbaseExchange.NET.Data
 
         public decimal CurrentSMA;
 
-        public MovingAverage(ref TickerClient tickerClient)
+        public MovingAverage(ref TickerClient tickerClient, int timeInterValInMin = 3, int smaSlices = 40)
         {
             //var a = tickerClient.CurrentPrice;
 
+            TIME_INTERVAL = timeInterValInMin;
+
+            SLICES = smaSlices;
+
             TickerPriceClient = tickerClient;
 
-            Init();
+            Init(timeInterValInMin);
 
 
         }
 
-        async void Init()
+        async void Init(int updateInterval)
         {
             MADataPoints = await getMaData();
 
             System.Timers.Timer aTimer = new System.Timers.Timer();
             aTimer.Elapsed += UpdateSMA;
-            aTimer.Interval = 3 * 60 * 1000;
+            aTimer.Interval = updateInterval * 60 * 1000;
             aTimer.Enabled = true;
             aTimer.Start();
             NotifyListener(new MAUpdateEventArgs { CurrentMAPrice = CurrentSMA });
@@ -57,7 +64,7 @@ namespace CoinbaseExchange.NET.Data
         {
             System.Diagnostics.Debug.WriteLine("Updating SMA");
 
-            const int SLICES = 40;
+            //const int SLICES = 40;
 
             MADataPoints.RemoveAt(0);
             MADataPoints.Add(new CandleData { Close = TickerPriceClient.CurrentPrice, Time = DateTime.UtcNow.ToLocalTime()});
@@ -91,8 +98,8 @@ namespace CoinbaseExchange.NET.Data
 
         public async Task<List<CandleData>> GetSmaData()
         {
-            const int TIME_INTERVAL = 3;
-            const int SLICES = 40;
+            //const int TIME_INTERVAL = 3;
+            //const int SLICES = 40;
 
             HistoricPrices historicData = new HistoricPrices();
             var exchangeData = await historicData.GetPrices(product: "LTC-USD", granularity: "60");

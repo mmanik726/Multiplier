@@ -55,9 +55,9 @@ namespace CoinbaseExchange.NET.Endpoints.PublicData
             if (!string.IsNullOrWhiteSpace(granularity))
             {
                 if (endpoint.Contains("?"))
-                    urlBuilder.Append(string.Format(@"&granularity={1}", startTime, endTime));
+                    urlBuilder.Append(string.Format(@"&granularity={0}", granularity));
                 else
-                    urlBuilder.Append(string.Format(@"?granularity={1}", startTime, endTime));
+                    urlBuilder.Append(string.Format(@"?granularity={0}", granularity));
                 endpoint = urlBuilder.ToString();
             }
 
