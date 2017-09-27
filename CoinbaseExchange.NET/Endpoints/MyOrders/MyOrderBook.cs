@@ -212,6 +212,8 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
     {
 
         public string OrderId { get; set; }
+        public string side { get; set; }
+        public string filledAtPrice { get; set; }
         public string Message { get; set; }
     }
 
@@ -232,6 +234,7 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
         private static bool isBusyCancelAndReorder;
 
         private static decimal currentPrice;
+
 
         private static DateTime lastTickTIme;  
 
@@ -270,40 +273,36 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
 
         }
 
-        public async void OrderFilledEventHandler(object sender, EventArgs args)
+        public void OrderFilledEventHandler(object sender, EventArgs args)
         {
-            //FillEventArgs filledOrders = (FillEventArgs)args;
+            FillEventArgs filledOrders = (FillEventArgs)args;
 
             Debug.WriteLine("Order filled");
 
-            //var filledOrder = filledOrders.Fills.FirstOrDefault();
-
-
-            //lock (filledLock)
-            //{
-            //    //remove the order from MyActiveOrderList
-            //    MyChaseOrderList.RemoveAll(x => x.OrderId == filledOrder.OrderId);
-
-            //    fillsClient.RemoveFromOrderWatchList(filledOrder.OrderId);
-            //}
+            var filledOrder = filledOrders.filledOrder;
 
 
             //System.Diagnostics.Debug.WriteLine(string.Format("Order id: {0} has been filled", filledOrder.OrderId));
 
-            //NotifyOrderUpdateListener(new OrderUpdateEventArgs
-            //{
-            //    Message = string.Format("Order id: {0} has been filled", filledOrder.OrderId),
-            //    OrderId = filledOrder.OrderId
-            //});
+            NotifyOrderUpdateListener(new OrderUpdateEventArgs
+            {
+                side = filledOrder.Side,
+                filledAtPrice = filledOrder.Price,
+                Message = string.Format("Order id: {0} has been filled", filledOrder.OrderId),
+                OrderId = filledOrder.OrderId
+            });
+
+
         }
 
         public async void PriceUpdateEventHandler(object sender, EventArgs args)
         {
 
+            
             var curTime = DateTime.UtcNow;
-            var timeSincLastTick = (curTime - lastTickTIme).TotalMilliseconds; 
+            var timeSinceLastTick = (curTime - lastTickTIme).TotalMilliseconds; 
 
-            if (timeSincLastTick < 3000)
+            if (timeSinceLastTick < 3000)
             {
                 return;
             }
@@ -344,13 +343,6 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
                 return;
             }
 
-            //System.Diagnostics.Debug.WriteLine("Orders in ActiveOrderList:");
-            //MyActiveOrderList.ForEach(x => System.Diagnostics.Debug.WriteLine("\t" + x.OrderId));
-
-            //if (MyChaseOrderList.Count == 0)
-            //{
-            //    return;
-            //}
 
             //await Task.Factory.StartNew(() => cancelAndReorder());
             await Task.Run(() => CancelAndReorder());
@@ -361,97 +353,51 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
         {
             isBusyCancelAndReorder = true;
 
-            Debug.WriteLine("\t\tcancel order: " + MyChaseOrderList.FirstOrDefault().OrderId);
-            //Task.Delay(15000);
-
-                
-            MyOrder myCurrentOrder = MyChaseOrderList.FirstOrDefault();
 
 
-            //cancell the current order
-            List<string> cancelledOrder = new List<string>();
-            try
+            for (int i = 0; i < MyChaseOrderList.Count; i++)
             {
-                var temp = CancelSingleOrder(myCurrentOrder.OrderId);
-                temp.Wait();
-                cancelledOrder = temp.Result;
+                if (MyChaseOrderList.Count == 0)
+                    break;
 
-                if (cancelledOrder.Count() > 0)
+                MyOrder myCurrentOrder = MyChaseOrderList.FirstOrDefault();
+
+                //cancell ALL the current orders
+                List<string> cancelledOrder = new List<string>();
+                try
                 {
-                    //busy waiting
-                    while (isUpdatingOrderList)
-                        Debug.WriteLine("waiting for order list update lock release");
+                    var temp = CancelSingleOrder(myCurrentOrder.OrderId);
+                    temp.Wait();
+                    cancelledOrder = temp.Result;
 
-                    isUpdatingOrderList = true;
-                    MyChaseOrderList.RemoveAll(x => x.OrderId == cancelledOrder.FirstOrDefault());
-                    isUpdatingOrderList = false;
+                    if (cancelledOrder.Count() > 0)
+                    {
+                        RemoveFromOrderList(cancelledOrder.FirstOrDefault());
+                    }
+
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine(ex.Message);
+                    //throw;
                 }
 
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine(ex.Message);
-                //throw;
-            }
+                Debug.WriteLine(string.Format("\t\tcancel {0} order: {1}", myCurrentOrder.Side, myCurrentOrder.OrderId));
 
 
-            decimal adjustedPrice;
-            if (myCurrentOrder.Side == "buy")
-                adjustedPrice = currentPrice;// - 0.01m; //m is for decimal
-            else
-                adjustedPrice = currentPrice;// + 0.01m;
+                decimal adjustedPrice = getAdjustedCurrentPrice(myCurrentOrder.Side);
 
+                //place new order
+                var orderAtNewPrice = PlaceNewLimitOrder(
+                    oSide: myCurrentOrder.Side,
+                    oProdName: myCurrentOrder.Productname,
+                    oSize: myCurrentOrder.ProductAmount.ToString(),
+                    oPrice: adjustedPrice.ToString(),
+                    chaseBestPrice: true
+                    );
 
-
-            //place new order
-            var orderAtNewPrice = PlaceNewLimitOrder(
-                oSide: myCurrentOrder.Side,
-                oProdName: myCurrentOrder.Productname,
-                oSize: myCurrentOrder.ProductAmount.ToString(),
-                oPrice: adjustedPrice.ToString(),
-                chaseBestPrice: true
-                ).Result;
-
-
-            if (orderAtNewPrice == null)
-            {
-                Debug.WriteLine("Order error ");
-                //try again with new order
-                isBusyCancelAndReorder = false;
-                PriceUpdateEventHandler(this, EventArgs.Empty);
-                return;
             }
 
-            if (orderAtNewPrice.Status == "rejected")
-            {
-                Debug.WriteLine("Order rejected at " + adjustedPrice.ToString());
-                //try again with new order
-                isBusyCancelAndReorder = false;
-                PriceUpdateEventHandler(this, EventArgs.Empty);
-                return;
-            }
-
-
-            ////add the new order to order list
-            ////busy waiting
-            //while (isUpdatingOrderList)
-            //    Debug.WriteLine("waiting for lock release");
-
-            //isUpdatingOrderList = true;
-
-            //MyChaseOrderList.Add(
-            //    new MyOrder
-            //    {
-            //        OrderId = orderAtNewPrice.Id,
-            //        Productname = orderAtNewPrice.Product_id,
-            //        OrderType = "limit",
-            //        Status = "OPEN",
-            //        UsdAmount = Convert.ToDecimal(orderAtNewPrice.Price),
-            //        ProductAmount = Convert.ToDecimal(orderAtNewPrice.Size),
-            //        Side = orderAtNewPrice.Side,
-            //        ChaseBestPrice = true
-            //    });
-            //isUpdatingOrderList = false;
 
             Debug.WriteLine("Orders in ActiveOrderList:");
 
@@ -460,6 +406,29 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
                 
             isBusyCancelAndReorder = false;
 
+        }
+
+
+        private void RemoveFromOrderList(string orderId)
+        {
+            //busy waiting
+            while (isUpdatingOrderList)
+                Debug.WriteLine("waiting for order list update lock release");
+
+            isUpdatingOrderList = true;
+            MyChaseOrderList.RemoveAll(x => x.OrderId == orderId);
+            isUpdatingOrderList = false;
+        }
+
+        private void AddToOrderList(MyOrder order)
+        {
+            //busy waiting
+            while (isUpdatingOrderList)
+                Debug.WriteLine("waiting for lock release");
+
+            isUpdatingOrderList = true;
+            MyChaseOrderList.Add(order);
+            isUpdatingOrderList = false;
         }
 
         public async Task<Order> PlaceNewLimitOrder(string oSide, string oProdName,
@@ -478,37 +447,48 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
             orderBodyObj.Add(new JProperty("size", oSize));
             //orderBodyObj.Add(new JProperty("post_only", "T"));
 
-
+            Debug.WriteLine(string.Format("placing new {0} order @{1}", oSide, oPrice));
             var newOrder = await limitOrder.PlaceOrder(orderBodyObj);
 
             if (newOrder != null)
             {
+
+                var myCurOrder = new MyOrder
+                {
+                    OrderId = newOrder.Id,
+                    Productname = newOrder.Product_id,
+                    OrderType = "limit",
+                    Status = "OPEN",
+                    UsdAmount = Convert.ToDecimal(newOrder.Price),
+                    ProductAmount = Convert.ToDecimal(newOrder.Size),
+                    Side = newOrder.Side,
+                    ChaseBestPrice = chaseBestPrice
+                };
+
+
                 if (newOrder.Status != "rejected")
                 {
-                    //busy waiting
-                    while (isUpdatingOrderList)
-                        Debug.WriteLine("waiting for lock release");
-
-                    isUpdatingOrderList = true;
-                    MyChaseOrderList.Add(
-                        new MyOrder
-                        {
-                            OrderId = newOrder.Id,
-                            Productname = newOrder.Product_id,
-                            OrderType = "limit",
-                            Status = "OPEN",
-                            UsdAmount = Convert.ToDecimal(newOrder.Price),
-                            ProductAmount = Convert.ToDecimal(newOrder.Size),
-                            Side = newOrder.Side,
-                            ChaseBestPrice = chaseBestPrice
-
-                        });
-                    isUpdatingOrderList = false;
+                    AddToOrderList(myCurOrder);
 
                     if (chaseBestPrice && MyChaseOrderList.Count == 1)
                     {
                         fillsClient.startTracker();
                     }
+                }
+                else
+                {
+                    //wait before placing a new order
+                    Task.Delay(200);
+
+                    decimal adjustedPrice = getAdjustedCurrentPrice(myCurOrder.Side);
+
+                    var orderAtNewPrice = PlaceNewLimitOrder(
+                        oSide: myCurOrder.Side,
+                        oProdName: myCurOrder.Productname,
+                        oSize: myCurOrder.ProductAmount.ToString(),
+                        oPrice: adjustedPrice.ToString(),
+                        chaseBestPrice: true
+                        );
                 }
 
 
@@ -518,6 +498,22 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
         }
 
 
+        decimal getAdjustedCurrentPrice(string side)
+        {
+
+            decimal curTmpPrice = 0;
+
+            if (currentPrice == 0)
+                curTmpPrice = PriceTicker.CurrentPrice;
+            else
+                curTmpPrice = currentPrice;
+
+
+            if (side == "buy")
+                return curTmpPrice; // - 1.00m; //m is for decimal
+            else
+                return curTmpPrice; // + 1.00m;            
+        }
 
 
         public async Task<List<String>> CancelAllOrders()

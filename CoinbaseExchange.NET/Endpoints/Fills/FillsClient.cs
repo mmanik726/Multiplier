@@ -34,7 +34,7 @@ namespace CoinbaseExchange.NET.Endpoints.Fills
             this.Time = jToken["created_at"].Value<DateTime>();
             this.Fee = jToken["fee"].Value<string>();
             this.Settled = jToken["settled"].Value<bool>();
-            this.Side = jToken["size"].Value<string>();
+            this.Side = jToken["side"].Value<string>();
             this.Liquidity = jToken["liquidity"].Value<string>();
 
         }
@@ -66,11 +66,8 @@ namespace CoinbaseExchange.NET.Endpoints.Fills
 
     public class FillEventArgs : EventArgs
     {
-        public List<Fill> Fills { get; }
-        public FillEventArgs(List<Fill> fills)
-        {
-            this.Fills = fills;
-        }
+        public Fill filledOrder;
+        
     }
 
 
@@ -120,11 +117,11 @@ namespace CoinbaseExchange.NET.Endpoints.Fills
             return orderStats;
         }
 
-        private void orderFilledEvent(string orderId)
+        private void orderFilledEvent(Fill fillDetails)
         {
             if (FillUpdated != null)
             {
-                FillUpdated(this, EventArgs.Empty);
+                FillUpdated(this, new FillEventArgs { filledOrder = fillDetails });
             }
 
         }
@@ -146,11 +143,16 @@ namespace CoinbaseExchange.NET.Endpoints.Fills
             while (FillWatchList.Count() > 0)
             {
 
-                System.Diagnostics.Debug.WriteLine(string.Format("Watching {0} order(s)", FillWatchList.Count()));
+                Debug.WriteLine(string.Format("Watching {0} order(s)", FillWatchList.Count()));
 
                 //System.Diagnostics.Debug.WriteLine(FillWatchList.FirstOrDefault());
+                try
+                {
+                    //list may change in the middle of operation
+                    FillWatchList.ForEach((x) => Debug.WriteLine(string.Format("{0} -> {1}", x.OrderId, x.Side)));
+                }
+                catch { };
 
-                FillWatchList.ForEach((x) => System.Diagnostics.Debug.WriteLine(x.OrderId));
 
                 for (int i = 0; i < FillWatchList.Count; i++)
                 {
@@ -172,7 +174,7 @@ namespace CoinbaseExchange.NET.Endpoints.Fills
                         FillWatchList.RemoveAll(x => x.OrderId == orderStat.Fills.FirstOrDefault().OrderId);
                         myActiveOrderBook.isUpdatingOrderList = false; //release
 
-                        orderFilledEvent(orderStat.Fills.FirstOrDefault().OrderId);
+                        orderFilledEvent(orderStat.Fills.FirstOrDefault());
                     }
 
 

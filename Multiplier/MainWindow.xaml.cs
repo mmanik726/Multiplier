@@ -33,6 +33,16 @@ namespace Multiplier
         private const string myKey = "b006d82554b495e227b9e7a1251ad745";
         private const string mySecret = "NhAb9pmbZaY9cPb2+eXOGWIILje7iFe/nF+dV9n6FOxazl6Kje2/03GuSiQYTsj3a/smh92m/lrvfu7kYkxQMg==";
 
+        private static decimal CurrentPrice;
+        private static decimal CurrentAveragePrice;
+        private decimal MaxBuy;
+        private decimal MaxSell;
+
+        private bool buyOrderFilled;
+        private bool sellOrderFilled;
+
+        private bool startBuyingSelling;
+
         CBAuthenticationContainer myAuth;
         MyOrderBook myOrderBook;
         TickerClient LtcTickerClient;
@@ -40,10 +50,25 @@ namespace Multiplier
         {
             InitializeComponent();
 
+            CurrentPrice = 0;
+            CurrentAveragePrice = 0;
+
+            buyOrderFilled = false;
+            sellOrderFilled = false;
+
+            MaxBuy = 5;
+            MaxSell = 5;
+
+            startBuyingSelling = false;
+
+
             TestMethod();
             myAuth = new CBAuthenticationContainer(myKey, myPassphrase, mySecret);
             myOrderBook = new MyOrderBook(myAuth, "LTC-USD");
+            myOrderBook.OrderUpdateEvent += fillUpdateHandler;
 
+            MovingAverage sma = new MovingAverage(ref LtcTickerClient, 3, 40);
+            sma.MovingAverageUpdated += SmaUpdateEventHandler;
 
         }
 
@@ -54,8 +79,21 @@ namespace Multiplier
         public void fillUpdateHandler(object sender, EventArgs args)
         {
 
-            var filledOrderId = ((FillEventArgs)args).Fills.FirstOrDefault().OrderId;
-            MessageBox.Show("order filled! " + filledOrderId);
+            var filledOrder = ((OrderUpdateEventArgs)args);
+
+            MessageBox.Show(string.Format("{0} order ({1}) filled @{2} ", filledOrder.side, filledOrder.OrderId, filledOrder.filledAtPrice));
+
+            if (filledOrder.side == "buy")
+            {
+                buyOrderFilled = true;
+            }
+            else if (filledOrder.side == "sell")
+            {
+                sellOrderFilled = true;
+            }
+            
+
+
         }
 
         public void OrderUpdateHandler(object sender, EventArgs args)
@@ -116,6 +154,7 @@ namespace Multiplier
             //var z = a.Sells.FirstOrDefault();
             //Console.WriteLine("Update: price {0}", tickerData.CurrentPrice);
 
+            CurrentPrice = tickerData.RealTimePrice;
             this.Dispatcher.Invoke(() =>
             {
                 lblCurPrice.Content = tickerData.RealTimePrice.ToString();
@@ -123,12 +162,81 @@ namespace Multiplier
             }
             );
 
+            if(startBuyingSelling)
+                buysell();
+
         }
 
-        private void Button_Click_1(object sender, RoutedEventArgs e)
+        async void buysell()
         {
-            MovingAverage sma = new MovingAverage(ref LtcTickerClient, 3, 60);
-            sma.MovingAverageUpdated += SmaUpdateEventHandler;
+
+            decimal curPriceDiff = CurrentPrice - CurrentAveragePrice;
+
+            if (curPriceDiff <= 0.02m) //below average: sell
+            {
+                if (!sellOrderFilled) //if not already sold
+                {
+                    if (MaxSell > 0)
+                    {
+                        await myOrderBook.PlaceNewLimitOrder("sell", "LTC-USD", "0.01", "100.00", true);
+                        MaxSell = 0;
+                        MaxBuy = 5;
+                    }
+
+                    sellOrderFilled = true;
+                    buyOrderFilled = false;
+                }
+
+            }
+
+            if (curPriceDiff >= 0.02m) //above average: buy
+            {
+                if (!buyOrderFilled) //if not already bought
+                {
+                    if (MaxBuy > 0)
+                    {
+                        await myOrderBook.PlaceNewLimitOrder("buy", "LTC-USD", "0.01", "10.00", true);
+                        MaxSell = 5;
+                        MaxBuy = 0;
+                    }
+
+                    sellOrderFilled = false;
+                    buyOrderFilled = true;
+                }
+
+            }
+
+
+
+        }
+
+        private void btnStartBySelling_Click(object sender, RoutedEventArgs e)
+        {
+            btnStartByBuying.IsEnabled = false;
+            btnStartBySelling.IsEnabled = false;
+
+            buyOrderFilled = true;
+            sellOrderFilled = false;
+
+            MaxBuy = 0;
+            MaxSell = 5;
+
+            startBuyingSelling = true;
+        }
+
+
+        private void btnStartByBuying_Click(object sender, RoutedEventArgs e)
+        {
+            btnStartByBuying.IsEnabled = false;
+            btnStartBySelling.IsEnabled = false;
+
+            buyOrderFilled = false;
+            sellOrderFilled = true;
+
+            MaxBuy = 5;
+            MaxSell = 0;
+
+            startBuyingSelling = true;
         }
 
         private void SmaUpdateEventHandler(object sender, EventArgs args)
@@ -136,6 +244,9 @@ namespace Multiplier
 
             var tickerData = (MAUpdateEventArgs)args;
             decimal newSmaPrice = tickerData.CurrentMAPrice;
+
+            CurrentAveragePrice = newSmaPrice; 
+
             this.Dispatcher.Invoke(() => 
                 {
                     lblSma.SetValue(ContentProperty, newSmaPrice);
@@ -160,7 +271,7 @@ namespace Multiplier
             catch (Exception ex)
             {
 
-                System.Diagnostics.Debug.WriteLine(ex.Message);
+                Debug.WriteLine(ex.Message);
             }
 
 
@@ -172,7 +283,7 @@ namespace Multiplier
         {
             try
             {
-                await myOrderBook.PlaceNewLimitOrder("sell", "LTC-USD", "0.01", "80.00", true);
+                await myOrderBook.PlaceNewLimitOrder("sell", "LTC-USD", "0.01", "100.00", true);
                 //await myOrderBook.PlaceNewLimitOrder("buy", "LTC-USD", "0.01", "10.00", true);
             }
             catch (Exception ex)
@@ -181,5 +292,6 @@ namespace Multiplier
                 System.Diagnostics.Debug.WriteLine(ex.Message);
             }
         }
+
     }
 }
