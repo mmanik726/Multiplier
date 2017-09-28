@@ -73,7 +73,7 @@ namespace CoinbaseExchange.NET.Data
             //itemsInSlice.ToList().ForEach((t) => Debug.WriteLine(t.Time + "\t" + t.Close));
             var itemsInSLiceAvg = itemsInSlice.Average((d) => d.Close);
 
-            MADataPoints.ForEach((t) => System.Diagnostics.Debug.WriteLine(t.Time + "\t" + t.Close));
+            //MADataPoints.ForEach((t) => System.Diagnostics.Debug.WriteLine(t.Time + "\t" + t.Close));
 
             CurrentSMA = itemsInSLiceAvg;
 

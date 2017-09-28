@@ -103,50 +103,70 @@ namespace CoinbaseExchange.NET.Endpoints.PublicData
             jObj.Add(new JProperty("product_ids", new JArray(product)));
             jObj.Add(new JProperty("channels", new JArray("matches")));
 
-            Console.WriteLine(jObj.ToString());
+            //Console.WriteLine(jObj.ToString());
 
-            var requestBytes = UTF8Encoding.UTF8.GetBytes(jObj.ToString());
-            await webSocketClient.ConnectAsync(uri, cancellationToken);
 
-            if (webSocketClient.State == WebSocketState.Open)
+
+            try
             {
-                var subscribeRequest = new ArraySegment<byte>(requestBytes);
-                var sendCancellationToken = new CancellationToken();
-                await webSocketClient.SendAsync(subscribeRequest, WebSocketMessageType.Text, true, sendCancellationToken);
+                var requestBytes = UTF8Encoding.UTF8.GetBytes(jObj.ToString());
+                await webSocketClient.ConnectAsync(uri, cancellationToken);
 
-                while (webSocketClient.State == WebSocketState.Open)
+                if (webSocketClient.State == WebSocketState.Open)
                 {
-                    var receiveCancellationToken = new CancellationToken();
-                    var receiveBuffer = new ArraySegment<byte>(new byte[1024 * 1024 * 1]); // 5MB buffer 1024 * 1024 * 5
-                    var webSocketReceiveResult = await webSocketClient.ReceiveAsync(receiveBuffer, receiveCancellationToken);
-                    if (webSocketReceiveResult.Count == 0) continue;
+                    var subscribeRequest = new ArraySegment<byte>(requestBytes);
+                    var sendCancellationToken = new CancellationToken();
+                    await webSocketClient.SendAsync(subscribeRequest, WebSocketMessageType.Text, true, sendCancellationToken);
 
-                    var jsonResponse = Encoding.UTF8.GetString(receiveBuffer.Array, 0, webSocketReceiveResult.Count);
-                    //var jToken = JToken.Parse(jsonResponse);
-                    var jToken = JObject.Parse(jsonResponse);
 
-                    var typeToken = jToken["type"];
-                    if (typeToken == null) continue;
-
-                    var type = typeToken.Value<string>();
-                    RealtimeMessage realtimeMessage = null;
-
-                    //Console.WriteLine("MSG TYPE: {0}", type);
-
-                    //look for only match messages
-
-                    if (type == "match")
+                    while (webSocketClient.State == WebSocketState.Open)
                     {
-                        realtimeMessage = new RealtimeMatch(jToken);
+                        var receiveCancellationToken = new CancellationToken();
+                        var receiveBuffer = new ArraySegment<byte>(new byte[1024 * 1024 * 1]); // 5MB buffer 1024 * 1024 * 5
+                        var webSocketReceiveResult = await webSocketClient.ReceiveAsync(receiveBuffer, receiveCancellationToken);
+                        if (webSocketReceiveResult.Count == 0) continue;
+
+                        var jsonResponse = Encoding.UTF8.GetString(receiveBuffer.Array, 0, webSocketReceiveResult.Count);
+                        //var jToken = JToken.Parse(jsonResponse);
+                        var jToken = JObject.Parse(jsonResponse);
+
+                        var typeToken = jToken["type"];
+                        if (typeToken == null) continue;
+
+                        var type = typeToken.Value<string>();
+                        RealtimeMessage realtimeMessage = null;
+
+                        //Console.WriteLine("MSG TYPE: {0}", type);
+
+                        //look for only match messages
+
+                        if (type == "match")
+                        {
+                            realtimeMessage = new RealtimeMatch(jToken);
+                        }
+
+
+                        if (realtimeMessage == null)
+                            continue;
+
+                        onMessageReceived(realtimeMessage);
                     }
 
 
-                    if (realtimeMessage == null)
-                        continue;
-
-                    onMessageReceived(realtimeMessage);
                 }
             }
+            catch (Exception ex)
+            {
+
+                System.Diagnostics.Debug.WriteLine("Error in ticker websocket: " + ex.Message);
+            }
+
+            System.Diagnostics.Debug.WriteLine(string.Format("websocket ticker feed closed, retrying in 10 sec {0}", DateTime.UtcNow.ToLocalTime().ToString()));
+
+            Task.Delay(10 * 1000);
+
+            Subscribe(product, onMessageReceived);
+
         }
 
 

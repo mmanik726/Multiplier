@@ -151,7 +151,10 @@ namespace CoinbaseExchange.NET.Endpoints.Fills
                     //list may change in the middle of operation
                     FillWatchList.ForEach((x) => Debug.WriteLine(string.Format("{0} -> {1}", x.OrderId, x.Side)));
                 }
-                catch { };
+                catch (Exception ex)
+                {
+                    Debug.WriteLine("Error writing wathc list (" + ex.Message + ")");
+                };
 
 
                 for (int i = 0; i < FillWatchList.Count; i++)
@@ -170,9 +173,19 @@ namespace CoinbaseExchange.NET.Endpoints.Fills
                         while(myActiveOrderBook.isUpdatingOrderList)
                             Debug.WriteLine("waiting for order list update lock release");
 
-                        myActiveOrderBook.isUpdatingOrderList = true; //wait
-                        FillWatchList.RemoveAll(x => x.OrderId == orderStat.Fills.FirstOrDefault().OrderId);
-                        myActiveOrderBook.isUpdatingOrderList = false; //release
+                        try
+                        {
+                            myActiveOrderBook.isUpdatingOrderList = true; //wait
+                            FillWatchList.RemoveAll(x => x.OrderId == orderStat.Fills.FirstOrDefault().OrderId);
+                            myActiveOrderBook.isUpdatingOrderList = false; //release
+                        }
+                        catch (Exception ex)
+                        {
+                            Debug.Write("Error removing item from filled list (" + ex.Message + ")");
+
+                            //throw;
+                        }
+
 
                         orderFilledEvent(orderStat.Fills.FirstOrDefault());
                     }

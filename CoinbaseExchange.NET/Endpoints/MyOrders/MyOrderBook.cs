@@ -338,13 +338,18 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
             }
 
 
-            if (isBusyCancelAndReorder || MyChaseOrderList.Count == 0)
+            if (isBusyCancelAndReorder)
             {
                 return;
             }
 
+            if (MyChaseOrderList.Count == 0)
+            {
+                return;
+            }
 
             //await Task.Factory.StartNew(() => cancelAndReorder());
+            isBusyCancelAndReorder = true;
             await Task.Run(() => CancelAndReorder());
         }
 
@@ -512,7 +517,13 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
             if (side == "buy")
                 return curTmpPrice; // - 1.00m; //m is for decimal
             else
-                return curTmpPrice; // + 1.00m;            
+                return curTmpPrice; // + 1.00m;    
+
+            //if (side == "buy")
+            //    return curTmpPrice - 1.00m; //m is for decimal
+            //else
+            //    return curTmpPrice + 1.00m;  
+
         }
 
 
