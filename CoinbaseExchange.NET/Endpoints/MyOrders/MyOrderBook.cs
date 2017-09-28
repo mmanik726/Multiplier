@@ -325,11 +325,8 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
             //check if the new order price is the same as the last placed order
             if (MyChaseOrderList.Count > 0 )
             {
-                decimal tempPrice = 0;
-                if (MyChaseOrderList.FirstOrDefault().Side == "buy")
-                    tempPrice = currentPrice - 0.01m; //m is for decimal
-                else
-                    tempPrice = currentPrice + 0.01m;
+                decimal tempPrice = getAdjustedCurrentPrice(MyChaseOrderList.FirstOrDefault().Side);
+
 
                 if (MyChaseOrderList.FirstOrDefault().UsdAmount == tempPrice)
                 {
@@ -340,6 +337,7 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
 
             if (isBusyCancelAndReorder)
             {
+                Debug.Write("busy with cancel and reorder"); 
                 return;
             }
 

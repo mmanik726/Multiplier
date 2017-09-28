@@ -33,7 +33,10 @@ namespace Multiplier
         private const string myKey = "b006d82554b495e227b9e7a1251ad745";
         private const string mySecret = "NhAb9pmbZaY9cPb2+eXOGWIILje7iFe/nF+dV9n6FOxazl6Kje2/03GuSiQYTsj3a/smh92m/lrvfu7kYkxQMg==";
 
-        private static decimal CurrentPrice;
+        private static decimal CurrentRealtimePrice;
+
+        private static decimal CurrentBufferedPrice; 
+
         private static decimal CurrentAveragePrice;
         private static decimal MaxBuy;
         private static decimal MaxSell;
@@ -46,8 +49,11 @@ namespace Multiplier
 
         private static bool waitingBuyOrSell; 
 
+        
+
         private static bool startBuyingSelling;
 
+        private static decimal priceBuffer;
 
         private static DateTime LastTickerUpdateTime;
         private static DateTime LastBuySellTime;
@@ -63,7 +69,10 @@ namespace Multiplier
         {
             InitializeComponent();
 
-            CurrentPrice = 0;
+            priceBuffer = 0.01m;
+
+            CurrentRealtimePrice = 0;
+            CurrentBufferedPrice = 0;
             CurrentAveragePrice = 0;
 
             buyOrderFilled = false;
@@ -73,7 +82,7 @@ namespace Multiplier
             waitingBuyFill= false;
             waitingBuyOrSell = false;
 
-            waitTimeAfterCrossInMin = 5.0;
+            waitTimeAfterCrossInMin = 2.0;
 
             MaxBuy = 5;
             MaxSell = 5;
@@ -82,12 +91,14 @@ namespace Multiplier
 
             LastCrossTime = DateTime.UtcNow.ToLocalTime();
 
-            TestMethod();
+            LtcTickerClient = new TickerClient("LTC-USD");
+            LtcTickerClient.PriceUpdated += LtcTickerClient_Update;
+
             myAuth = new CBAuthenticationContainer(myKey, myPassphrase, mySecret);
             myOrderBook = new MyOrderBook(myAuth, "LTC-USD");
             myOrderBook.OrderUpdateEvent += fillUpdateHandler;
 
-            MovingAverage sma = new MovingAverage(ref LtcTickerClient, 3, 60);
+            MovingAverage sma = new MovingAverage(ref LtcTickerClient, 3, 2);
             sma.MovingAverageUpdated += SmaUpdateEventHandler;
 
         }
@@ -108,12 +119,18 @@ namespace Multiplier
             if (filledOrder.side == "buy")
             {
                 buyOrderFilled = true;
+                sellOrderFilled = false;
+
                 waitingBuyFill = false;
+                waitingSellFill = true;
             }
             else if (filledOrder.side == "sell")
             {
                 sellOrderFilled = true;
+                buyOrderFilled = false;
+
                 waitingSellFill = false;
+                waitingBuyFill = true;
             }
 
             waitingBuyOrSell = false;
@@ -127,50 +144,6 @@ namespace Multiplier
             MessageBox.Show(orderUpdate.Message);
         }
 
-        public void TestMethod()
-        {
-
-            LtcTickerClient = new TickerClient("LTC-USD");
-            LtcTickerClient.PriceUpdated += LtcTickerClient_Update;
-
-            //MyOrderBook myOrderBook = new MyOrderBook(myAuth, "LTC-USD");
-
-            //var x = await myOrderBook.GetAllOrders();
-            //var delOrder = x[0].Id;
-
-            //FillsClient fillClient = new FillsClient(myAuth);
-            //fillClient.FillUpdated += fillUpdateHandler;
-
-            //fillClient.addOrderToWatchList("42643496-1f08-442c-84e3-c9ecd7178f07");
-
-
-            //var fillStat = fillClient.GetFillStatus(delOrder);
-
-            //await Task.Delay(5000);
-            //fillClient.addOrderToWatchList(delOrder);
-
-
-            //await Task.Delay(5000);
-            //fillClient.addOrderToWatchList("42643496-1f08-442c-84e3-c9ecd7178888");
-
-            //await Task.Delay(5000);
-            //fillClient.addOrderToWatchList("42643496-1f08-442c-84e3-c9ecd7178f07");
-
-            //await Task.Delay(5000);
-            //fillClient.removeFromOrderWatchList(delOrder);
-
-
-            //var z = await myOrderBook.CancelSingleOrder(delOrder);
-            //var z = await myOrderBook.CancelAllOrders();
-            //await Task.Delay(1000000);
-            //var o = myOrderBook.PlaceNewLimitOrder("buy", "LTC-USD", "1.0", "1.0");
-
-            //MessageBox.Show("Order placed, ID: " + o.Result.Id);
-
-
-
-
-        }
 
         public void LtcTickerClient_Update(object sender, EventArgs args)
         {
@@ -180,23 +153,48 @@ namespace Multiplier
 
             LastTickerUpdateTime = DateTime.UtcNow.ToLocalTime();
 
-            CurrentPrice = tickerData.RealTimePrice;
+            CurrentRealtimePrice = tickerData.RealTimePrice;
+
+            //Debug.WriteLine(CurrentRealtimePrice + "-" + CurrentBufferedPrice);
+
             this.Dispatcher.Invoke(() =>
             {
                 lblCurPrice.Content = tickerData.RealTimePrice.ToString();
                 lblTickUpdate1.Content = LastTickerUpdateTime.ToLongTimeString();
+
+                if (CurrentRealtimePrice - CurrentAveragePrice >= 0)
+                {
+                    lblCurPrice.Foreground = Brushes.Green;
+                }
+                else
+                {
+                    lblCurPrice.Foreground = Brushes.Red;
+                }
             }
             );
 
             if (startBuyingSelling)
             {
+               if ((LastTickerUpdateTime - LastBuySellTime).TotalMilliseconds < 1000)
+                {
+                    //Debug.WriteLine("price skipped: " + CurrentRealtimePrice);
+                    return;
+                }
+
+                CurrentBufferedPrice = CurrentRealtimePrice;
+
+                var secSinceLastCrosss = (DateTime.UtcNow.ToLocalTime() - LastCrossTime).TotalSeconds;
+                if (secSinceLastCrosss < (waitTimeAfterCrossInMin * 60))
+                {
+                    //if the last time prices crossed is < 2 min do nothing
+                    Debug.WriteLine(string.Format("Waiting {0} sec before placing any new order", Math.Round((waitTimeAfterCrossInMin * 60) - secSinceLastCrosss)));
+                    return;
+                }
+
+
                 if (!waitingBuyOrSell)
                 {
-                    if ((LastTickerUpdateTime - LastBuySellTime).TotalMilliseconds < 1000)
-                    {
-                        Debug.WriteLine("price skipped: " + CurrentPrice);
-                        return;
-                    }
+                    LastBuySellTime = DateTime.UtcNow.ToLocalTime();
 
                     buysell();
                 }
@@ -211,34 +209,17 @@ namespace Multiplier
 
         async void buysell()
         {
-            //var x = (LastTickerUpdateTime - LastBuySellTime).TotalMilliseconds;
-            //if (x < 1000)
-            //{
-            //    Debug.WriteLine("price skipped: " + CurrentPrice);
-            //    return;
-            //}
-
-            LastBuySellTime = DateTime.UtcNow.ToLocalTime();
 
 
             if (waitingBuyOrSell)
             {
+                Debug.WriteLine("this should never print");
                 return;
             }
 
+            decimal curPriceDiff = CurrentBufferedPrice - CurrentAveragePrice;
 
-            var secSinceLastCrosss = (DateTime.UtcNow.ToLocalTime() - LastCrossTime).TotalSeconds;
-            if (secSinceLastCrosss < (waitTimeAfterCrossInMin * 60))
-            {
-                //if the last time prices crossed is < 2 min do nothing
-                Debug.WriteLine("Waiting 5.0 min after crossing");
-                return; 
-            }
-
-
-            decimal curPriceDiff = CurrentPrice - CurrentAveragePrice;
-
-            if (curPriceDiff <= 0.03m) //below average: sell
+            if (curPriceDiff <= priceBuffer) //below average: sell
             {
                 if (!sellOrderFilled) //if not already sold
                 {
@@ -255,7 +236,7 @@ namespace Multiplier
 
                         LastCrossTime = DateTime.UtcNow.ToLocalTime();
 
-                        await myOrderBook.PlaceNewLimitOrder("sell", "LTC-USD", "1.0", "100.00", true);
+                        await myOrderBook.PlaceNewLimitOrder("sell", "LTC-USD", "0.01", CurrentBufferedPrice.ToString(), true);
 
                     }
 
@@ -264,7 +245,7 @@ namespace Multiplier
 
             }
 
-            if (curPriceDiff >= 0.03m) //above average: buy
+            if (curPriceDiff >= priceBuffer) //above average: buy
             {
                 if (!buyOrderFilled) //if not already bought
                 {
@@ -282,7 +263,7 @@ namespace Multiplier
 
                         LastCrossTime = DateTime.UtcNow.ToLocalTime();
 
-                        await myOrderBook.PlaceNewLimitOrder("buy", "LTC-USD", "1.0", "10.00", true);
+                        await myOrderBook.PlaceNewLimitOrder("buy", "LTC-USD", "0.01", CurrentBufferedPrice.ToString(), true);
 
                     }
 
@@ -356,7 +337,7 @@ namespace Multiplier
             try
             {
                 //await myOrderBook.PlaceNewLimitOrder("sell", "LTC-USD", "0.01", "80.00", true);
-                await myOrderBook.PlaceNewLimitOrder("buy", "LTC-USD", "0.01", "10.00", true);
+                await myOrderBook.PlaceNewLimitOrder("buy", "LTC-USD", "0.01", CurrentRealtimePrice.ToString(), true);
             }
             catch (Exception ex)
             {
@@ -373,7 +354,7 @@ namespace Multiplier
         {
             try
             {
-                await myOrderBook.PlaceNewLimitOrder("sell", "LTC-USD", "0.01", "100.00", true);
+                await myOrderBook.PlaceNewLimitOrder("sell", "LTC-USD", "0.01", CurrentRealtimePrice.ToString(), true);
                 //await myOrderBook.PlaceNewLimitOrder("buy", "LTC-USD", "0.01", "10.00", true);
             }
             catch (Exception ex)

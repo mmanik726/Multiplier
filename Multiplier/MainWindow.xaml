@@ -8,7 +8,7 @@
         Title="MainWindow" Height="350" Width="525">
     <Grid x:Name="lblTickUpdate" RenderTransformOrigin="0.481,0.279">
         <Label Content="Current Price" HorizontalAlignment="Left" Margin="41,29,0,0" VerticalAlignment="Top" Width="80" Height="35" HorizontalContentAlignment="Center" VerticalContentAlignment="Center"/>
-        <Label x:Name="lblCurPrice" Content="0" HorizontalAlignment="Center" Margin="126,29,95,0" VerticalAlignment="Top" Height="35" Width="299" FontSize="20" HorizontalContentAlignment="Center"/>
+        <Label x:Name="lblCurPrice" Content="0" HorizontalAlignment="Center" Margin="126,29,95,0" VerticalAlignment="Top" Height="35" Width="299" FontSize="20" HorizontalContentAlignment="Center" Foreground="#FFD60D0D"/>
         <Button Content="Buy 0.01 LTC" HorizontalAlignment="Left" Margin="359,258,0,0" VerticalAlignment="Top" Width="151" Click="Button_Click_2"/>
         <Button Content="Sell 0.01 LTC" HorizontalAlignment="Left" Margin="359,292,0,0" VerticalAlignment="Top" Width="151" Click="Button_Click_3"/>
         <Label Content="SMA40" HorizontalAlignment="Left" Margin="52,138,0,0" VerticalAlignment="Top" Height="34" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" RenderTransformOrigin="-0.685,0.412"/>
