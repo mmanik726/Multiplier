@@ -47,9 +47,11 @@ namespace Multiplier
         private static bool waitingSellFill;
         private static bool waitingBuyFill;
 
-        private static bool waitingBuyOrSell; 
+        private static bool waitingBuyOrSell;
 
-        
+        private static Int16 SmaSlices;
+        private static Int16 SmaTimeInterval;
+
 
         private static bool startBuyingSelling;
 
@@ -68,6 +70,10 @@ namespace Multiplier
         public MainWindow()
         {
             InitializeComponent();
+
+
+            SmaTimeInterval = 3;
+            SmaSlices = 40;
 
             priceBuffer = 0.01m;
 
@@ -98,7 +104,7 @@ namespace Multiplier
             myOrderBook = new MyOrderBook(myAuth, "LTC-USD");
             myOrderBook.OrderUpdateEvent += fillUpdateHandler;
 
-            MovingAverage sma = new MovingAverage(ref LtcTickerClient, 3, 2);
+            MovingAverage sma = new MovingAverage(ref LtcTickerClient, SmaTimeInterval, SmaSlices);
             sma.MovingAverageUpdated += SmaUpdateEventHandler;
 
         }
@@ -321,7 +327,8 @@ namespace Multiplier
             this.Dispatcher.Invoke(() => 
                 {
                     lblSma.SetValue(ContentProperty, newSmaPrice);
-                    lblUpdatedTime.Content = DateTime.UtcNow.ToLocalTime();
+                    lblUpdatedTime.Content = DateTime.UtcNow.ToLocalTime().ToLongTimeString();
+                    lblSmaValue.Content = "SMA-" + SmaSlices.ToString();
                 }
             );
             

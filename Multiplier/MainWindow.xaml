@@ -11,7 +11,7 @@
         <Label x:Name="lblCurPrice" Content="0" HorizontalAlignment="Center" Margin="126,29,95,0" VerticalAlignment="Top" Height="35" Width="299" FontSize="20" HorizontalContentAlignment="Center" Foreground="#FFD60D0D"/>
         <Button Content="Buy 0.01 LTC" HorizontalAlignment="Left" Margin="359,258,0,0" VerticalAlignment="Top" Width="151" Click="Button_Click_2"/>
         <Button Content="Sell 0.01 LTC" HorizontalAlignment="Left" Margin="359,292,0,0" VerticalAlignment="Top" Width="151" Click="Button_Click_3"/>
-        <Label Content="SMA40" HorizontalAlignment="Left" Margin="52,138,0,0" VerticalAlignment="Top" Height="34" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" RenderTransformOrigin="-0.685,0.412"/>
+        <Label x:Name="lblSmaValue" Content="SMA-" HorizontalAlignment="Left" Margin="52,138,0,0" VerticalAlignment="Top" Height="34" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" RenderTransformOrigin="-0.685,0.412"/>
         <Label x:Name="lblSma" Content="0" HorizontalAlignment="Left" Margin="105,135,0,0" VerticalAlignment="Top" HorizontalContentAlignment="Center" FontSize="20" Width="331"/>
         <Label x:Name="lblUpdatedTime" Content="(time)" HorizontalAlignment="Left" Margin="359,195,0,0" VerticalAlignment="Top"/>
         <Label x:Name="lblTickUpdate1" Content="(time)" HorizontalAlignment="Left" Margin="359,64,0,0" VerticalAlignment="Top"/>

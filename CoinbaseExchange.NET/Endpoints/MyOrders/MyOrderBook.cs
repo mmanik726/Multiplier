@@ -367,23 +367,34 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
 
                 //cancell ALL the current orders
                 List<string> cancelledOrder = new List<string>();
+
+
+                //////problem code
+                ////var temp = CancelSingleOrder(myCurrentOrder.OrderId);
+                ////temp.Wait();
+                ////cancelledOrder = temp.Result;
+
+
+
+                //var temp = CancelSingleOrder(myCurrentOrder.OrderId).Result;
+                //temp.Wait();
                 try
                 {
-                    var temp = CancelSingleOrder(myCurrentOrder.OrderId);
-                    temp.Wait();
-                    cancelledOrder = temp.Result;
-
-                    if (cancelledOrder.Count() > 0)
-                    {
-                        RemoveFromOrderList(cancelledOrder.FirstOrDefault());
-                    }
-
+                    cancelledOrder = CancelSingleOrder(myCurrentOrder.OrderId).Result;
                 }
                 catch (Exception ex)
                 {
-                    Debug.WriteLine(ex.Message);
+                    Debug.WriteLine(string.Format("error cancelling order {0}, retrying...", myCurrentOrder.OrderId));
+                    continue; //continue and try again to cancel and reorder
                     //throw;
                 }
+
+                if (cancelledOrder.Count() > 0)
+                {
+                    RemoveFromOrderList(cancelledOrder.FirstOrDefault());
+                }
+
+
 
                 Debug.WriteLine(string.Format("\t\tcancel {0} order: {1}", myCurrentOrder.Side, myCurrentOrder.OrderId));
 
@@ -512,15 +523,15 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
                 curTmpPrice = currentPrice;
 
 
-            if (side == "buy")
-                return curTmpPrice; // - 1.00m; //m is for decimal
-            else
-                return curTmpPrice; // + 1.00m;    
-
             //if (side == "buy")
-            //    return curTmpPrice - 1.00m; //m is for decimal
+            //    return curTmpPrice; // - 1.00m; //m is for decimal
             //else
-            //    return curTmpPrice + 1.00m;  
+            //    return curTmpPrice; // + 1.00m;    
+
+            if (side == "buy")
+                return curTmpPrice - 1.00m; //m is for decimal
+            else
+                return curTmpPrice + 1.00m;
 
         }
 
@@ -548,10 +559,12 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
             {
                 if (genericResponse.StatusCode == System.Net.HttpStatusCode.Forbidden)
                 {
+                    Debug.WriteLine("cancel order permissions denied");
                     throw new Exception("PermissionDenied");
                 }
                 else
                 {
+                    Debug.WriteLine("cancel order error: " + genericResponse.ContentBody);
                     throw new Exception("CancelOrderError");
                 }
             }
@@ -584,10 +597,17 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
             {
                 if (genericResponse.StatusCode == System.Net.HttpStatusCode.Forbidden)
                 {
+                    Debug.WriteLine("cancel order permissions denied");
                     throw new Exception("PermissionDenied");
+                }
+                else if (genericResponse.StatusCode == System.Net.HttpStatusCode.NotFound)
+                {
+                    Debug.WriteLine(string.Format("order {0} not found, may have been already filled or cancelled otherwise", orderId));
+                    throw new Exception("OrderNotFound");
                 }
                 else
                 {
+                    Debug.WriteLine(string.Format("Error cancelling order {0}: ", orderId, genericResponse.StatusCode.ToString()));
                     throw new Exception("CancelOrderError");
                 }
             }

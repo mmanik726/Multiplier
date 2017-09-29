@@ -135,7 +135,7 @@ namespace CoinbaseExchange.NET.Endpoints.Fills
                 return;
 
 
-            System.Diagnostics.Debug.WriteLine("Checking fill status...");
+            Debug.WriteLine("Checking fill status...");
 
             if (FillWatchList.Count() > 0)
                 IsBusy_TrackIngOrder = true;
