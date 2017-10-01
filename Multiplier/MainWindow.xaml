@@ -5,18 +5,32 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:Multiplier"
         mc:Ignorable="d"
-        Title="MainWindow" Height="350" Width="525">
+        Title="Mani" Height="538.009" Width="861.571" WindowStartupLocation="CenterScreen">
     <Grid x:Name="lblTickUpdate" RenderTransformOrigin="0.481,0.279">
-        <Label Content="Current Price" HorizontalAlignment="Left" Margin="41,29,0,0" VerticalAlignment="Top" Width="80" Height="35" HorizontalContentAlignment="Center" VerticalContentAlignment="Center"/>
-        <Label x:Name="lblCurPrice" Content="0" HorizontalAlignment="Center" Margin="126,29,95,0" VerticalAlignment="Top" Height="35" Width="299" FontSize="20" HorizontalContentAlignment="Center" Foreground="#FFD60D0D"/>
-        <Button Content="Buy 0.01 LTC" HorizontalAlignment="Left" Margin="359,258,0,0" VerticalAlignment="Top" Width="151" Click="Button_Click_2"/>
-        <Button Content="Sell 0.01 LTC" HorizontalAlignment="Left" Margin="359,292,0,0" VerticalAlignment="Top" Width="151" Click="Button_Click_3"/>
-        <Label x:Name="lblSmaValue" Content="SMA-" HorizontalAlignment="Left" Margin="52,138,0,0" VerticalAlignment="Top" Height="34" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" RenderTransformOrigin="-0.685,0.412"/>
-        <Label x:Name="lblSma" Content="0" HorizontalAlignment="Left" Margin="105,135,0,0" VerticalAlignment="Top" HorizontalContentAlignment="Center" FontSize="20" Width="331"/>
-        <Label x:Name="lblUpdatedTime" Content="(time)" HorizontalAlignment="Left" Margin="359,195,0,0" VerticalAlignment="Top"/>
-        <Label x:Name="lblTickUpdate1" Content="(time)" HorizontalAlignment="Left" Margin="359,64,0,0" VerticalAlignment="Top"/>
-        <Button x:Name="btnStartBySelling" Content="Start by selling" HorizontalAlignment="Left" Margin="10,233,0,0" VerticalAlignment="Top" Width="111" Click="btnStartBySelling_Click"/>
-        <Button x:Name="btnStartByBuying" Content="Start by buying" HorizontalAlignment="Left" Margin="10,263,0,0" VerticalAlignment="Top" Width="111" Click="btnStartByBuying_Click"/>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition/>
+            <ColumnDefinition Width="0*"/>
+        </Grid.ColumnDefinitions>
+        <Label Content="Current Price" HorizontalAlignment="Left" Margin="27,10,0,0" VerticalAlignment="Top" Width="108" Height="35" HorizontalContentAlignment="Center" VerticalContentAlignment="Center"/>
+        <Label x:Name="lblCurPrice" Content="0" HorizontalAlignment="Left" Margin="124,10,0,0" VerticalAlignment="Top" Height="35" Width="150" FontSize="20" Foreground="#FFD60D0D"/>
+        <Label x:Name="lblSmaValue" Content="SMA-" HorizontalAlignment="Left" Margin="339,9,0,0" VerticalAlignment="Top" Height="34" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" RenderTransformOrigin="-0.685,0.412" Width="108"/>
+        <Label x:Name="lblSma" Content="0" HorizontalAlignment="Left" Margin="465,9,0,0" VerticalAlignment="Top" FontSize="20" Width="150" Height="35"/>
+        <Label x:Name="lblUpdatedTime" Content="(time)" HorizontalAlignment="Left" Margin="389,44,0,0" VerticalAlignment="Top" Width="108" HorizontalContentAlignment="Center" Height="26"/>
+        <Label x:Name="lblTickUpdate1" Content="(time)" HorizontalAlignment="Left" Margin="47,45,0,0" VerticalAlignment="Top" Width="108" HorizontalContentAlignment="Center" Height="26"/>
+        <Button x:Name="btnStartBySelling" Content="Start by selling" HorizontalAlignment="Left" Margin="618,391,0,0" VerticalAlignment="Top" Width="111" Click="btnStartBySelling_Click" Height="20"/>
+        <Button x:Name="btnStartByBuying" Content="Start by buying" HorizontalAlignment="Left" Margin="618,421,0,0" VerticalAlignment="Top" Width="111" Click="btnStartByBuying_Click" Height="20"/>
+        <ListView x:Name="lstView" Height="226" Margin="10,91,0,0" VerticalAlignment="Top" HorizontalAlignment="Left" VerticalContentAlignment="Top" Width="836">
+            <ListView.View>
+                <GridView>
+                    <GridViewColumn/>
+                </GridView>
+            </ListView.View>
+        </ListView>
+        <Button x:Name="btnUpdateSmaInterval" Content="Update SMA Interval" HorizontalAlignment="Left" Margin="705,13,0,0" VerticalAlignment="Top" Width="136" Height="23" Click="btnUpdateSmaInterval_Click"/>
+        <TextBox x:Name="txtSmaTimeInterval" HorizontalAlignment="Left" Height="23" Margin="619,13,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="37"/>
+        <TextBox x:Name="txtSmaSlices" HorizontalAlignment="Left" Height="23" Margin="619,40,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="37"/>
+        <Label Content="Min" HorizontalAlignment="Left" Margin="656,14,0,0" VerticalAlignment="Top" Height="26" Width="31"/>
+        <Label Content="Slices" HorizontalAlignment="Left" Margin="656,41,0,0" VerticalAlignment="Top"/>
 
     </Grid>
 </Window>

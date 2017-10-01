@@ -212,9 +212,11 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
     {
 
         public string OrderId { get; set; }
+        public string fillSize { get; set; }
         public string side { get; set; }
         public string filledAtPrice { get; set; }
         public string Message { get; set; }
+        public string fillFee { get; set; }
     }
 
 
@@ -289,7 +291,10 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
                 side = filledOrder.Side,
                 filledAtPrice = filledOrder.Price,
                 Message = string.Format("Order id: {0} has been filled", filledOrder.OrderId),
-                OrderId = filledOrder.OrderId
+                OrderId = filledOrder.OrderId,
+                fillFee = filledOrder.Fee,
+                fillSize = filledOrder.Size
+
             });
 
 
@@ -523,15 +528,15 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
                 curTmpPrice = currentPrice;
 
 
-            //if (side == "buy")
-            //    return curTmpPrice; // - 1.00m; //m is for decimal
-            //else
-            //    return curTmpPrice; // + 1.00m;    
-
             if (side == "buy")
-                return curTmpPrice - 1.00m; //m is for decimal
+                return curTmpPrice; // - 1.00m; //m is for decimal
             else
-                return curTmpPrice + 1.00m;
+                return curTmpPrice; // + 1.00m;    
+
+            //if (side == "buy")
+            //    return curTmpPrice - 1.00m; //m is for decimal
+            //else
+            //    return curTmpPrice + 1.00m;
 
         }
 

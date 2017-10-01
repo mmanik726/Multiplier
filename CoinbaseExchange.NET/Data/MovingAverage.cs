@@ -27,6 +27,8 @@ namespace CoinbaseExchange.NET.Data
 
         public decimal CurrentSMA;
 
+        public static System.Timers.Timer aTimer; 
+
         public MovingAverage(ref TickerClient tickerClient, int timeInterValInMin = 3, int smaSlices = 40)
         {
             //var a = tickerClient.CurrentPrice;
@@ -44,13 +46,29 @@ namespace CoinbaseExchange.NET.Data
 
         async void Init(int updateInterval)
         {
-            MADataPoints = await getMaData();
+            try
+            {
+                MADataPoints = await getMaData();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("error in sma calculation: " + ex.Message);
+                throw new Exception("SMAInitError");
+            }
 
-            System.Timers.Timer aTimer = new System.Timers.Timer();
+            if(aTimer != null) //timer already in place
+            {
+                aTimer.Elapsed -= UpdateSMA;
+                aTimer.Stop();
+                aTimer = null;
+            }
+
+            aTimer = new System.Timers.Timer();
             aTimer.Elapsed += UpdateSMA;
             aTimer.Interval = updateInterval * 60 * 1000;
             aTimer.Enabled = true;
             aTimer.Start();
+            
             NotifyListener(new MAUpdateEventArgs { CurrentMAPrice = CurrentSMA });
         }
 
@@ -60,9 +78,19 @@ namespace CoinbaseExchange.NET.Data
             return z.Result;
         }
 
+        public void updateValues(int timeIntInMin = 3, int newSlices = 40)
+        {
+
+            TIME_INTERVAL = timeIntInMin;
+            SLICES = newSlices;
+
+            Init(timeIntInMin);
+
+        }
+
         private void UpdateSMA(object sender, System.Timers.ElapsedEventArgs e)
         {
-            System.Diagnostics.Debug.WriteLine("Updating SMA");
+            //System.Diagnostics.Debug.WriteLine("Updating SMA");
 
             //const int SLICES = 40;
 

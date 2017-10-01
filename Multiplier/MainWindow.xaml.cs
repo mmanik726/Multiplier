@@ -41,6 +41,8 @@ namespace Multiplier
         private static decimal MaxBuy;
         private static decimal MaxSell;
 
+        private static decimal BuySellAmount;
+
         private static bool buyOrderFilled;
         private static bool sellOrderFilled;
 
@@ -49,8 +51,8 @@ namespace Multiplier
 
         private static bool waitingBuyOrSell;
 
-        private static Int16 SmaSlices;
-        private static Int16 SmaTimeInterval;
+        private static int SmaSlices;
+        private static int SmaTimeInterval;
 
 
         private static bool startBuyingSelling;
@@ -62,7 +64,9 @@ namespace Multiplier
 
         private static DateTime LastCrossTime;
 
-        private static double waitTimeAfterCrossInMin; 
+        private static double waitTimeAfterCrossInMin;
+
+        MovingAverage sma;
 
         CBAuthenticationContainer myAuth;
         MyOrderBook myOrderBook;
@@ -70,12 +74,14 @@ namespace Multiplier
         public MainWindow()
         {
             InitializeComponent();
+            initListView();
 
+            BuySellAmount = 3.0m;//3.0m;
 
             SmaTimeInterval = 3;
             SmaSlices = 40;
 
-            priceBuffer = 0.01m;
+            priceBuffer = 0.04m;
 
             CurrentRealtimePrice = 0;
             CurrentBufferedPrice = 0;
@@ -88,7 +94,7 @@ namespace Multiplier
             waitingBuyFill= false;
             waitingBuyOrSell = false;
 
-            waitTimeAfterCrossInMin = 2.0;
+            waitTimeAfterCrossInMin = SmaTimeInterval; //buy sell every time interval
 
             MaxBuy = 5;
             MaxSell = 5;
@@ -104,9 +110,14 @@ namespace Multiplier
             myOrderBook = new MyOrderBook(myAuth, "LTC-USD");
             myOrderBook.OrderUpdateEvent += fillUpdateHandler;
 
-            MovingAverage sma = new MovingAverage(ref LtcTickerClient, SmaTimeInterval, SmaSlices);
+            sma = new MovingAverage(ref LtcTickerClient, SmaTimeInterval, SmaSlices);
             sma.MovingAverageUpdated += SmaUpdateEventHandler;
 
+
+
+
+            txtSmaSlices.Text = SmaSlices.ToString();
+            txtSmaTimeInterval.Text = SmaTimeInterval.ToString(); 
         }
 
 
@@ -141,6 +152,7 @@ namespace Multiplier
 
             waitingBuyOrSell = false;
 
+            this.Dispatcher.Invoke(() => updateListView(filledOrder));
         }
 
         public void OrderUpdateHandler(object sender, EventArgs args)
@@ -225,7 +237,8 @@ namespace Multiplier
 
             decimal curPriceDiff = CurrentBufferedPrice - CurrentAveragePrice;
 
-            if (curPriceDiff <= priceBuffer) //below average: sell
+            //if (curPriceDiff <= priceBuffer) //below average: sell
+            if (CurrentBufferedPrice <= (CurrentAveragePrice - priceBuffer))
             {
                 if (!sellOrderFilled) //if not already sold
                 {
@@ -241,8 +254,16 @@ namespace Multiplier
                         waitingBuyOrSell = true;
 
                         LastCrossTime = DateTime.UtcNow.ToLocalTime();
-
-                        await myOrderBook.PlaceNewLimitOrder("sell", "LTC-USD", "0.01", CurrentBufferedPrice.ToString(), true);
+                        try
+                        {
+                            await myOrderBook.PlaceNewLimitOrder("sell", "LTC-USD", BuySellAmount.ToString(), CurrentBufferedPrice.ToString(), true);
+                        }
+                        catch (Exception ex)
+                        {
+                            Debug.WriteLine("error selling: " + ex.Message);
+                            //throw;
+                        }
+                        
 
                     }
 
@@ -251,7 +272,9 @@ namespace Multiplier
 
             }
 
-            if (curPriceDiff >= priceBuffer) //above average: buy
+
+            //if (curPriceDiff >= priceBuffer) //above average: buy
+            if (CurrentBufferedPrice >= (CurrentAveragePrice + priceBuffer))
             {
                 if (!buyOrderFilled) //if not already bought
                 {
@@ -269,7 +292,16 @@ namespace Multiplier
 
                         LastCrossTime = DateTime.UtcNow.ToLocalTime();
 
-                        await myOrderBook.PlaceNewLimitOrder("buy", "LTC-USD", "0.01", CurrentBufferedPrice.ToString(), true);
+                        try
+                        {
+                            await myOrderBook.PlaceNewLimitOrder("buy", "LTC-USD", BuySellAmount.ToString(), CurrentBufferedPrice.ToString(), true);
+
+                        }
+                        catch (Exception ex)
+                        {
+                            Debug.WriteLine("Error buying: " + ex.Message);
+                            //throw;
+                        }
 
                     }
 
@@ -328,10 +360,10 @@ namespace Multiplier
                 {
                     lblSma.SetValue(ContentProperty, newSmaPrice);
                     lblUpdatedTime.Content = DateTime.UtcNow.ToLocalTime().ToLongTimeString();
-                    lblSmaValue.Content = "SMA-" + SmaSlices.ToString();
+                    lblSmaValue.Content = "SMA-" + SmaSlices.ToString() + " (" + SmaTimeInterval.ToString() + " min)";
                 }
             );
-            
+            Debug.WriteLine(string.Format("SMA updated: {0} {1}",newSmaPrice, DateTime.UtcNow.ToLocalTime().ToLongTimeString()));
             //lblSma.Content = newSmaPrice.ToString();
             //Debug.WriteLine(DateTime.UtcNow.ToString());
         }
@@ -341,16 +373,16 @@ namespace Multiplier
         {
 
 
-            try
-            {
-                //await myOrderBook.PlaceNewLimitOrder("sell", "LTC-USD", "0.01", "80.00", true);
-                await myOrderBook.PlaceNewLimitOrder("buy", "LTC-USD", "0.01", CurrentRealtimePrice.ToString(), true);
-            }
-            catch (Exception ex)
-            {
+            //try
+            //{
+            //    //await myOrderBook.PlaceNewLimitOrder("sell", "LTC-USD", "0.01", "80.00", true);
+            //    await myOrderBook.PlaceNewLimitOrder("buy", "LTC-USD", "0.01", CurrentRealtimePrice.ToString(), true);
+            //}
+            //catch (Exception ex)
+            //{
 
-                Debug.WriteLine(ex.Message);
-            }
+            //    Debug.WriteLine(ex.Message);
+            //}
 
 
         }
@@ -359,17 +391,242 @@ namespace Multiplier
 
         private async void Button_Click_3(object sender, RoutedEventArgs e)
         {
+            //try
+            //{
+            //    await myOrderBook.PlaceNewLimitOrder("sell", "LTC-USD", "0.01", CurrentRealtimePrice.ToString(), true);
+            //    //await myOrderBook.PlaceNewLimitOrder("buy", "LTC-USD", "0.01", "10.00", true);
+            //}
+            //catch (Exception ex)
+            //{
+
+            //    System.Diagnostics.Debug.WriteLine(ex.Message);
+            //}
+        }
+
+        void initListView()
+        {
+            // Add columns
+            var grdView = new GridView();
+
+            lstView.View = grdView;
+
+            grdView.Columns.Add(new GridViewColumn
+            {
+                Header = "Buy Time",
+                DisplayMemberBinding = new Binding("buyTime")
+            });
+
+            grdView.Columns.Add(new GridViewColumn
+            {
+                Header = "Buy price",
+                DisplayMemberBinding = new Binding("buyPrice")
+            });
+            grdView.Columns.Add(new GridViewColumn
+            {
+                Header = "Buy size",
+                DisplayMemberBinding = new Binding("buySize")
+            });
+            grdView.Columns.Add(new GridViewColumn
+            {
+                Header = "Buy fee",
+                DisplayMemberBinding = new Binding("buyFee")
+            });
+            grdView.Columns.Add(new GridViewColumn
+            {
+                Header = "Sell price",
+                DisplayMemberBinding = new Binding("sellPrice")
+            });
+            grdView.Columns.Add(new GridViewColumn
+            {
+                Header = "Sell size",
+                DisplayMemberBinding = new Binding("sellSize")
+            });
+            grdView.Columns.Add(new GridViewColumn
+            {
+                Header = "Sell fee",
+                DisplayMemberBinding = new Binding("sellFee")
+            });
+            grdView.Columns.Add(new GridViewColumn
+            {
+                Header = "Sell Time",
+                DisplayMemberBinding = new Binding("sellTime")
+            });
+            grdView.Columns.Add(new GridViewColumn
+            {
+                Header = "Total Fee",
+                DisplayMemberBinding = new Binding("feeTotal")
+            });
+
+            grdView.Columns.Add(new GridViewColumn
+            {
+                Header = "Profit/Loss",
+                DisplayMemberBinding = new Binding("pl")
+            });
+        }
+
+        private void updateListView(OrderUpdateEventArgs fillData)
+        {
+
+            if (fillData.side == "buy")
+            {
+                RowItem rowData = new RowItem();
+
+                rowData.buyPrice = fillData.filledAtPrice;
+                rowData.buySize = fillData.fillSize;
+                var dt = DateTime.UtcNow.ToLocalTime();
+                rowData.buyTime = dt.ToShortDateString() + " " + dt.ToLongTimeString();
+                rowData.buyFee = fillData.fillFee;
+
+                lstView.Items.Add(rowData);
+            }
+            else
+            {
+                int lastItem = lstView.Items.Count -1;
+
+                RowItem rowDataItem;
+
+                if (lastItem >= 0) //no item in list 
+                {
+                    rowDataItem = (RowItem)(lstView.Items.GetItemAt(lastItem));
+                }
+                else
+                {
+                    rowDataItem = new RowItem
+                    {
+                        buyPrice = "0",
+                        buyFee = "0",
+                        buySize = "0",
+                        buyTime = ""
+                    };
+                }
+
+                
+
+                rowDataItem.sellPrice = fillData.filledAtPrice;
+                rowDataItem.sellSize = fillData.fillSize;
+                var dt = DateTime.UtcNow.ToLocalTime();
+                rowDataItem.sellTime = dt.ToShortDateString() + " " + dt.ToLongTimeString();
+                rowDataItem.sellFee = fillData.fillFee;
+
+                var feeTotal = (Convert.ToDecimal(rowDataItem.buyFee) + Convert.ToDecimal(rowDataItem.sellFee));
+
+                rowDataItem.feeTotal = feeTotal.ToString();
+
+                var diff = Convert.ToDecimal(rowDataItem.sellPrice) - Convert.ToDecimal(rowDataItem.buyPrice);
+                var profitLoss = (diff * (Convert.ToDecimal(rowDataItem.sellSize))) - feeTotal; 
+
+                rowDataItem.pl = (profitLoss).ToString();
+
+                if (lastItem >= 0)
+                {
+                    lstView.Items.RemoveAt(lastItem);
+                    lstView.Items.Insert(lastItem, rowDataItem);
+                }
+                else
+                {
+                    lstView.Items.Add(rowDataItem);
+                }
+
+
+            }
+
+
+
+            // Populate list
+
+            var gridView = (GridView)lstView.View;
+            gridView.Columns.ToList().ForEach((c) => { c.Width = 0; c.Width = double.NaN; });
+
+        }
+
+        private async void btnUpdateSmaInterval_Click(object sender, RoutedEventArgs e)
+        {
+
+            int timeInt = 3;
+            int slices = 40;
+
             try
             {
-                await myOrderBook.PlaceNewLimitOrder("sell", "LTC-USD", "0.01", CurrentRealtimePrice.ToString(), true);
-                //await myOrderBook.PlaceNewLimitOrder("buy", "LTC-USD", "0.01", "10.00", true);
-            }
-            catch (Exception ex)
-            {
+                timeInt = Convert.ToInt16(txtSmaTimeInterval.Text);
+                slices = Convert.ToInt16(txtSmaSlices.Text);
 
-                System.Diagnostics.Debug.WriteLine(ex.Message);
+                if (timeInt < 1)
+                {
+                    MessageBox.Show("time interval cannot be less than 1 min");
+                    return;
+                }
+
+                if (slices < 1)
+                {
+                    MessageBox.Show("slices cannot be less than 1 min");
+                    return;
+                }
+
+                if (slices * timeInt > 200)
+                {
+                    MessageBox.Show("max amount of data points available is 200 at the moment");
+                    return;
+                }
+
+                SmaSlices = slices;
+                SmaTimeInterval = timeInt;
+
+                bool errorOccured = false;
+
+                try
+                {
+                    sma.updateValues(timeInt, slices) ;
+
+                }
+                catch (Exception)
+                {
+                    errorOccured = true;
+                    MessageBox.Show("Error occured  in sma calculations. Please check the numbers. default values used");
+                    SmaSlices = 40;
+                    SmaTimeInterval = 3;
+
+                    sma.updateValues(3, 40);
+
+                    //throw;
+                }
+
+                if (!errorOccured)
+                {
+                    var updateMsg = string.Format("SMA parameters updated. Time interval: {0}, Slices: {1}", timeInt, slices);
+                    Debug.WriteLine(updateMsg);
+                    MessageBox.Show(updateMsg);
+                }
+
+
             }
+            catch (Exception)
+            {
+                MessageBox.Show("invalid sma values"); 
+
+                //throw;
+            }
+
+
+
         }
+    }
+
+
+
+    class RowItem
+    {
+        public string buyPrice { get; set; }
+        public string buySize { get; set; }
+        public string buyFee { get; set; }
+        public string buyTime { get; set; }
+
+        public string sellPrice { get; set; }
+        public string sellSize { get; set; }
+        public string sellFee { get; set; }
+        public string sellTime { get; set; }
+
+        public string feeTotal { get; set; }
+        public string pl { get; set; }
 
     }
 }
