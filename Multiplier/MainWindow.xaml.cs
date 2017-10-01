@@ -81,7 +81,7 @@ namespace Multiplier
             SmaTimeInterval = 3;
             SmaSlices = 40;
 
-            priceBuffer = 0.04m;
+            priceBuffer = 0.05m;
 
             CurrentRealtimePrice = 0;
             CurrentBufferedPrice = 0;
@@ -117,7 +117,9 @@ namespace Multiplier
 
 
             txtSmaSlices.Text = SmaSlices.ToString();
-            txtSmaTimeInterval.Text = SmaTimeInterval.ToString(); 
+            txtSmaTimeInterval.Text = SmaTimeInterval.ToString();
+
+            lblBuySellBuffer.Content = priceBuffer.ToString();
         }
 
 
@@ -351,8 +353,8 @@ namespace Multiplier
         private void SmaUpdateEventHandler(object sender, EventArgs args)
         {
 
-            var tickerData = (MAUpdateEventArgs)args;
-            decimal newSmaPrice = tickerData.CurrentMAPrice;
+            var currentSmaData = (MAUpdateEventArgs)args;
+            decimal newSmaPrice = currentSmaData.CurrentMAPrice;
 
             CurrentAveragePrice = newSmaPrice; 
 
@@ -361,6 +363,7 @@ namespace Multiplier
                     lblSma.SetValue(ContentProperty, newSmaPrice);
                     lblUpdatedTime.Content = DateTime.UtcNow.ToLocalTime().ToLongTimeString();
                     lblSmaValue.Content = "SMA-" + SmaSlices.ToString() + " (" + SmaTimeInterval.ToString() + " min)";
+                    lblSd.Content = currentSmaData.CurrentSd; 
                 }
             );
             Debug.WriteLine(string.Format("SMA updated: {0} {1}",newSmaPrice, DateTime.UtcNow.ToLocalTime().ToLongTimeString()));
@@ -568,25 +571,26 @@ namespace Multiplier
                     return;
                 }
 
-                SmaSlices = slices;
-                SmaTimeInterval = timeInt;
+
 
                 bool errorOccured = false;
 
                 try
                 {
                     sma.updateValues(timeInt, slices) ;
-
+                    SmaSlices = slices;
+                    SmaTimeInterval = timeInt;
+                    waitTimeAfterCrossInMin = SmaTimeInterval;
                 }
                 catch (Exception)
                 {
                     errorOccured = true;
                     MessageBox.Show("Error occured  in sma calculations. Please check the numbers. default values used");
-                    SmaSlices = 40;
-                    SmaTimeInterval = 3;
 
                     sma.updateValues(3, 40);
-
+                    SmaSlices = 40;
+                    SmaTimeInterval = 3;
+                    waitTimeAfterCrossInMin = SmaTimeInterval;
                     //throw;
                 }
 
@@ -608,6 +612,39 @@ namespace Multiplier
 
 
 
+        }
+
+        private void Button_Click(object sender, RoutedEventArgs e)
+        {
+            decimal buySellBuffer = 0.03m; //default 
+
+            try
+            {
+                buySellBuffer = Convert.ToDecimal(txtPriceBuffer.Text);
+
+                if (buySellBuffer < 0)
+                {
+                    MessageBox.Show("price buffer cannot be less than 0");
+                    return;
+                }
+
+                updateBuySellBuffer(buySellBuffer);
+                var msg = "price buffer updated to " + 
+                    buySellBuffer.ToString() + " at " 
+                    + DateTime.UtcNow.ToLocalTime().ToShortDateString() + DateTime.UtcNow.ToLocalTime().ToLongTimeString();
+                MessageBox.Show(msg);
+                Debug.WriteLine(msg);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("invalid decimal value for price buffer");
+            }
+        }
+
+        public void updateBuySellBuffer(decimal newPriceBuffer)
+        {
+            priceBuffer = newPriceBuffer;
+            lblBuySellBuffer.Content = priceBuffer.ToString();
         }
     }
 

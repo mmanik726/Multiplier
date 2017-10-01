@@ -11,6 +11,7 @@ namespace CoinbaseExchange.NET.Data
     public class MAUpdateEventArgs : EventArgs
     {
         public decimal CurrentMAPrice { get; set; }
+        public decimal CurrentSd { get; set; }
     }
 
 
@@ -25,7 +26,8 @@ namespace CoinbaseExchange.NET.Data
 
         public EventHandler<MAUpdateEventArgs> MovingAverageUpdated;
 
-        public decimal CurrentSMA;
+        public decimal CurrentSMAPrice;
+        public decimal currentSandardDeviation ;
 
         public static System.Timers.Timer aTimer; 
 
@@ -69,7 +71,7 @@ namespace CoinbaseExchange.NET.Data
             aTimer.Enabled = true;
             aTimer.Start();
             
-            NotifyListener(new MAUpdateEventArgs { CurrentMAPrice = CurrentSMA });
+            NotifyListener(new MAUpdateEventArgs { CurrentMAPrice = CurrentSMAPrice, CurrentSd = currentSandardDeviation });
         }
 
         async Task<List<CandleData>> getMaData()
@@ -98,16 +100,26 @@ namespace CoinbaseExchange.NET.Data
             MADataPoints.Add(new CandleData { Close = TickerPriceClient.CurrentPrice, Time = DateTime.UtcNow.ToLocalTime()});
 
             var itemsInSlice = MADataPoints.Take(SLICES);
-            //itemsInSlice.ToList().ForEach((t) => Debug.WriteLine(t.Time + "\t" + t.Close));
+            itemsInSlice.ToList().ForEach((t) => System.Diagnostics.Debug.WriteLine(t.Time + "\t" + t.Close));
             var itemsInSLiceAvg = itemsInSlice.Average((d) => d.Close);
 
             //MADataPoints.ForEach((t) => System.Diagnostics.Debug.WriteLine(t.Time + "\t" + t.Close));
 
-            CurrentSMA = itemsInSLiceAvg;
+            CurrentSMAPrice = itemsInSLiceAvg;
+
+
+            //itemsInSlice.ToList().ForEach((d) => { Math.Pow((Convert.ToDouble(d.Close) - Convert.ToDouble(itemsInSLiceAvg)), 2); });
+
+            List<double> itemsInSliceDbl = itemsInSlice.Select(candle => (double)candle.Close).ToList();
+            var sdDouble = CalculateStdDev(itemsInSliceDbl);
 
             //updateOccured(CurrentSMA, NotifyListener);
 
-            NotifyListener(new MAUpdateEventArgs { CurrentMAPrice = CurrentSMA });
+            NotifyListener(new MAUpdateEventArgs
+            {
+                CurrentMAPrice = CurrentSMAPrice,
+                CurrentSd = Convert.ToDecimal(sdDouble)
+            });
 
         }
 
@@ -116,6 +128,20 @@ namespace CoinbaseExchange.NET.Data
         //    var arg = new MAUpdateEventArgs { CurrentMAPrice = price }; 
         //    runMethod(arg);
         //}
+        private double CalculateStdDev(IEnumerable<double> values)
+        {
+            double ret = 0;
+            if (values.Count() > 0)
+            {
+                //Compute the Average      
+                double avg = values.Average();
+                //Perform the Sum of (value-avg)_2_2      
+                double sum = values.Sum(d => Math.Pow(d - avg, 2));
+                //Put it all together      
+                ret = Math.Sqrt((sum) / (values.Count() - 1));
+            }
+            return ret;
+        }
 
         private void NotifyListener(MAUpdateEventArgs args)
         {
@@ -162,13 +188,17 @@ namespace CoinbaseExchange.NET.Data
 
             //sma.ForEach((l) => Debug.WriteLine(l.Time + "\t" + l.Close));
 
-            CurrentSMA = sma.First().Close;
+            CurrentSMAPrice = sma.First().Close;
+
 
             //List<CandleData> priceDataPoints = new List<CandleData>();
 
-            var lst = requiredIntervalData.Take(SLICES).OrderBy((c)=>c.Time).ToList(); 
+            var lst = requiredIntervalData.Take(SLICES).OrderBy((c)=>c.Time).ToList();
 
-            //priceDataPoints.AddRange(lst);
+            List<double> itemsInSliceDbl = lst.Select(candle => (double)candle.Close).ToList();
+            var sdDouble = CalculateStdDev(itemsInSliceDbl);
+
+            currentSandardDeviation = Convert.ToDecimal(sdDouble);
 
             //return sma;
             return lst; 
