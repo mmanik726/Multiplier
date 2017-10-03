@@ -33,75 +33,77 @@ namespace Multiplier
         private const string myKey = "b006d82554b495e227b9e7a1251ad745";
         private const string mySecret = "NhAb9pmbZaY9cPb2+eXOGWIILje7iFe/nF+dV9n6FOxazl6Kje2/03GuSiQYTsj3a/smh92m/lrvfu7kYkxQMg==";
 
-        private static decimal CurrentRealtimePrice;
+        private static decimal sharedCurrentRealtimePrice;
 
-        private static decimal CurrentBufferedPrice; 
+        private static decimal sharedCurrentBufferedPrice; 
 
-        private static decimal CurrentAveragePrice;
-        private static decimal MaxBuy;
-        private static decimal MaxSell;
+        private static decimal sharedCurrentAveragePrice;
+        private static decimal sharedMaxBuy;
+        private static decimal sharedMaxSell;
 
-        private static decimal BuySellAmount;
+        private static decimal sharedBuySellAmount;
 
-        private static bool buyOrderFilled;
-        private static bool sellOrderFilled;
+        private static bool sharedBuyOrderFilled;
+        private static bool sharedSellOrderFilled;
 
-        private static bool waitingSellFill;
-        private static bool waitingBuyFill;
+        private static bool sharedWaitingSellFill;
+        private static bool sharedWaitingBuyFill;
 
-        private static bool waitingBuyOrSell;
+        private static bool sharedWaitingBuyOrSell;
 
-        private static int SmaSlices;
-        private static int SmaTimeInterval;
+        private static int sharedSmaSlices;
+        private static int sharedSmaTimeInterval;
 
 
-        private static bool startBuyingSelling;
+        private static bool sharedStartBuyingSelling;
 
-        private static decimal priceBuffer;
+        private static decimal sharedPriceBuffer;
 
-        private static DateTime LastTickerUpdateTime;
-        private static DateTime LastBuySellTime;
+        private static DateTime sharedLastTickerUpdateTime;
+        private static DateTime sharedLastBuySellTime;
 
-        private static DateTime LastCrossTime;
+        private static DateTime sharedLastCrossTime;
 
-        private static double waitTimeAfterCrossInMin;
+        private static double sharedWaitTimeAfterCrossInMin;
 
-        MovingAverage sma;
+        MovingAverage sharedSma;
 
         CBAuthenticationContainer myAuth;
         MyOrderBook myOrderBook;
         TickerClient LtcTickerClient;
+
+
         public MainWindow()
         {
             InitializeComponent();
             initListView();
 
-            BuySellAmount = 3.0m;//3.0m;
+            sharedBuySellAmount = 0.1m;//3.0m;
 
-            SmaTimeInterval = 3;
-            SmaSlices = 40;
+            sharedSmaTimeInterval = 3;
+            sharedSmaSlices = 40;
 
-            priceBuffer = 0.05m;
+            sharedPriceBuffer = 0.05m;
 
-            CurrentRealtimePrice = 0;
-            CurrentBufferedPrice = 0;
-            CurrentAveragePrice = 0;
+            sharedCurrentRealtimePrice = 0;
+            sharedCurrentBufferedPrice = 0;
+            sharedCurrentAveragePrice = 0;
 
-            buyOrderFilled = false;
-            sellOrderFilled = false;
+            sharedBuyOrderFilled = false;
+            sharedSellOrderFilled = false;
 
-            waitingSellFill = false;
-            waitingBuyFill= false;
-            waitingBuyOrSell = false;
+            sharedWaitingSellFill = false;
+            sharedWaitingBuyFill= false;
+            sharedWaitingBuyOrSell = false;
 
-            waitTimeAfterCrossInMin = SmaTimeInterval; //buy sell every time interval
+            sharedWaitTimeAfterCrossInMin = sharedSmaTimeInterval; //buy sell every time interval
 
-            MaxBuy = 5;
-            MaxSell = 5;
+            sharedMaxBuy = 5;
+            sharedMaxSell = 5;
 
-            startBuyingSelling = false;
+            sharedStartBuyingSelling = false;
 
-            LastCrossTime = DateTime.UtcNow.ToLocalTime();
+            sharedLastCrossTime = DateTime.UtcNow.ToLocalTime();
 
             LtcTickerClient = new TickerClient("LTC-USD");
             LtcTickerClient.PriceUpdated += LtcTickerClient_Update;
@@ -110,16 +112,16 @@ namespace Multiplier
             myOrderBook = new MyOrderBook(myAuth, "LTC-USD");
             myOrderBook.OrderUpdateEvent += fillUpdateHandler;
 
-            sma = new MovingAverage(ref LtcTickerClient, SmaTimeInterval, SmaSlices);
-            sma.MovingAverageUpdated += SmaUpdateEventHandler;
+            sharedSma = new MovingAverage(ref LtcTickerClient, sharedSmaTimeInterval, sharedSmaSlices);
+            sharedSma.MovingAverageUpdated += SmaUpdateEventHandler;
 
 
 
 
-            txtSmaSlices.Text = SmaSlices.ToString();
-            txtSmaTimeInterval.Text = SmaTimeInterval.ToString();
+            txtSmaSlices.Text = sharedSmaSlices.ToString();
+            txtSmaTimeInterval.Text = sharedSmaTimeInterval.ToString();
 
-            lblBuySellBuffer.Content = priceBuffer.ToString();
+            lblBuySellBuffer.Content = sharedPriceBuffer.ToString();
         }
 
 
@@ -137,22 +139,22 @@ namespace Multiplier
 
             if (filledOrder.side == "buy")
             {
-                buyOrderFilled = true;
-                sellOrderFilled = false;
+                sharedBuyOrderFilled = true;
+                sharedSellOrderFilled = false;
 
-                waitingBuyFill = false;
-                waitingSellFill = true;
+                sharedWaitingBuyFill = false;
+                sharedWaitingSellFill = true;
             }
             else if (filledOrder.side == "sell")
             {
-                sellOrderFilled = true;
-                buyOrderFilled = false;
+                sharedSellOrderFilled = true;
+                sharedBuyOrderFilled = false;
 
-                waitingSellFill = false;
-                waitingBuyFill = true;
+                sharedWaitingSellFill = false;
+                sharedWaitingBuyFill = true;
             }
 
-            waitingBuyOrSell = false;
+            sharedWaitingBuyOrSell = false;
 
             this.Dispatcher.Invoke(() => updateListView(filledOrder));
         }
@@ -171,18 +173,18 @@ namespace Multiplier
             //var z = a.Sells.FirstOrDefault();
             //Console.WriteLine("Update: price {0}", tickerData.CurrentPrice);
 
-            LastTickerUpdateTime = DateTime.UtcNow.ToLocalTime();
+            sharedLastTickerUpdateTime = DateTime.UtcNow.ToLocalTime();
 
-            CurrentRealtimePrice = tickerData.RealTimePrice;
+            sharedCurrentRealtimePrice = tickerData.RealTimePrice;
 
             //Debug.WriteLine(CurrentRealtimePrice + "-" + CurrentBufferedPrice);
 
             this.Dispatcher.Invoke(() =>
             {
                 lblCurPrice.Content = tickerData.RealTimePrice.ToString();
-                lblTickUpdate1.Content = LastTickerUpdateTime.ToLongTimeString();
+                lblTickUpdate1.Content = sharedLastTickerUpdateTime.ToLongTimeString();
 
-                if (CurrentRealtimePrice - CurrentAveragePrice >= 0)
+                if (sharedCurrentRealtimePrice - sharedCurrentAveragePrice >= 0)
                 {
                     lblCurPrice.Foreground = Brushes.Green;
                 }
@@ -193,28 +195,28 @@ namespace Multiplier
             }
             );
 
-            if (startBuyingSelling)
+            if (sharedStartBuyingSelling)
             {
-               if ((LastTickerUpdateTime - LastBuySellTime).TotalMilliseconds < 1000)
+               if ((sharedLastTickerUpdateTime - sharedLastBuySellTime).TotalMilliseconds < 1000)
                 {
                     //Debug.WriteLine("price skipped: " + CurrentRealtimePrice);
                     return;
                 }
 
-                CurrentBufferedPrice = CurrentRealtimePrice;
+                sharedCurrentBufferedPrice = sharedCurrentRealtimePrice;
 
-                var secSinceLastCrosss = (DateTime.UtcNow.ToLocalTime() - LastCrossTime).TotalSeconds;
-                if (secSinceLastCrosss < (waitTimeAfterCrossInMin * 60))
+                var secSinceLastCrosss = (DateTime.UtcNow.ToLocalTime() - sharedLastCrossTime).TotalSeconds;
+                if (secSinceLastCrosss < (sharedWaitTimeAfterCrossInMin * 60))
                 {
                     //if the last time prices crossed is < 2 min do nothing
-                    Debug.WriteLine(string.Format("Waiting {0} sec before placing any new order", Math.Round((waitTimeAfterCrossInMin * 60) - secSinceLastCrosss)));
+                    Debug.WriteLine(string.Format("Waiting {0} sec before placing any new order", Math.Round((sharedWaitTimeAfterCrossInMin * 60) - secSinceLastCrosss)));
                     return;
                 }
 
 
-                if (!waitingBuyOrSell)
+                if (!sharedWaitingBuyOrSell)
                 {
-                    LastBuySellTime = DateTime.UtcNow.ToLocalTime();
+                    sharedLastBuySellTime = DateTime.UtcNow.ToLocalTime();
 
                     buysell();
                 }
@@ -231,34 +233,34 @@ namespace Multiplier
         {
 
 
-            if (waitingBuyOrSell)
+            if (sharedWaitingBuyOrSell)
             {
                 Debug.WriteLine("this should never print");
                 return;
             }
 
-            decimal curPriceDiff = CurrentBufferedPrice - CurrentAveragePrice;
+            decimal curPriceDiff = sharedCurrentBufferedPrice - sharedCurrentAveragePrice;
 
             //if (curPriceDiff <= priceBuffer) //below average: sell
-            if (CurrentBufferedPrice <= (CurrentAveragePrice - priceBuffer))
+            if (sharedCurrentBufferedPrice <= (sharedCurrentAveragePrice - sharedPriceBuffer))
             {
-                if (!sellOrderFilled) //if not already sold
+                if (!sharedSellOrderFilled) //if not already sold
                 {
-                    sellOrderFilled = true;
-                    buyOrderFilled = false;
+                    sharedSellOrderFilled = true;
+                    sharedBuyOrderFilled = false;
 
-                    if (MaxSell > 0)
+                    if (sharedMaxSell > 0)
                     {
-                        MaxSell = 0;
-                        MaxBuy = 5;
+                        sharedMaxSell = 0;
+                        sharedMaxBuy = 5;
 
-                        waitingSellFill = true;
-                        waitingBuyOrSell = true;
+                        sharedWaitingSellFill = true;
+                        sharedWaitingBuyOrSell = true;
 
-                        LastCrossTime = DateTime.UtcNow.ToLocalTime();
+                        sharedLastCrossTime = DateTime.UtcNow.ToLocalTime();
                         try
                         {
-                            await myOrderBook.PlaceNewLimitOrder("sell", "LTC-USD", BuySellAmount.ToString(), CurrentBufferedPrice.ToString(), true);
+                            await myOrderBook.PlaceNewLimitOrder("sell", "LTC-USD", sharedBuySellAmount.ToString(), sharedCurrentBufferedPrice.ToString(), true);
                         }
                         catch (Exception ex)
                         {
@@ -276,27 +278,27 @@ namespace Multiplier
 
 
             //if (curPriceDiff >= priceBuffer) //above average: buy
-            if (CurrentBufferedPrice >= (CurrentAveragePrice + priceBuffer))
+            if (sharedCurrentBufferedPrice >= (sharedCurrentAveragePrice + sharedPriceBuffer))
             {
-                if (!buyOrderFilled) //if not already bought
+                if (!sharedBuyOrderFilled) //if not already bought
                 {
 
-                    sellOrderFilled = false;
-                    buyOrderFilled = true;
+                    sharedSellOrderFilled = false;
+                    sharedBuyOrderFilled = true;
 
-                    if (MaxBuy > 0)
+                    if (sharedMaxBuy > 0)
                     {
-                        MaxSell = 5;
-                        MaxBuy = 0;
+                        sharedMaxSell = 5;
+                        sharedMaxBuy = 0;
 
-                        waitingBuyFill = true;
-                        waitingBuyOrSell = true;
+                        sharedWaitingBuyFill = true;
+                        sharedWaitingBuyOrSell = true;
 
-                        LastCrossTime = DateTime.UtcNow.ToLocalTime();
+                        sharedLastCrossTime = DateTime.UtcNow.ToLocalTime();
 
                         try
                         {
-                            await myOrderBook.PlaceNewLimitOrder("buy", "LTC-USD", BuySellAmount.ToString(), CurrentBufferedPrice.ToString(), true);
+                            await myOrderBook.PlaceNewLimitOrder("buy", "LTC-USD", sharedBuySellAmount.ToString(), sharedCurrentBufferedPrice.ToString(), true);
 
                         }
                         catch (Exception ex)
@@ -317,37 +319,37 @@ namespace Multiplier
 
         private void btnStartBySelling_Click(object sender, RoutedEventArgs e)
         {
-            LastBuySellTime = DateTime.UtcNow.ToLocalTime();
-            LastCrossTime = DateTime.UtcNow.ToLocalTime().AddSeconds(-1 * waitTimeAfterCrossInMin * 60);
+            sharedLastBuySellTime = DateTime.UtcNow.ToLocalTime();
+            sharedLastCrossTime = DateTime.UtcNow.ToLocalTime().AddSeconds(-1 * sharedWaitTimeAfterCrossInMin * 60);
 
             btnStartByBuying.IsEnabled = false;
             btnStartBySelling.IsEnabled = false;
 
-            buyOrderFilled = true;
-            sellOrderFilled = false;
+            sharedBuyOrderFilled = true;
+            sharedSellOrderFilled = false;
 
-            MaxBuy = 0;
-            MaxSell = 5;
+            sharedMaxBuy = 0;
+            sharedMaxSell = 5;
 
-            startBuyingSelling = true;
+            sharedStartBuyingSelling = true;
         }
 
 
         private void btnStartByBuying_Click(object sender, RoutedEventArgs e)
         {
-            LastBuySellTime = DateTime.UtcNow.ToLocalTime();
-            LastCrossTime = DateTime.UtcNow.ToLocalTime().AddSeconds(-1 * waitTimeAfterCrossInMin * 60);
+            sharedLastBuySellTime = DateTime.UtcNow.ToLocalTime();
+            sharedLastCrossTime = DateTime.UtcNow.ToLocalTime().AddSeconds(-1 * sharedWaitTimeAfterCrossInMin * 60);
 
             btnStartByBuying.IsEnabled = false;
             btnStartBySelling.IsEnabled = false;
 
-            buyOrderFilled = false;
-            sellOrderFilled = true;
+            sharedBuyOrderFilled = false;
+            sharedSellOrderFilled = true;
 
-            MaxBuy = 5;
-            MaxSell = 0;
+            sharedMaxBuy = 5;
+            sharedMaxSell = 0;
 
-            startBuyingSelling = true;
+            sharedStartBuyingSelling = true;
         }
 
         private void SmaUpdateEventHandler(object sender, EventArgs args)
@@ -356,14 +358,20 @@ namespace Multiplier
             var currentSmaData = (MAUpdateEventArgs)args;
             decimal newSmaPrice = currentSmaData.CurrentMAPrice;
 
-            CurrentAveragePrice = newSmaPrice; 
+            sharedCurrentAveragePrice = newSmaPrice;
+
+            //update the buy / sell buffer 
+            var x = this.Dispatcher.Invoke(()=> chkUseSd.IsChecked);
+            if (x == true)
+                updateBuySellBuffer(currentSmaData.CurrentSd);
 
             this.Dispatcher.Invoke(() => 
                 {
                     lblSma.SetValue(ContentProperty, newSmaPrice);
                     lblUpdatedTime.Content = DateTime.UtcNow.ToLocalTime().ToLongTimeString();
-                    lblSmaValue.Content = "SMA-" + SmaSlices.ToString() + " (" + SmaTimeInterval.ToString() + " min)";
-                    lblSd.Content = currentSmaData.CurrentSd; 
+                    lblSmaValue.Content = "SMA-" + sharedSmaSlices.ToString() + " (" + sharedSmaTimeInterval.ToString() + " min)";
+                    lblSd.Content = currentSmaData.CurrentSd;
+                    //txtPriceBuffer.Text = currentSmaData.CurrentSd.ToString();
                 }
             );
             Debug.WriteLine(string.Format("SMA updated: {0} {1}",newSmaPrice, DateTime.UtcNow.ToLocalTime().ToLongTimeString()));
@@ -567,8 +575,9 @@ namespace Multiplier
 
                 if (slices * timeInt > 200)
                 {
-                    MessageBox.Show("max amount of data points available is 200 at the moment");
-                    return;
+                    Debug.WriteLine("Additional data needs to be downloaded if not already downloaded");
+                    //MessageBox.Show("max amount of data points available is 200 at the moment");
+                    //return;
                 }
 
 
@@ -577,20 +586,20 @@ namespace Multiplier
 
                 try
                 {
-                    sma.updateValues(timeInt, slices) ;
-                    SmaSlices = slices;
-                    SmaTimeInterval = timeInt;
-                    waitTimeAfterCrossInMin = SmaTimeInterval;
+                    sharedSma.updateValues(timeInt, slices) ;
+                    sharedSmaSlices = slices;
+                    sharedSmaTimeInterval = timeInt;
+                    sharedWaitTimeAfterCrossInMin = sharedSmaTimeInterval;
                 }
                 catch (Exception)
                 {
                     errorOccured = true;
                     MessageBox.Show("Error occured  in sma calculations. Please check the numbers. default values used");
 
-                    sma.updateValues(3, 40);
-                    SmaSlices = 40;
-                    SmaTimeInterval = 3;
-                    waitTimeAfterCrossInMin = SmaTimeInterval;
+                    sharedSma.updateValues(3, 40);
+                    sharedSmaSlices = 40;
+                    sharedSmaTimeInterval = 3;
+                    sharedWaitTimeAfterCrossInMin = sharedSmaTimeInterval;
                     //throw;
                 }
 
@@ -643,8 +652,25 @@ namespace Multiplier
 
         public void updateBuySellBuffer(decimal newPriceBuffer)
         {
-            priceBuffer = newPriceBuffer;
-            lblBuySellBuffer.Content = priceBuffer.ToString();
+
+
+
+            decimal tempValue = 0;
+            bool x;
+            x = Dispatcher.Invoke(() => chkUseInverse.IsChecked.Value);
+
+            if (x == null)
+                x = false;
+
+            if (x == true)
+                tempValue = 1 / (newPriceBuffer * (10*100));
+            else
+                tempValue = newPriceBuffer;
+
+            sharedPriceBuffer = Math.Round( tempValue,3);
+            Dispatcher.Invoke(() => lblBuySellBuffer.Content = sharedPriceBuffer.ToString());
+            //lblBuySellBuffer.Content = sharedPriceBuffer.ToString();
+
         }
     }
 

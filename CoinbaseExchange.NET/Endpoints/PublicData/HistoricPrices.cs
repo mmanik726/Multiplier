@@ -95,6 +95,7 @@ namespace CoinbaseExchange.NET.Endpoints.PublicData
             }
             else
             {
+                
                 throw new Exception("ExchangeRequestError");
             }
 

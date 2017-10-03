@@ -20,6 +20,12 @@ namespace CoinbaseExchange.NET.Data
         private int SLICES;
         private int TIME_INTERVAL;
 
+        private static bool isBusyUpdatingMA;
+        private DateTime firstDataPointDateTime;
+        private DateTime lastDataPointDateTime;
+
+        private List<CandleData> sharedRawExchangeData; 
+
         public TickerClient TickerPriceClient { get; set; }
 
         private List<CandleData> MADataPoints;
@@ -35,6 +41,10 @@ namespace CoinbaseExchange.NET.Data
         {
             //var a = tickerClient.CurrentPrice;
 
+            isBusyUpdatingMA = false;
+
+            sharedRawExchangeData = new List<CandleData>();
+
             TIME_INTERVAL = timeInterValInMin;
 
             SLICES = smaSlices;
@@ -48,6 +58,7 @@ namespace CoinbaseExchange.NET.Data
 
         async void Init(int updateInterval)
         {
+
             try
             {
                 MADataPoints = await getMaData();
@@ -71,7 +82,10 @@ namespace CoinbaseExchange.NET.Data
             aTimer.Enabled = true;
             aTimer.Start();
             
-            NotifyListener(new MAUpdateEventArgs { CurrentMAPrice = CurrentSMAPrice, CurrentSd = currentSandardDeviation });
+            NotifyListener(new MAUpdateEventArgs { CurrentMAPrice = CurrentSMAPrice, CurrentSd = Math.Round(currentSandardDeviation,3)});
+
+            
+
         }
 
         async Task<List<CandleData>> getMaData()
@@ -80,8 +94,14 @@ namespace CoinbaseExchange.NET.Data
             return z.Result;
         }
 
-        public void updateValues(int timeIntInMin = 3, int newSlices = 40)
+        public async void updateValues(int timeIntInMin = 3, int newSlices = 40)
         {
+
+
+            if ((timeIntInMin * newSlices > 200) && sharedRawExchangeData.Count() < 500)
+            {
+                await DownloadAdditionalData();
+            }
 
             TIME_INTERVAL = timeIntInMin;
             SLICES = newSlices;
@@ -95,6 +115,8 @@ namespace CoinbaseExchange.NET.Data
             //System.Diagnostics.Debug.WriteLine("Updating SMA");
 
             //const int SLICES = 40;
+
+            isBusyUpdatingMA = true;
 
             MADataPoints.RemoveAt(0);
             MADataPoints.Add(new CandleData { Close = TickerPriceClient.CurrentPrice, Time = DateTime.UtcNow.ToLocalTime()});
@@ -113,12 +135,14 @@ namespace CoinbaseExchange.NET.Data
             List<double> itemsInSliceDbl = itemsInSlice.Select(candle => (double)candle.Close).ToList();
             var sdDouble = CalculateStdDev(itemsInSliceDbl);
 
+            isBusyUpdatingMA = false;
+
             //updateOccured(CurrentSMA, NotifyListener);
 
             NotifyListener(new MAUpdateEventArgs
             {
                 CurrentMAPrice = CurrentSMAPrice,
-                CurrentSd = Convert.ToDecimal(sdDouble)
+                CurrentSd = Math.Round(Convert.ToDecimal(sdDouble), 3)
             });
 
         }
@@ -143,6 +167,52 @@ namespace CoinbaseExchange.NET.Data
             return ret;
         }
 
+        public async Task<bool> DownloadAdditionalData()
+        {
+
+            while (isBusyUpdatingMA)
+                Console.WriteLine("Waiting for sma update to finish before dowanloading additional data...");
+
+            System.Diagnostics.Debug.WriteLine("Additional data is being downloaded " + DateTime.UtcNow.ToString());
+
+            int days = 5; //36 hours data in 1 min interval in total
+
+            HistoricPrices historicData = new HistoricPrices();
+
+            var startDt = firstDataPointDateTime.AddMinutes(-1).AddHours(-6);
+            var endDt = firstDataPointDateTime.AddMinutes(-1);
+
+            List<CandleData> extraData = new List<CandleData>();
+
+            for (int i = 0; i < days; i++)
+            {
+                //var x = Task.Delay(200);
+
+                System.Threading.Thread.Sleep(200);
+                var temp = await historicData.GetPrices(
+                    product: "LTC-USD",
+                    granularity: "60",
+                    startTime: startDt.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ"),
+                    endTime: endDt.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ"));
+
+                startDt = temp.Last().Time.AddMinutes(-1).AddHours(-6);
+                endDt = temp.Last().Time.AddMinutes(-1);
+
+                extraData.AddRange(temp);
+            }
+
+            sharedRawExchangeData.AddRange(extraData);
+
+
+            //sharedRawExchangeData.ForEach((d) => System.Diagnostics.Debug.WriteLine(d.Time + "\t" + d.Close));
+
+            //sharedRawExchangeData = sharedRawExchangeData.OrderByDescending((d)=>d.Time).ToList();
+
+            System.Diagnostics.Debug.WriteLine("done downloading additional data "+ DateTime.UtcNow.ToLocalTime());
+
+            return true;
+        }
+
         private void NotifyListener(MAUpdateEventArgs args)
         {
             if (MovingAverageUpdated != null)
@@ -155,10 +225,21 @@ namespace CoinbaseExchange.NET.Data
             //const int TIME_INTERVAL = 3;
             //const int SLICES = 40;
 
-            HistoricPrices historicData = new HistoricPrices();
-            var exchangeData = await historicData.GetPrices(product: "LTC-USD", granularity: "60");
 
-            var intervalData = exchangeData.Where((candleData, i) => i % TIME_INTERVAL == 0).ToList();// select every third item in list ie select data from every 3 min 
+            if (sharedRawExchangeData.Count() == 0) //download initial data if there is no data already
+            {
+                HistoricPrices historicData = new HistoricPrices();
+                var temp = await historicData.GetPrices(product: "LTC-USD", granularity: "60");
+                sharedRawExchangeData = temp.ToList();
+            }
+
+
+            lastDataPointDateTime = sharedRawExchangeData.First().Time;
+            firstDataPointDateTime = sharedRawExchangeData.Last().Time;
+
+            //exchangeData.ToList().ForEach((a) => System.Diagnostics.Debug.WriteLine(a.Time + "\t" + a.Close));
+
+            var intervalData = sharedRawExchangeData.Where((candleData, i) => i % TIME_INTERVAL == 0).ToList();// select every third item in list ie select data from every x min 
 
             var takeCount = intervalData.Count - (intervalData.Count() % SLICES);
             var requiredIntervalData = intervalData.Take(takeCount).ToList();
@@ -169,7 +250,7 @@ namespace CoinbaseExchange.NET.Data
 
             var groupCount = requiredIntervalData.Count() / SLICES;
 
-            
+            //requiredIntervalData.ForEach((a) => System.Diagnostics.Debug.WriteLine(a.Time + "\t"+ a.Close));
 
             for (int i = 0; i < groupCount - 1; i++)
             {
@@ -193,15 +274,15 @@ namespace CoinbaseExchange.NET.Data
 
             //List<CandleData> priceDataPoints = new List<CandleData>();
 
-            var lst = requiredIntervalData.Take(SLICES).OrderBy((c)=>c.Time).ToList();
+            var maDataList = requiredIntervalData.Take(SLICES).OrderBy((c)=>c.Time).ToList();
 
-            List<double> itemsInSliceDbl = lst.Select(candle => (double)candle.Close).ToList();
+            List<double> itemsInSliceDbl = maDataList.Select(candle => (double)candle.Close).ToList();
             var sdDouble = CalculateStdDev(itemsInSliceDbl);
 
             currentSandardDeviation = Convert.ToDecimal(sdDouble);
 
             //return sma;
-            return lst; 
+            return maDataList; 
         }
 
 

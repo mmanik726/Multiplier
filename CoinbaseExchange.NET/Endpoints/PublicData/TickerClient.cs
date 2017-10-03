@@ -28,11 +28,12 @@ namespace CoinbaseExchange.NET.Endpoints.PublicData
     {
         public EventHandler PriceUpdated;
         public decimal CurrentPrice;
-
+        public static bool isTryingToReconnect;
 
         public TickerClient(string ProductName) : base()
         {
             //OnUpdated();
+            isTryingToReconnect = false;
             updateLatestPrice(ProductName);
             Subscribe(ProductName, onTickerUpdateReceived);
         }
@@ -41,6 +42,7 @@ namespace CoinbaseExchange.NET.Endpoints.PublicData
         private async void updateLatestPrice(string product)
         {
             RealtimePrice curPrice = new RealtimePrice();
+            //error: stops here when http erros including no internet
             var price = await curPrice.GetRealtimePrice(product);
 
             TickerMessage tickerMsg = new TickerMessage(price);
@@ -157,9 +159,17 @@ namespace CoinbaseExchange.NET.Endpoints.PublicData
             }
             catch (Exception ex)
             {
-
                 System.Diagnostics.Debug.WriteLine("Error in ticker websocket: " + ex.Message);
+                //webSocketClient.Abort();
+                webSocketClient = null;
             }
+
+            //if (isTryingToReconnect)
+            //{
+            //    return;
+            //}
+
+            isTryingToReconnect = true;
 
             System.Diagnostics.Debug.WriteLine(string.Format("websocket ticker feed closed, retrying in 10 sec {0}", DateTime.UtcNow.ToLocalTime().ToString()));
 
@@ -167,6 +177,7 @@ namespace CoinbaseExchange.NET.Endpoints.PublicData
 
             Subscribe(product, onMessageReceived);
 
+            isTryingToReconnect = false;
         }
 
 
