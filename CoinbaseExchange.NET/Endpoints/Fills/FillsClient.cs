@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
 using CoinbaseExchange.NET.Endpoints.MyOrders;
 using System.Diagnostics;
-
+using CoinbaseExchange.NET.Utilities;
 namespace CoinbaseExchange.NET.Endpoints.Fills
 {
 
@@ -135,7 +135,7 @@ namespace CoinbaseExchange.NET.Endpoints.Fills
                 return;
 
 
-            Debug.WriteLine("Checking fill status...");
+            Logger.WriteLog("Checking fill status...");
 
             if (FillWatchList.Count() > 0)
                 IsBusy_TrackIngOrder = true;
@@ -143,17 +143,17 @@ namespace CoinbaseExchange.NET.Endpoints.Fills
             while (FillWatchList.Count() > 0)
             {
 
-                Debug.WriteLine(string.Format("Watching {0} order(s)", FillWatchList.Count()));
+                Logger.WriteLog(string.Format("Watching {0} order(s)", FillWatchList.Count()));
 
-                //System.Diagnostics.Debug.WriteLine(FillWatchList.FirstOrDefault());
+                //Logger.WriteLog(FillWatchList.FirstOrDefault());
                 try
                 {
                     //list may change in the middle of operation
-                    FillWatchList.ForEach((x) => Debug.WriteLine(string.Format("{0} -> {1}", x.OrderId, x.Side)));
+                    FillWatchList.ForEach((x) => Logger.WriteLog(string.Format("{0} -> {1}", x.OrderId, x.Side)));
                 }
                 catch (Exception ex)
                 {
-                    Debug.WriteLine("Error writing wathc list (" + ex.Message + ")");
+                    Logger.WriteLog("Error writing wathc list (" + ex.Message + ")");
                 };
 
 
@@ -171,7 +171,7 @@ namespace CoinbaseExchange.NET.Endpoints.Fills
                     {
                         //busy waiting
                         while(myActiveOrderBook.isUpdatingOrderList)
-                            Debug.WriteLine("waiting for order list update lock release");
+                            Logger.WriteLog("waiting for order list update lock release");
 
                         try
                         {

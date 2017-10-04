@@ -17,8 +17,8 @@
         <Label x:Name="lblSma" Content="0" HorizontalAlignment="Left" Margin="465,9,0,0" VerticalAlignment="Top" FontSize="20" Width="150" Height="35"/>
         <Label x:Name="lblUpdatedTime" Content="(time)" HorizontalAlignment="Left" Margin="389,44,0,0" VerticalAlignment="Top" Width="108" HorizontalContentAlignment="Center" Height="26"/>
         <Label x:Name="lblTickUpdate1" Content="(time)" HorizontalAlignment="Left" Margin="47,45,0,0" VerticalAlignment="Top" Width="108" HorizontalContentAlignment="Center" Height="26"/>
-        <Button x:Name="btnStartBySelling" Content="Start by selling" HorizontalAlignment="Left" Margin="618,391,0,0" VerticalAlignment="Top" Width="111" Click="btnStartBySelling_Click" Height="20"/>
-        <Button x:Name="btnStartByBuying" Content="Start by buying" HorizontalAlignment="Left" Margin="618,421,0,0" VerticalAlignment="Top" Width="111" Click="btnStartByBuying_Click" Height="20"/>
+        <Button x:Name="btnStartBySelling" Content="Start by selling" HorizontalAlignment="Left" Margin="705,435,0,0" VerticalAlignment="Top" Width="136" Click="btnStartBySelling_Click" Height="26"/>
+        <Button x:Name="btnStartByBuying" Content="Start by buying" HorizontalAlignment="Left" Margin="705,474,0,0" VerticalAlignment="Top" Width="136" Click="btnStartByBuying_Click" Height="26"/>
         <ListView x:Name="lstView" Height="226" Margin="10,91,0,0" VerticalAlignment="Top" HorizontalAlignment="Left" VerticalContentAlignment="Top" Width="836">
             <ListView.View>
                 <GridView>
@@ -31,15 +31,20 @@
         <TextBox x:Name="txtSmaSlices" HorizontalAlignment="Left" Height="23" Margin="619,40,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="37"/>
         <Label Content="Min" HorizontalAlignment="Left" Margin="656,14,0,0" VerticalAlignment="Top" Height="26" Width="31"/>
         <Label Content="Slices" HorizontalAlignment="Left" Margin="656,41,0,0" VerticalAlignment="Top"/>
-        <TextBox x:Name="txtPriceBuffer" HorizontalAlignment="Left" Height="23" Margin="20,393,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="135"/>
-        <Button Content="Update buy/sell buffer" HorizontalAlignment="Left" Margin="20,421,0,0" VerticalAlignment="Top" Width="135" Click="Button_Click"/>
-        <Label Content="Buy / Sell Buffer (Cents)" HorizontalAlignment="Left" Margin="20,362,0,0" VerticalAlignment="Top"/>
-        <Label x:Name="lblBuySellBuffer" Content="0" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="160,324,0,0"/>
-        <Label Content="current Buy / Sell buffer: " HorizontalAlignment="Left" VerticalAlignment="Top" Margin="13,324,0,0"/>
-        <Label Content="Standard Deviation:" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="227,352,0,0"/>
-        <Label x:Name="lblSd" Content="0" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="346,352,0,0"/>
-        <CheckBox x:Name="chkUseInverse" Content="Use Inverse" HorizontalAlignment="Left" Margin="160,396,0,0" VerticalAlignment="Top"/>
-        <CheckBox x:Name="chkUseSd" Content="Use SD" HorizontalAlignment="Left" Margin="202,330,0,0" VerticalAlignment="Top"/>
+        <TextBox x:Name="txtPriceBuffer" HorizontalAlignment="Left" Height="23" Margin="20,393,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="52"/>
+        <Button Content="Update buy/sell buffer" HorizontalAlignment="Left" Margin="20,421,0,0" VerticalAlignment="Top" Width="138" Click="Button_Click"/>
+        <Label Content="Buy / Sell Buffer (Cents)" HorizontalAlignment="Left" Margin="13,362,0,0" VerticalAlignment="Top"/>
+        <Label x:Name="lblBuySellBuffer" Content="0" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="113,324,0,0"/>
+        <Label Content="Buy / Sell buffer: " HorizontalAlignment="Left" VerticalAlignment="Top" Margin="13,324,0,0"/>
+        <Label Content="Standard Deviation:" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="448,324,0,0"/>
+        <Label x:Name="lblSd" Content="0" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="567,324,0,0"/>
+        <CheckBox x:Name="chkUseInverse" Content="Use Inverse" HorizontalAlignment="Left" Margin="77,393,0,0" VerticalAlignment="Top"/>
+        <CheckBox x:Name="chkUseSd" Content="Use SD" HorizontalAlignment="Left" Margin="160,330,0,0" VerticalAlignment="Top"/>
+        <Label Content="Buy / Sell size:" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="305,415,0,0"/>
+        <Label x:Name="lblBuySellAmount" Content="0" HorizontalAlignment="Left" Margin="395,415,0,0" VerticalAlignment="Top" Height="23" RenderTransformOrigin="0.522,-0.196"/>
+        <TextBox x:Name="txtBuySellAmount" HorizontalAlignment="Left" Height="23" Margin="305,446,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="107"/>
+        <Button Content="Update buy/sell Size" HorizontalAlignment="Left" Margin="305,474,0,0" VerticalAlignment="Top" Width="127" Click="Button_Click_1"/>
+        <Button x:Name="btnShowLog" Content="Log" HorizontalAlignment="Left" Margin="814,400,0,0" VerticalAlignment="Top" Width="27" Height="23" Click="btnShowLog_Click"/>
 
     </Grid>
 </Window>

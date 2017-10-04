@@ -13,6 +13,7 @@ using CoinbaseExchange.NET.Endpoints.PublicData;
 using CoinbaseExchange.NET.Endpoints.Fills;
 
 using System.Diagnostics;
+using CoinbaseExchange.NET.Utilities;
 
 namespace CoinbaseExchange.NET.Endpoints.MyOrders
 {
@@ -279,12 +280,12 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
         {
             FillEventArgs filledOrders = (FillEventArgs)args;
 
-            Debug.WriteLine("Order filled");
+            Logger.WriteLog("Order filled");
 
             var filledOrder = filledOrders.filledOrder;
 
 
-            //System.Diagnostics.Debug.WriteLine(string.Format("Order id: {0} has been filled", filledOrder.OrderId));
+            //Logger.WriteLog(string.Format("Order id: {0} has been filled", filledOrder.OrderId));
 
             NotifyOrderUpdateListener(new OrderUpdateEventArgs
             {
@@ -389,7 +390,7 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
                 }
                 catch (Exception ex)
                 {
-                    Debug.WriteLine(string.Format("error cancelling order {0}, retrying...", myCurrentOrder.OrderId));
+                    Logger.WriteLog(string.Format("error cancelling order {0}, retrying...", myCurrentOrder.OrderId));
                     continue; //continue and try again to cancel and reorder
                     //throw;
                 }
@@ -401,7 +402,7 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
 
 
 
-                Debug.WriteLine(string.Format("\t\tcancel {0} order: {1}", myCurrentOrder.Side, myCurrentOrder.OrderId));
+                Logger.WriteLog(string.Format("\t\tcancel {0} order: {1}", myCurrentOrder.Side, myCurrentOrder.OrderId));
 
 
                 decimal adjustedPrice = getAdjustedCurrentPrice(myCurrentOrder.Side);
@@ -418,10 +419,10 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
             }
 
 
-            Debug.WriteLine("Orders in ActiveOrderList:");
+            Logger.WriteLog("Orders in ActiveOrderList:");
 
 
-            MyChaseOrderList.ForEach(x => Debug.WriteLine("\t" + x.OrderId));
+            MyChaseOrderList.ForEach(x => Logger.WriteLog("\t" + x.OrderId));
                 
             isBusyCancelAndReorder = false;
 
@@ -432,7 +433,7 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
         {
             //busy waiting
             while (isUpdatingOrderList)
-                Debug.WriteLine("waiting for order list update lock release");
+                Logger.WriteLog("waiting for order list update lock release");
 
             isUpdatingOrderList = true;
             MyChaseOrderList.RemoveAll(x => x.OrderId == orderId);
@@ -443,7 +444,7 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
         {
             //busy waiting
             while (isUpdatingOrderList)
-                Debug.WriteLine("waiting for lock release");
+                Logger.WriteLog("waiting for lock release");
 
             isUpdatingOrderList = true;
             MyChaseOrderList.Add(order);
@@ -466,7 +467,7 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
             orderBodyObj.Add(new JProperty("size", oSize));
             //orderBodyObj.Add(new JProperty("post_only", "T"));
 
-            Debug.WriteLine(string.Format("placing new {0} order @{1}", oSide, oPrice));
+            Logger.WriteLog(string.Format("placing new {0} order @{1}", oSide, oPrice));
             var newOrder = await limitOrder.PlaceOrder(orderBodyObj);
 
             if (newOrder != null)
@@ -564,12 +565,12 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
             {
                 if (genericResponse.StatusCode == System.Net.HttpStatusCode.Forbidden)
                 {
-                    Debug.WriteLine("cancel order permissions denied");
+                    Logger.WriteLog("cancel order permissions denied");
                     throw new Exception("PermissionDenied");
                 }
                 else
                 {
-                    Debug.WriteLine("cancel order error: " + genericResponse.ContentBody);
+                    Logger.WriteLog("cancel order error: " + genericResponse.ContentBody);
                     throw new Exception("CancelOrderError");
                 }
             }
@@ -602,17 +603,17 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
             {
                 if (genericResponse.StatusCode == System.Net.HttpStatusCode.Forbidden)
                 {
-                    Debug.WriteLine("cancel order permissions denied");
+                    Logger.WriteLog("cancel order permissions denied");
                     throw new Exception("PermissionDenied");
                 }
                 else if (genericResponse.StatusCode == System.Net.HttpStatusCode.NotFound)
                 {
-                    Debug.WriteLine(string.Format("order {0} not found, may have been already filled or cancelled otherwise", orderId));
+                    Logger.WriteLog(string.Format("order {0} not found, may have been already filled or cancelled otherwise", orderId));
                     throw new Exception("OrderNotFound");
                 }
                 else
                 {
-                    Debug.WriteLine(string.Format("Error cancelling order {0}: ", orderId, genericResponse.StatusCode.ToString()));
+                    Logger.WriteLog(string.Format("Error cancelling order {0}: ", orderId, genericResponse.StatusCode.ToString()));
                     throw new Exception("CancelOrderError");
                 }
             }
@@ -622,7 +623,7 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
 
             //    //busy waiting
             //    while (isUpdatingOrderList)
-            //        Debug.WriteLine("waiting for order list update lock release");
+            //        Logger.WriteLog("waiting for order list update lock release");
 
             //    isUpdatingOrderList = true; //wait
             //    MyChaseOrderList.RemoveAll(x => x.OrderId == cancelledOrder.FirstOrDefault());

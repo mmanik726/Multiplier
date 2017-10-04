@@ -7,7 +7,7 @@ using CoinbaseExchange.NET.Core;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using CoinbaseExchange.NET.Utilities;
-
+using CoinbaseExchange.NET.Utilities;
 namespace CoinbaseExchange.NET.Endpoints.PublicData
 {
 
@@ -70,7 +70,7 @@ namespace CoinbaseExchange.NET.Endpoints.PublicData
             {
                 var json = genericResponse.ContentBody;
 
-                //System.Diagnostics.Debug.WriteLine(json);
+                //Logger.WriteLog(json);
 
 
 

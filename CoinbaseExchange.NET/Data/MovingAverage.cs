@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using CoinbaseExchange.NET.Endpoints.PublicData;
+using CoinbaseExchange.NET.Utilities;
 
 namespace CoinbaseExchange.NET.Data
 {
@@ -40,6 +41,8 @@ namespace CoinbaseExchange.NET.Data
         public MovingAverage(ref TickerClient tickerClient, int timeInterValInMin = 3, int smaSlices = 40)
         {
             //var a = tickerClient.CurrentPrice;
+
+            //Logger.WriteLog("Starting moving avg calculations");
 
             isBusyUpdatingMA = false;
 
@@ -112,7 +115,7 @@ namespace CoinbaseExchange.NET.Data
 
         private void UpdateSMA(object sender, System.Timers.ElapsedEventArgs e)
         {
-            //System.Diagnostics.Debug.WriteLine("Updating SMA");
+            //Logger.WriteLog("Updating SMA");
 
             //const int SLICES = 40;
 
@@ -122,10 +125,10 @@ namespace CoinbaseExchange.NET.Data
             MADataPoints.Add(new CandleData { Close = TickerPriceClient.CurrentPrice, Time = DateTime.UtcNow.ToLocalTime()});
 
             var itemsInSlice = MADataPoints.Take(SLICES);
-            itemsInSlice.ToList().ForEach((t) => System.Diagnostics.Debug.WriteLine(t.Time + "\t" + t.Close));
+            itemsInSlice.ToList().ForEach((t) => Logger.WriteLog(t.Close.ToString()));
             var itemsInSLiceAvg = itemsInSlice.Average((d) => d.Close);
 
-            //MADataPoints.ForEach((t) => System.Diagnostics.Debug.WriteLine(t.Time + "\t" + t.Close));
+            //MADataPoints.ForEach((t) => Logger.WriteLog(t.Time + "\t" + t.Close));
 
             CurrentSMAPrice = itemsInSLiceAvg;
 
@@ -173,7 +176,7 @@ namespace CoinbaseExchange.NET.Data
             while (isBusyUpdatingMA)
                 Console.WriteLine("Waiting for sma update to finish before dowanloading additional data...");
 
-            System.Diagnostics.Debug.WriteLine("Additional data is being downloaded " + DateTime.UtcNow.ToString());
+            Logger.WriteLog("Additional data is being downloaded ");
 
             int days = 5; //36 hours data in 1 min interval in total
 
@@ -204,11 +207,11 @@ namespace CoinbaseExchange.NET.Data
             sharedRawExchangeData.AddRange(extraData);
 
 
-            //sharedRawExchangeData.ForEach((d) => System.Diagnostics.Debug.WriteLine(d.Time + "\t" + d.Close));
+            //sharedRawExchangeData.ForEach((d) => Logger.WriteLog(d.Time + "\t" + d.Close));
 
             //sharedRawExchangeData = sharedRawExchangeData.OrderByDescending((d)=>d.Time).ToList();
 
-            System.Diagnostics.Debug.WriteLine("done downloading additional data "+ DateTime.UtcNow.ToLocalTime());
+            Logger.WriteLog("done downloading additional data ");
 
             return true;
         }
@@ -237,7 +240,7 @@ namespace CoinbaseExchange.NET.Data
             lastDataPointDateTime = sharedRawExchangeData.First().Time;
             firstDataPointDateTime = sharedRawExchangeData.Last().Time;
 
-            //exchangeData.ToList().ForEach((a) => System.Diagnostics.Debug.WriteLine(a.Time + "\t" + a.Close));
+            //exchangeData.ToList().ForEach((a) => Logger.WriteLog(a.Time + "\t" + a.Close));
 
             var intervalData = sharedRawExchangeData.Where((candleData, i) => i % TIME_INTERVAL == 0).ToList();// select every third item in list ie select data from every x min 
 
@@ -250,24 +253,24 @@ namespace CoinbaseExchange.NET.Data
 
             var groupCount = requiredIntervalData.Count() / SLICES;
 
-            //requiredIntervalData.ForEach((a) => System.Diagnostics.Debug.WriteLine(a.Time + "\t"+ a.Close));
+            //requiredIntervalData.ForEach((a) => Logger.WriteLog(a.Time + "\t"+ a.Close));
 
             for (int i = 0; i < groupCount - 1; i++)
             {
                 var itemsInSlice = requiredIntervalData.Skip(i * SLICES).Take(SLICES);
-                //itemsInSlice.ToList().ForEach((t) => Debug.WriteLine(t.Time + "\t" + t.Close));
+                //itemsInSlice.ToList().ForEach((t) => Logger.WriteLog(t.Time + "\t" + t.Close));
                 var itemsInSLiceAvg = itemsInSlice.Average((d) => d.Close);
-                //Debug.WriteLine("slice avg: " + itemsInSLiceAvg.ToString());
+                //Logger.WriteLog("slice avg: " + itemsInSLiceAvg.ToString());
                 sma.Add(new CandleData { Time = itemsInSlice.First().Time, Close = itemsInSLiceAvg });
             }
 
-            ////exchangeData.OrderBy(w => w.Time).ToList().ForEach((l) => Debug.WriteLine(l.Time + "\t" + l.Close));
+            ////exchangeData.OrderBy(w => w.Time).ToList().ForEach((l) => Logger.WriteLog(l.Time + "\t" + l.Close));
             //Debug.Write("\n\n");
 
-            //requiredIntervalData.ForEach((l) => Debug.WriteLine(l.Time + "\t" + l.Close));
+            //requiredIntervalData.ForEach((l) => Logger.WriteLog(l.Time + "\t" + l.Close));
             //Debug.Write("\n\n");
 
-            //sma.ForEach((l) => Debug.WriteLine(l.Time + "\t" + l.Close));
+            //sma.ForEach((l) => Logger.WriteLog(l.Time + "\t" + l.Close));
 
             CurrentSMAPrice = sma.First().Close;
 

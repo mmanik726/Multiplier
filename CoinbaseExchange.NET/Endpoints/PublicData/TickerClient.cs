@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 
 using CoinbaseExchange.NET.Core;
 using CoinbaseExchange.NET.Endpoints.OrderBook;
+using CoinbaseExchange.NET.Utilities;
 
 namespace CoinbaseExchange.NET.Endpoints.PublicData
 {
@@ -159,7 +160,7 @@ namespace CoinbaseExchange.NET.Endpoints.PublicData
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine("Error in ticker websocket: " + ex.Message);
+                Logger.WriteLog("Error in ticker websocket: " + ex.Message);
                 //webSocketClient.Abort();
                 webSocketClient = null;
             }
@@ -171,9 +172,10 @@ namespace CoinbaseExchange.NET.Endpoints.PublicData
 
             isTryingToReconnect = true;
 
-            System.Diagnostics.Debug.WriteLine(string.Format("websocket ticker feed closed, retrying in 10 sec {0}", DateTime.UtcNow.ToLocalTime().ToString()));
+            Logger.WriteLog(string.Format("websocket ticker feed closed, retrying in 5 sec {0}"));
 
-            Task.Delay(10 * 1000);
+            System.Threading.Thread.Sleep(5 * 1000);
+            //Task.Delay(10 * 1000);
 
             Subscribe(product, onMessageReceived);
 

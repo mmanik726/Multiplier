@@ -21,6 +21,8 @@ using CoinbaseExchange.NET.Core;
 using CoinbaseExchange.NET.Endpoints.Fills;
 using System.Diagnostics;
 using CoinbaseExchange.NET.Data;
+using CoinbaseExchange.NET.Utilities;
+
 namespace Multiplier
 {
     /// <summary>
@@ -71,14 +73,19 @@ namespace Multiplier
         CBAuthenticationContainer myAuth;
         MyOrderBook myOrderBook;
         TickerClient LtcTickerClient;
-
+        LogWindow logWindow;
 
         public MainWindow()
         {
             InitializeComponent();
+
+            logWindow = new LogWindow();
+            logWindow.Show();
+
+
             initListView();
 
-            sharedBuySellAmount = 0.1m;//3.0m;
+            sharedBuySellAmount = 0.01m;//3.0m;
 
             sharedSmaTimeInterval = 3;
             sharedSmaSlices = 40;
@@ -122,6 +129,9 @@ namespace Multiplier
             txtSmaTimeInterval.Text = sharedSmaTimeInterval.ToString();
 
             lblBuySellBuffer.Content = sharedPriceBuffer.ToString();
+            lblBuySellAmount.Content = sharedBuySellAmount; 
+
+            
         }
 
 
@@ -133,7 +143,7 @@ namespace Multiplier
 
             var filledOrder = ((OrderUpdateEventArgs)args);
 
-            Debug.WriteLine(string.Format("{0} order ({1}) filled @{2} {3}", filledOrder.side, filledOrder.OrderId, filledOrder.filledAtPrice, DateTime.UtcNow.ToLocalTime().ToString()));
+            Logger.WriteLog(string.Format("{0} order ({1}) filled @{2}", filledOrder.side, filledOrder.OrderId, filledOrder.filledAtPrice));
 
             //MessageBox.Show(string.Format("{0} order ({1}) filled @{2} ", filledOrder.side, filledOrder.OrderId, filledOrder.filledAtPrice));
 
@@ -177,7 +187,7 @@ namespace Multiplier
 
             sharedCurrentRealtimePrice = tickerData.RealTimePrice;
 
-            //Debug.WriteLine(CurrentRealtimePrice + "-" + CurrentBufferedPrice);
+            //Logger.WriteLog(CurrentRealtimePrice + "-" + CurrentBufferedPrice);
 
             this.Dispatcher.Invoke(() =>
             {
@@ -199,7 +209,7 @@ namespace Multiplier
             {
                if ((sharedLastTickerUpdateTime - sharedLastBuySellTime).TotalMilliseconds < 1000)
                 {
-                    //Debug.WriteLine("price skipped: " + CurrentRealtimePrice);
+                    //Logger.WriteLog("price skipped: " + CurrentRealtimePrice);
                     return;
                 }
 
@@ -209,7 +219,7 @@ namespace Multiplier
                 if (secSinceLastCrosss < (sharedWaitTimeAfterCrossInMin * 60))
                 {
                     //if the last time prices crossed is < 2 min do nothing
-                    Debug.WriteLine(string.Format("Waiting {0} sec before placing any new order", Math.Round((sharedWaitTimeAfterCrossInMin * 60) - secSinceLastCrosss)));
+                    Logger.WriteLog(string.Format("Waiting {0} sec before placing any new order", Math.Round((sharedWaitTimeAfterCrossInMin * 60) - secSinceLastCrosss)));
                     return;
                 }
 
@@ -222,7 +232,7 @@ namespace Multiplier
                 }
                 else
                 {
-                    Debug.WriteLine("Buysell already in progress");
+                    Logger.WriteLog("Buysell already in progress");
                 }
             }
 
@@ -235,7 +245,7 @@ namespace Multiplier
 
             if (sharedWaitingBuyOrSell)
             {
-                Debug.WriteLine("this should never print");
+                Logger.WriteLog("this should never print");
                 return;
             }
 
@@ -264,7 +274,7 @@ namespace Multiplier
                         }
                         catch (Exception ex)
                         {
-                            Debug.WriteLine("error selling: " + ex.Message);
+                            Logger.WriteLog("error selling: " + ex.Message);
                             //throw;
                         }
                         
@@ -303,7 +313,7 @@ namespace Multiplier
                         }
                         catch (Exception ex)
                         {
-                            Debug.WriteLine("Error buying: " + ex.Message);
+                            Logger.WriteLog("Error buying: " + ex.Message);
                             //throw;
                         }
 
@@ -374,9 +384,9 @@ namespace Multiplier
                     //txtPriceBuffer.Text = currentSmaData.CurrentSd.ToString();
                 }
             );
-            Debug.WriteLine(string.Format("SMA updated: {0} {1}",newSmaPrice, DateTime.UtcNow.ToLocalTime().ToLongTimeString()));
+            Logger.WriteLog(string.Format("SMA updated: {0}",newSmaPrice));
             //lblSma.Content = newSmaPrice.ToString();
-            //Debug.WriteLine(DateTime.UtcNow.ToString());
+            //Logger.WriteLog(DateTime.UtcNow.ToString());
         }
 
 
@@ -392,7 +402,7 @@ namespace Multiplier
             //catch (Exception ex)
             //{
 
-            //    Debug.WriteLine(ex.Message);
+            //    Logger.WriteLog(ex.Message);
             //}
 
 
@@ -410,7 +420,7 @@ namespace Multiplier
             //catch (Exception ex)
             //{
 
-            //    System.Diagnostics.Debug.WriteLine(ex.Message);
+            //    System.Diagnostics.Logger.WriteLog(ex.Message);
             //}
         }
 
@@ -575,7 +585,7 @@ namespace Multiplier
 
                 if (slices * timeInt > 200)
                 {
-                    Debug.WriteLine("Additional data needs to be downloaded if not already downloaded");
+                    Logger.WriteLog("Additional data needs to be downloaded if not already downloaded");
                     //MessageBox.Show("max amount of data points available is 200 at the moment");
                     //return;
                 }
@@ -606,7 +616,7 @@ namespace Multiplier
                 if (!errorOccured)
                 {
                     var updateMsg = string.Format("SMA parameters updated. Time interval: {0}, Slices: {1}", timeInt, slices);
-                    Debug.WriteLine(updateMsg);
+                    Logger.WriteLog(updateMsg);
                     MessageBox.Show(updateMsg);
                 }
 
@@ -642,7 +652,7 @@ namespace Multiplier
                     buySellBuffer.ToString() + " at " 
                     + DateTime.UtcNow.ToLocalTime().ToShortDateString() + DateTime.UtcNow.ToLocalTime().ToLongTimeString();
                 MessageBox.Show(msg);
-                Debug.WriteLine(msg);
+                Logger.WriteLog(msg);
             }
             catch (Exception ex)
             {
@@ -672,6 +682,58 @@ namespace Multiplier
             //lblBuySellBuffer.Content = sharedPriceBuffer.ToString();
 
         }
+
+
+        public void updateBuySellAmount(decimal amount)
+        {
+            if (amount <= 0)
+            {
+                Logger.WriteLog("buy sell amount cannot be less than or equal to 0");
+                return;
+            }
+
+            sharedBuySellAmount = amount;
+        }
+
+        private void Button_Click_1(object sender, RoutedEventArgs e)
+        {
+            decimal tradeAmount = 0.1m; //default 
+
+            try
+            {
+                tradeAmount = Convert.ToDecimal(txtBuySellAmount.Text);
+
+                if (tradeAmount <= 0.01m) 
+                {
+                    MessageBox.Show("buy sell amount canot be less than 0.01");
+                    return;
+                }
+
+                updateBuySellAmount(tradeAmount);
+                lblBuySellAmount.Content = tradeAmount.ToString();
+
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("invalid buy sell amount");
+
+            }
+
+        }
+
+        private void btnShowLog_Click(object sender, RoutedEventArgs e)
+        {
+            if (logWindow != null)
+            {
+                logWindow.Close();
+                logWindow = null;
+                logWindow = new LogWindow();
+                logWindow.Show();
+                //logWindow.Closed += LogWindow_Closed;
+            }
+        }
+
+
     }
 
 
