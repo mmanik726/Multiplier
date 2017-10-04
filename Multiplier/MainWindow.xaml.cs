@@ -79,6 +79,8 @@ namespace Multiplier
         {
             InitializeComponent();
 
+
+
             logWindow = new LogWindow();
             logWindow.Show();
 
@@ -219,7 +221,7 @@ namespace Multiplier
                 if (secSinceLastCrosss < (sharedWaitTimeAfterCrossInMin * 60))
                 {
                     //if the last time prices crossed is < 2 min do nothing
-                    Logger.WriteLog(string.Format("Waiting {0} sec before placing any new order", Math.Round((sharedWaitTimeAfterCrossInMin * 60) - secSinceLastCrosss)));
+                    //Logger.WriteLog(string.Format("Waiting {0} sec before placing any new order", Math.Round((sharedWaitTimeAfterCrossInMin * 60) - secSinceLastCrosss)));
                     return;
                 }
 
@@ -271,6 +273,7 @@ namespace Multiplier
                         try
                         {
                             await myOrderBook.PlaceNewLimitOrder("sell", "LTC-USD", sharedBuySellAmount.ToString(), sharedCurrentBufferedPrice.ToString(), true);
+                            Logger.WriteLog(string.Format("Waiting {0} min before placing any new order", sharedWaitTimeAfterCrossInMin));
                         }
                         catch (Exception ex)
                         {
@@ -309,7 +312,7 @@ namespace Multiplier
                         try
                         {
                             await myOrderBook.PlaceNewLimitOrder("buy", "LTC-USD", sharedBuySellAmount.ToString(), sharedCurrentBufferedPrice.ToString(), true);
-
+                            Logger.WriteLog(string.Format("Waiting {0} min before placing any new order", sharedWaitTimeAfterCrossInMin));
                         }
                         catch (Exception ex)
                         {
@@ -733,6 +736,11 @@ namespace Multiplier
             }
         }
 
+        private void Window_Closed(object sender, EventArgs e)
+        {
+            //MessageBox.Show("app closing");
+            System.Environment.Exit(0);
+        }
 
     }
 
