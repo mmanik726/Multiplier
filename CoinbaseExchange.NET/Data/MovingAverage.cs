@@ -23,6 +23,8 @@ namespace CoinbaseExchange.NET.Data
         private int SLICES;
         private int TIME_INTERVAL;
 
+        private string Product;
+
         private static bool isBusyUpdatingMA;
         private DateTime firstDataPointDateTime;
         private DateTime lastDataPointDateTime;
@@ -40,11 +42,13 @@ namespace CoinbaseExchange.NET.Data
 
         public static System.Timers.Timer aTimer; 
 
-        public MovingAverage(ref TickerClient tickerClient, int timeInterValInMin = 3, int smaSlices = 40)
+        public MovingAverage(ref TickerClient tickerClient, string ProductName, int timeInterValInMin = 3, int smaSlices = 40)
         {
             //var a = tickerClient.CurrentPrice;
 
             //Logger.WriteLog("Starting moving avg calculations");
+
+            Product = ProductName;
 
             isBusyUpdatingMA = false;
 
@@ -211,7 +215,7 @@ namespace CoinbaseExchange.NET.Data
 
                 System.Threading.Thread.Sleep(300);
                 var temp = await historicData.GetPrices(
-                    product: "LTC-USD",
+                    product: Product,
                     granularity: "60",
                     startTime: startDt.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ"),
                     endTime: endDt.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ"));
@@ -250,7 +254,7 @@ namespace CoinbaseExchange.NET.Data
             if (sharedRawExchangeData.Count() == 0) //download initial data if there is no data already
             {
                 HistoricPrices historicData = new HistoricPrices();
-                var temp = await historicData.GetPrices(product: "LTC-USD", granularity: "60");
+                var temp = await historicData.GetPrices(product: Product, granularity: "60");
                 sharedRawExchangeData = temp.ToList();
             }
 

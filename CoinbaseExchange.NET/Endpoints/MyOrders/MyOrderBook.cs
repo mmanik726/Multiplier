@@ -211,7 +211,7 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
 
     public class OrderUpdateEventArgs : EventArgs
     {
-
+        public string ProductName { get; set; }
         public string OrderId { get; set; }
         public string fillSize { get; set; }
         public string side { get; set; }
@@ -294,7 +294,8 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
                 Message = string.Format("Order id: {0} has been filled", filledOrder.OrderId),
                 OrderId = filledOrder.OrderId,
                 fillFee = filledOrder.Fee,
-                fillSize = filledOrder.Size
+                fillSize = filledOrder.Size,
+                ProductName = filledOrder.ProductId
 
             });
 

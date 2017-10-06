@@ -91,15 +91,6 @@ namespace CoinbaseExchange.NET.Endpoints.PublicData
             //jStr.Append()
             var requestString = string.Format("");
 
-            //JObject jObj = new JObject(
-            //    new JProperty(
-            //        "type", "subscribe"),
-            //    new JProperty(
-            //        "product_ids", new JArray(
-            //        "LTC-USD")),
-            //    new JProperty(
-            //        "channels", new JArray(
-            //        "matches")));
 
             JObject jObj = new JObject();
             jObj.Add(new JProperty("type", "subscribe"));

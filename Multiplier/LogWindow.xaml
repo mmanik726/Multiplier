@@ -5,9 +5,9 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:Multiplier"
         mc:Ignorable="d"
-        Title="Mani Log" Height="558" Width="424">
+        Title="Mani Log" Height="558" Width="652">
     <Grid>
-        <RichTextBox x:Name="txtLog" HorizontalAlignment="Left" Height="507" Margin="10,10,0,0" VerticalAlignment="Top" Width="396" TextChanged="txtLog_TextChanged" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+        <RichTextBox x:Name="txtLog" HorizontalAlignment="Left" Height="507" Margin="10,10,0,0" VerticalAlignment="Top" Width="627" TextChanged="txtLog_TextChanged" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch">
             <FlowDocument/>
         </RichTextBox>
 

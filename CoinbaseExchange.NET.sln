@@ -1,11 +1,9 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.26430.16
+VisualStudioVersion = 15.0.26730.15
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CoinbaseExchange.NET", "CoinbaseExchange.NET\CoinbaseExchange.NET.csproj", "{2B3EE98E-D170-460B-9356-505603281E80}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CoinbaseExchange.Tests", "CoinbaseExchange.Tests\CoinbaseExchange.Tests.csproj", "{8EE373A1-817F-40AE-B2E5-41E336A951A1}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Multiplier", "Multiplier\Multiplier.csproj", "{00F46C4E-F8AD-419D-AEB6-8261C8D65513}"
 EndProject
@@ -19,10 +17,6 @@ Global
 		{2B3EE98E-D170-460B-9356-505603281E80}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2B3EE98E-D170-460B-9356-505603281E80}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2B3EE98E-D170-460B-9356-505603281E80}.Release|Any CPU.Build.0 = Release|Any CPU
-		{8EE373A1-817F-40AE-B2E5-41E336A951A1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{8EE373A1-817F-40AE-B2E5-41E336A951A1}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{8EE373A1-817F-40AE-B2E5-41E336A951A1}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{8EE373A1-817F-40AE-B2E5-41E336A951A1}.Release|Any CPU.Build.0 = Release|Any CPU
 		{00F46C4E-F8AD-419D-AEB6-8261C8D65513}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{00F46C4E-F8AD-419D-AEB6-8261C8D65513}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{00F46C4E-F8AD-419D-AEB6-8261C8D65513}.Release|Any CPU.ActiveCfg = Release|Any CPU

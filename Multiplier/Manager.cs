@@ -163,9 +163,10 @@ namespace Multiplier
             MyOrderBook = new MyOrderBook(MyAuth, ProductName);
             MyOrderBook.OrderUpdateEvent += FillUpdateEventHandler;
 
-            Sma = new MovingAverage(ref ProductTickerClient, SmaTimeInterval, SmaSlices);
+            Sma = new MovingAverage(ref ProductTickerClient, ProductName, SmaTimeInterval, SmaSlices);
             Sma.MovingAverageUpdated += SmaChangeEventHandler;
 
+            Logger.WriteLog(string.Format("{0} manager started", ProductName));
 
         }
 
@@ -175,7 +176,7 @@ namespace Multiplier
 
             var filledOrder = ((OrderUpdateEventArgs)args);
 
-            Logger.WriteLog(string.Format("{0} order of size {1} ({2}) filled @{3}", filledOrder.side, filledOrder.fillSize, filledOrder.OrderId, filledOrder.filledAtPrice));
+            Logger.WriteLog(string.Format("{0} order of {1} {2} ({3}) filled @{4}", filledOrder.side, filledOrder.fillSize, filledOrder.ProductName , filledOrder.OrderId, filledOrder.filledAtPrice));
 
             //MessageBox.Show(string.Format("{0} order ({1}) filled @{2} ", filledOrder.side, filledOrder.OrderId, filledOrder.filledAtPrice));
 
@@ -285,7 +286,7 @@ namespace Multiplier
                         LastCrossTime = DateTime.UtcNow.ToLocalTime();
                         try
                         {
-                            await MyOrderBook.PlaceNewLimitOrder("sell", "LTC-USD", BuySellAmount.ToString(), CurrentBufferedPrice.ToString(), true);
+                            await MyOrderBook.PlaceNewLimitOrder("sell", ProductName, BuySellAmount.ToString(), CurrentBufferedPrice.ToString(), true);
                             Logger.WriteLog(string.Format("Waiting {0} min before placing any new order", WaitTimeAfterCrossInMin));
                         }
                         catch (Exception ex)
@@ -324,7 +325,7 @@ namespace Multiplier
 
                         try
                         {
-                            await MyOrderBook.PlaceNewLimitOrder("buy", "LTC-USD", BuySellAmount.ToString(), CurrentBufferedPrice.ToString(), true);
+                            await MyOrderBook.PlaceNewLimitOrder("buy", ProductName, BuySellAmount.ToString(), CurrentBufferedPrice.ToString(), true);
                             Logger.WriteLog(string.Format("Waiting {0} min before placing any new order", WaitTimeAfterCrossInMin));
                         }
                         catch (Exception ex)

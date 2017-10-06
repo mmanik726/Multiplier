@@ -14,7 +14,7 @@ namespace CoinbaseExchange.NET.Endpoints.OrderBook
 {
     public class RealtimeOrderBookClient : ExchangeClientBase
     {
-        private const string Product = "BTC-USD";
+        private string Product;
 
         private object _spreadLock = new object();
         private object _askLock = new object();
@@ -47,13 +47,15 @@ namespace CoinbaseExchange.NET.Endpoints.OrderBook
             }
         }
 
-        public RealtimeOrderBookClient(CBAuthenticationContainer auth) : base(auth)
+        public RealtimeOrderBookClient(CBAuthenticationContainer auth, string productName) : base(auth)
         {
             _sells = new List<BidAskOrder>();
             _buys = new List<BidAskOrder>();
 
             Sells = new List<BidAskOrder>();
             Buys = new List<BidAskOrder>();
+
+            Product = productName;
 
             ResetStateWithFullOrderBook();
         }
@@ -252,7 +254,7 @@ namespace CoinbaseExchange.NET.Endpoints.OrderBook
                     "type", "subscribe"),
                 new JProperty(
                     "product_ids", new JArray(
-                    "BTC-USD","LTC-USD")),
+                    "BTC-USD",product)),
                 new JProperty(
                     "channels", new JArray(
                     "matches")));
