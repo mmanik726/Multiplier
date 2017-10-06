@@ -22,6 +22,7 @@ using CoinbaseExchange.NET.Endpoints.Fills;
 using System.Diagnostics;
 using CoinbaseExchange.NET.Data;
 using CoinbaseExchange.NET.Utilities;
+using static Multiplier.Manager;
 
 namespace Multiplier
 {
@@ -31,172 +32,131 @@ namespace Multiplier
     public partial class MainWindow : Window
     {
 
+
+        Manager LTCManager; 
+
         private const string myPassphrase = "n6yci6u4i0g";
         private const string myKey = "b006d82554b495e227b9e7a1251ad745";
         private const string mySecret = "NhAb9pmbZaY9cPb2+eXOGWIILje7iFe/nF+dV9n6FOxazl6Kje2/03GuSiQYTsj3a/smh92m/lrvfu7kYkxQMg==";
-
-        private static decimal sharedCurrentRealtimePrice;
-
-        private static decimal sharedCurrentBufferedPrice; 
+        LogWindow logWindow;
 
         private static decimal sharedCurrentAveragePrice;
-        private static decimal sharedMaxBuy;
-        private static decimal sharedMaxSell;
 
-        private static decimal sharedBuySellAmount;
-
-        private static bool sharedBuyOrderFilled;
-        private static bool sharedSellOrderFilled;
-
-        private static bool sharedWaitingSellFill;
-        private static bool sharedWaitingBuyFill;
-
-        private static bool sharedWaitingBuyOrSell;
-
-        private static int sharedSmaSlices;
-        private static int sharedSmaTimeInterval;
-
-
-        private static bool sharedStartBuyingSelling;
-
-        private static decimal sharedPriceBuffer;
-
-        private static DateTime sharedLastTickerUpdateTime;
-        private static DateTime sharedLastBuySellTime;
-
-        private static DateTime sharedLastCrossTime;
-
-        private static double sharedWaitTimeAfterCrossInMin;
-
-        MovingAverage sharedSma;
-
-        CBAuthenticationContainer myAuth;
-        MyOrderBook myOrderBook;
-        TickerClient LtcTickerClient;
-        LogWindow logWindow;
 
         public MainWindow()
         {
             InitializeComponent();
 
 
-
             logWindow = new LogWindow();
             logWindow.Show();
+            InitListView();
 
 
-            initListView();
+            LTCManager = new Manager("LTC-USD", myPassphrase, myKey, mySecret);
 
-            sharedBuySellAmount = 0.01m;//3.0m;
 
-            sharedSmaTimeInterval = 3;
-            sharedSmaSlices = 40;
+            LTCManager.BuySellAmountChangedEvent += BuySellAmountChangedEventHandler;
+            LTCManager.BuySellBufferChangedEvent += BuySellBufferChangedEventHandler;
+            LTCManager.OrderFilledEvent += OrderFilledEventHandler;
+            LTCManager.SmaParametersUpdatedEvent += SmaParametersUpdatedEventHandler;
+            LTCManager.SmaUpdateEvent += SmaUpdateEventHandler;
+            LTCManager.TickerPriceUpdateEvent += TickerPriceUpdateEventHandler;
+            LTCManager.AutoTradingStartedEvent += AutoTradingStartedEventHandler;
 
-            sharedPriceBuffer = 0.05m;
 
-            sharedCurrentRealtimePrice = 0;
-            sharedCurrentBufferedPrice = 0;
+
             sharedCurrentAveragePrice = 0;
 
-            sharedBuyOrderFilled = false;
-            sharedSellOrderFilled = false;
-
-            sharedWaitingSellFill = false;
-            sharedWaitingBuyFill= false;
-            sharedWaitingBuyOrSell = false;
-
-            sharedWaitTimeAfterCrossInMin = sharedSmaTimeInterval; //buy sell every time interval
-
-            sharedMaxBuy = 5;
-            sharedMaxSell = 5;
-
-            sharedStartBuyingSelling = false;
-
-            sharedLastCrossTime = DateTime.UtcNow.ToLocalTime();
-
-            LtcTickerClient = new TickerClient("LTC-USD");
-            LtcTickerClient.PriceUpdated += LtcTickerClient_Update;
-
-            myAuth = new CBAuthenticationContainer(myKey, myPassphrase, mySecret);
-            myOrderBook = new MyOrderBook(myAuth, "LTC-USD");
-            myOrderBook.OrderUpdateEvent += fillUpdateHandler;
-
-            sharedSma = new MovingAverage(ref LtcTickerClient, sharedSmaTimeInterval, sharedSmaSlices);
-            sharedSma.MovingAverageUpdated += SmaUpdateEventHandler;
 
 
+            LTCManager.UpdateBuySellAmount(0.01m);
+            LTCManager.UpdateBuySellBuffer(0.03m);
 
-
-            txtSmaSlices.Text = sharedSmaSlices.ToString();
-            txtSmaTimeInterval.Text = sharedSmaTimeInterval.ToString();
-
-            lblBuySellBuffer.Content = sharedPriceBuffer.ToString();
-            lblBuySellAmount.Content = sharedBuySellAmount; 
+            //lblBuySellBuffer.Content = sharedPriceBuffer.ToString();
+            //lblBuySellAmount.Content = sharedBuySellAmount; 
 
             
         }
 
 
-
-
-
-        public void fillUpdateHandler(object sender, EventArgs args)
+        public void BuySellAmountChangedEventHandler(object sender, EventArgs args)
         {
+            var curBuySellAmount = ((BuySellAmountUpdateArgs)args).NewBuySellAmount;
 
+            var msg = "Buy sell amount changed to: " + curBuySellAmount.ToString();
+            //MessageBox.Show(msg);
+
+            lblBuySellAmount.Content = curBuySellAmount.ToString();
+
+        }
+
+
+        public void BuySellBufferChangedEventHandler(object sender, EventArgs args)
+        {
+            var data = (BuySellBufferUpdateArgs)args;
+            var msg = "Buy Sell Price buffer updated to " + data.NewBuySellBuffer.ToString(); 
+            //MessageBox.Show(msg);
+
+            lblBuySellBuffer.Content = data.NewBuySellBuffer.ToString();
+
+        }
+
+        public void OrderFilledEventHandler(object sender, EventArgs args)
+        {
             var filledOrder = ((OrderUpdateEventArgs)args);
 
-            Logger.WriteLog(string.Format("{0} order ({1}) filled @{2}", filledOrder.side, filledOrder.OrderId, filledOrder.filledAtPrice));
 
             //MessageBox.Show(string.Format("{0} order ({1}) filled @{2} ", filledOrder.side, filledOrder.OrderId, filledOrder.filledAtPrice));
 
-            if (filledOrder.side == "buy")
-            {
-                sharedBuyOrderFilled = true;
-                sharedSellOrderFilled = false;
-
-                sharedWaitingBuyFill = false;
-                sharedWaitingSellFill = true;
-            }
-            else if (filledOrder.side == "sell")
-            {
-                sharedSellOrderFilled = true;
-                sharedBuyOrderFilled = false;
-
-                sharedWaitingSellFill = false;
-                sharedWaitingBuyFill = true;
-            }
-
-            sharedWaitingBuyOrSell = false;
 
             this.Dispatcher.Invoke(() => updateListView(filledOrder));
         }
 
-        public void OrderUpdateHandler(object sender, EventArgs args)
+
+        public void SmaParametersUpdatedEventHandler(object sender, EventArgs args)
         {
 
-            var orderUpdate = ((OrderUpdateEventArgs)args);
-            MessageBox.Show(orderUpdate.Message);
+            var data = (SmaParamUpdateArgs)args;
+
+            txtSmaSlices.Text = data.NewSlices.ToString();
+            txtSmaTimeInterval.Text = data.NewTimeinterval.ToString();
+
         }
 
+        public void SmaUpdateEventHandler(object sender, EventArgs args)
+        {
+            var currentSmaData = (MAUpdateEventArgs)args;
+            decimal newSmaPrice = currentSmaData.CurrentMAPrice;
 
-        public void LtcTickerClient_Update(object sender, EventArgs args)
+            sharedCurrentAveragePrice = currentSmaData.CurrentMAPrice; 
+
+            var x = this.Dispatcher.Invoke(() => chkUseSd.IsChecked);
+            if (x == true)
+                LTCManager.UpdateBuySellBuffer(currentSmaData.CurrentSd);
+
+            this.Dispatcher.Invoke(() =>
+            {
+                lblSma.SetValue(ContentProperty, newSmaPrice);
+                lblUpdatedTime.Content = DateTime.UtcNow.ToLocalTime().ToLongTimeString();
+                lblSmaValue.Content = "SMA-" + currentSmaData.CurrentSlices.ToString() + " (" + currentSmaData.CurrentTimeInterval.ToString() + " min)";
+                lblSd.Content = currentSmaData.CurrentSd;
+                //txtPriceBuffer.Text = currentSmaData.CurrentSd.ToString();
+            });
+
+
+        }
+
+        public void TickerPriceUpdateEventHandler(object sender, EventArgs args)
         {
             var tickerData = (TickerMessage)args;
-            //var z = a.Sells.FirstOrDefault();
-            //Console.WriteLine("Update: price {0}", tickerData.CurrentPrice);
-
-            sharedLastTickerUpdateTime = DateTime.UtcNow.ToLocalTime();
-
-            sharedCurrentRealtimePrice = tickerData.RealTimePrice;
-
-            //Logger.WriteLog(CurrentRealtimePrice + "-" + CurrentBufferedPrice);
 
             this.Dispatcher.Invoke(() =>
             {
                 lblCurPrice.Content = tickerData.RealTimePrice.ToString();
-                lblTickUpdate1.Content = sharedLastTickerUpdateTime.ToLongTimeString();
+                lblTickUpdate1.Content = DateTime.UtcNow.ToLocalTime().ToLongTimeString();
 
-                if (sharedCurrentRealtimePrice - sharedCurrentAveragePrice >= 0)
+                if (tickerData.RealTimePrice - sharedCurrentAveragePrice >= 0)
                 {
                     lblCurPrice.Foreground = Brushes.Green;
                 }
@@ -204,230 +164,43 @@ namespace Multiplier
                 {
                     lblCurPrice.Foreground = Brushes.Red;
                 }
-            }
-            );
-
-            if (sharedStartBuyingSelling)
-            {
-               if ((sharedLastTickerUpdateTime - sharedLastBuySellTime).TotalMilliseconds < 1000)
-                {
-                    //Logger.WriteLog("price skipped: " + CurrentRealtimePrice);
-                    return;
-                }
-
-                sharedCurrentBufferedPrice = sharedCurrentRealtimePrice;
-
-                var secSinceLastCrosss = (DateTime.UtcNow.ToLocalTime() - sharedLastCrossTime).TotalSeconds;
-                if (secSinceLastCrosss < (sharedWaitTimeAfterCrossInMin * 60))
-                {
-                    //if the last time prices crossed is < 2 min do nothing
-                    //Logger.WriteLog(string.Format("Waiting {0} sec before placing any new order", Math.Round((sharedWaitTimeAfterCrossInMin * 60) - secSinceLastCrosss)));
-                    return;
-                }
-
-
-                if (!sharedWaitingBuyOrSell)
-                {
-                    sharedLastBuySellTime = DateTime.UtcNow.ToLocalTime();
-
-                    buysell();
-                }
-                else
-                {
-                    Logger.WriteLog("Buysell already in progress");
-                }
-            }
-
+            });
 
         }
 
-        async void buysell()
+
+        public void AutoTradingStartedEventHandler(object sender,EventArgs args)
         {
-
-
-            if (sharedWaitingBuyOrSell)
-            {
-                Logger.WriteLog("this should never print");
-                return;
-            }
-
-            decimal curPriceDiff = sharedCurrentBufferedPrice - sharedCurrentAveragePrice;
-
-            //if (curPriceDiff <= priceBuffer) //below average: sell
-            if (sharedCurrentBufferedPrice <= (sharedCurrentAveragePrice - sharedPriceBuffer))
-            {
-                if (!sharedSellOrderFilled) //if not already sold
-                {
-                    sharedSellOrderFilled = true;
-                    sharedBuyOrderFilled = false;
-
-                    if (sharedMaxSell > 0)
-                    {
-                        sharedMaxSell = 0;
-                        sharedMaxBuy = 5;
-
-                        sharedWaitingSellFill = true;
-                        sharedWaitingBuyOrSell = true;
-
-                        sharedLastCrossTime = DateTime.UtcNow.ToLocalTime();
-                        try
-                        {
-                            await myOrderBook.PlaceNewLimitOrder("sell", "LTC-USD", sharedBuySellAmount.ToString(), sharedCurrentBufferedPrice.ToString(), true);
-                            Logger.WriteLog(string.Format("Waiting {0} min before placing any new order", sharedWaitTimeAfterCrossInMin));
-                        }
-                        catch (Exception ex)
-                        {
-                            Logger.WriteLog("error selling: " + ex.Message);
-                            //throw;
-                        }
-                        
-
-                    }
-
-
-                }
-
-            }
-
-
-            //if (curPriceDiff >= priceBuffer) //above average: buy
-            if (sharedCurrentBufferedPrice >= (sharedCurrentAveragePrice + sharedPriceBuffer))
-            {
-                if (!sharedBuyOrderFilled) //if not already bought
-                {
-
-                    sharedSellOrderFilled = false;
-                    sharedBuyOrderFilled = true;
-
-                    if (sharedMaxBuy > 0)
-                    {
-                        sharedMaxSell = 5;
-                        sharedMaxBuy = 0;
-
-                        sharedWaitingBuyFill = true;
-                        sharedWaitingBuyOrSell = true;
-
-                        sharedLastCrossTime = DateTime.UtcNow.ToLocalTime();
-
-                        try
-                        {
-                            await myOrderBook.PlaceNewLimitOrder("buy", "LTC-USD", sharedBuySellAmount.ToString(), sharedCurrentBufferedPrice.ToString(), true);
-                            Logger.WriteLog(string.Format("Waiting {0} min before placing any new order", sharedWaitTimeAfterCrossInMin));
-                        }
-                        catch (Exception ex)
-                        {
-                            Logger.WriteLog("Error buying: " + ex.Message);
-                            //throw;
-                        }
-
-                    }
-
-                }
-
-            }
-
-
-
+            //auto trading started
         }
+
+
+
 
         private void btnStartBySelling_Click(object sender, RoutedEventArgs e)
         {
-            sharedLastBuySellTime = DateTime.UtcNow.ToLocalTime();
-            sharedLastCrossTime = DateTime.UtcNow.ToLocalTime().AddSeconds(-1 * sharedWaitTimeAfterCrossInMin * 60);
+
+            LTCManager.StartTrading_BySelling();
 
             btnStartByBuying.IsEnabled = false;
             btnStartBySelling.IsEnabled = false;
-
-            sharedBuyOrderFilled = true;
-            sharedSellOrderFilled = false;
-
-            sharedMaxBuy = 0;
-            sharedMaxSell = 5;
-
-            sharedStartBuyingSelling = true;
         }
 
 
         private void btnStartByBuying_Click(object sender, RoutedEventArgs e)
         {
-            sharedLastBuySellTime = DateTime.UtcNow.ToLocalTime();
-            sharedLastCrossTime = DateTime.UtcNow.ToLocalTime().AddSeconds(-1 * sharedWaitTimeAfterCrossInMin * 60);
 
+            LTCManager.StartTrading_ByBuying();
             btnStartByBuying.IsEnabled = false;
             btnStartBySelling.IsEnabled = false;
 
-            sharedBuyOrderFilled = false;
-            sharedSellOrderFilled = true;
-
-            sharedMaxBuy = 5;
-            sharedMaxSell = 0;
-
-            sharedStartBuyingSelling = true;
-        }
-
-        private void SmaUpdateEventHandler(object sender, EventArgs args)
-        {
-
-            var currentSmaData = (MAUpdateEventArgs)args;
-            decimal newSmaPrice = currentSmaData.CurrentMAPrice;
-
-            sharedCurrentAveragePrice = newSmaPrice;
-
-            //update the buy / sell buffer 
-            var x = this.Dispatcher.Invoke(()=> chkUseSd.IsChecked);
-            if (x == true)
-                updateBuySellBuffer(currentSmaData.CurrentSd);
-
-            this.Dispatcher.Invoke(() => 
-                {
-                    lblSma.SetValue(ContentProperty, newSmaPrice);
-                    lblUpdatedTime.Content = DateTime.UtcNow.ToLocalTime().ToLongTimeString();
-                    lblSmaValue.Content = "SMA-" + sharedSmaSlices.ToString() + " (" + sharedSmaTimeInterval.ToString() + " min)";
-                    lblSd.Content = currentSmaData.CurrentSd;
-                    //txtPriceBuffer.Text = currentSmaData.CurrentSd.ToString();
-                }
-            );
-            Logger.WriteLog(string.Format("SMA updated: {0}",newSmaPrice));
-            //lblSma.Content = newSmaPrice.ToString();
-            //Logger.WriteLog(DateTime.UtcNow.ToString());
-        }
-
-
-        private async void Button_Click_2(object sender, RoutedEventArgs e)
-        {
-
-
-            //try
-            //{
-            //    //await myOrderBook.PlaceNewLimitOrder("sell", "LTC-USD", "0.01", "80.00", true);
-            //    await myOrderBook.PlaceNewLimitOrder("buy", "LTC-USD", "0.01", CurrentRealtimePrice.ToString(), true);
-            //}
-            //catch (Exception ex)
-            //{
-
-            //    Logger.WriteLog(ex.Message);
-            //}
-
-
         }
 
 
 
-        private async void Button_Click_3(object sender, RoutedEventArgs e)
-        {
-            //try
-            //{
-            //    await myOrderBook.PlaceNewLimitOrder("sell", "LTC-USD", "0.01", CurrentRealtimePrice.ToString(), true);
-            //    //await myOrderBook.PlaceNewLimitOrder("buy", "LTC-USD", "0.01", "10.00", true);
-            //}
-            //catch (Exception ex)
-            //{
 
-            //    System.Diagnostics.Logger.WriteLog(ex.Message);
-            //}
-        }
 
-        void initListView()
+        void InitListView()
         {
             // Add columns
             var grdView = new GridView();
@@ -593,34 +366,16 @@ namespace Multiplier
                     //return;
                 }
 
-
-
-                bool errorOccured = false;
-
                 try
                 {
-                    sharedSma.updateValues(timeInt, slices) ;
-                    sharedSmaSlices = slices;
-                    sharedSmaTimeInterval = timeInt;
-                    sharedWaitTimeAfterCrossInMin = sharedSmaTimeInterval;
+                    LTCManager.UpdateSmaParamters(timeInt, slices); 
                 }
                 catch (Exception)
                 {
-                    errorOccured = true;
-                    MessageBox.Show("Error occured  in sma calculations. Please check the numbers. default values used");
-
-                    sharedSma.updateValues(3, 40);
-                    sharedSmaSlices = 40;
-                    sharedSmaTimeInterval = 3;
-                    sharedWaitTimeAfterCrossInMin = sharedSmaTimeInterval;
+                    var msg = "Error occured  in sma calculations. Please check the numbers. default values used";
+                    MessageBox.Show(msg);
+                    Logger.WriteLog(msg);
                     //throw;
-                }
-
-                if (!errorOccured)
-                {
-                    var updateMsg = string.Format("SMA parameters updated. Time interval: {0}, Slices: {1}", timeInt, slices);
-                    Logger.WriteLog(updateMsg);
-                    MessageBox.Show(updateMsg);
                 }
 
 
@@ -628,8 +383,6 @@ namespace Multiplier
             catch (Exception)
             {
                 MessageBox.Show("invalid sma values"); 
-
-                //throw;
             }
 
 
@@ -650,12 +403,8 @@ namespace Multiplier
                     return;
                 }
 
-                updateBuySellBuffer(buySellBuffer);
-                var msg = "price buffer updated to " + 
-                    buySellBuffer.ToString() + " at " 
-                    + DateTime.UtcNow.ToLocalTime().ToShortDateString() + DateTime.UtcNow.ToLocalTime().ToLongTimeString();
-                MessageBox.Show(msg);
-                Logger.WriteLog(msg);
+                LTCManager.UpdateBuySellBuffer(buySellBuffer);
+
             }
             catch (Exception ex)
             {
@@ -663,40 +412,6 @@ namespace Multiplier
             }
         }
 
-        public void updateBuySellBuffer(decimal newPriceBuffer)
-        {
-
-
-
-            decimal tempValue = 0;
-            bool x;
-            x = Dispatcher.Invoke(() => chkUseInverse.IsChecked.Value);
-
-            if (x == null)
-                x = false;
-
-            if (x == true)
-                tempValue = 1 / (newPriceBuffer * (10*100));
-            else
-                tempValue = newPriceBuffer;
-
-            sharedPriceBuffer = Math.Round( tempValue,3);
-            Dispatcher.Invoke(() => lblBuySellBuffer.Content = sharedPriceBuffer.ToString());
-            //lblBuySellBuffer.Content = sharedPriceBuffer.ToString();
-
-        }
-
-
-        public void updateBuySellAmount(decimal amount)
-        {
-            if (amount <= 0)
-            {
-                Logger.WriteLog("buy sell amount cannot be less than or equal to 0");
-                return;
-            }
-
-            sharedBuySellAmount = amount;
-        }
 
         private void Button_Click_1(object sender, RoutedEventArgs e)
         {
@@ -712,7 +427,7 @@ namespace Multiplier
                     return;
                 }
 
-                updateBuySellAmount(tradeAmount);
+                LTCManager.UpdateBuySellAmount(tradeAmount);
                 lblBuySellAmount.Content = tradeAmount.ToString();
 
             }
@@ -739,6 +454,7 @@ namespace Multiplier
         private void Window_Closed(object sender, EventArgs e)
         {
             //MessageBox.Show("app closing");
+            Logger.WriteLog("Multiplier exit");
             System.Environment.Exit(0);
         }
 

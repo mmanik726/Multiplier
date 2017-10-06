@@ -26,6 +26,9 @@ namespace CoinbaseExchange.NET.Utilities
 
         private static Logger LoggerInstance;
 
+        private static Queue<string> writeQue;
+
+        public static object WriteLock = new object();
 
         private static void InitLogger(string logFileName = "")
         {
@@ -85,10 +88,30 @@ namespace CoinbaseExchange.NET.Utilities
             string logMsg = dt + "\t" + message + "\n";
 
 
+
+            //if (writeQue.Count > 0)
+            //{
+            //    writeQue.Enqueue(logMsg);
+            //}
+            
+
             try
             {
-                File.AppendAllText(fileNamePath, logMsg);
-                Debug.WriteLine(logMsg);
+                //for (int i = 0; i < writeQue.Count; i++)
+                //{
+                //    File.AppendAllText(fileNamePath, logMsg);
+                //    Debug.WriteLine(logMsg);
+
+                //    writeQue.Dequeue();
+                //}
+
+                lock (WriteLock)
+                {
+                    File.AppendAllText(fileNamePath, logMsg);
+                    Debug.WriteLine(logMsg);
+                }
+
+
             }
             catch (Exception ex)
             {

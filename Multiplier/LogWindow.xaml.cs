@@ -12,6 +12,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 using CoinbaseExchange.NET.Utilities;
+
 namespace Multiplier
 {
     /// <summary>
@@ -19,28 +20,40 @@ namespace Multiplier
     /// </summary>
     public partial class LogWindow : Window
     {
+        public static object writeLock = new object();
+
         public LogWindow()
         {
             InitializeComponent();
 
-            Logger.Logupdated += LoggerUpdateEventHandler;
+            Logger.Logupdated += LogUpdatedHandler;
+            txtLog.HorizontalScrollBarVisibility = ScrollBarVisibility.Visible;
+            txtLog.Document.PageWidth = 1000;
         }
 
-
-        public void LoggerUpdateEventHandler(object sender, LoggerEventArgs args)
+        private void LogUpdatedHandler(object sender, EventArgs args)
         {
-            this.Dispatcher.Invoke(() =>
+            var msg = (LoggerEventArgs)args;
+            try
             {
-                txtLog.AppendText(args.LogMessage); 
-            });
-            //Logger.WriteLog("Hello");
+                lock (writeLock)
+                {
+                    this.Dispatcher.Invoke(() => txtLog.AppendText(msg.LogMessage)) ;
+                }
+            }
+            catch (Exception)
+            {
+                Console.WriteLine("error appending to text box");
+                //throw;
+            }
+            
         }
 
 
-        //protected override void OnClosing(CancelEventArgs e)
-        //{
-        //    base.OnClosing(e);
-        //    e.Cancel = true;
-        //}
+        private void txtLog_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            // scroll it automatically
+            txtLog.ScrollToEnd();
+        }
     }
 }

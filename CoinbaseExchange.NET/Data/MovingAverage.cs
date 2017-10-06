@@ -12,7 +12,9 @@ namespace CoinbaseExchange.NET.Data
     public class MAUpdateEventArgs : EventArgs
     {
         public decimal CurrentMAPrice { get; set; }
+        public int CurrentSlices { get; set; }
         public decimal CurrentSd { get; set; }
+        public int CurrentTimeInterval { get; set; }
     }
 
 
@@ -84,8 +86,14 @@ namespace CoinbaseExchange.NET.Data
             aTimer.Interval = updateInterval * 60 * 1000;
             aTimer.Enabled = true;
             aTimer.Start();
-            
-            NotifyListener(new MAUpdateEventArgs { CurrentMAPrice = CurrentSMAPrice, CurrentSd = Math.Round(currentSandardDeviation,3)});
+
+            NotifyListener(new MAUpdateEventArgs
+            {
+                CurrentMAPrice = CurrentSMAPrice,
+                CurrentSd = Math.Round(currentSandardDeviation, 3),
+                CurrentSlices = SLICES,
+                CurrentTimeInterval = TIME_INTERVAL
+            });
 
             
 
@@ -103,7 +111,17 @@ namespace CoinbaseExchange.NET.Data
 
             if ((timeIntInMin * newSlices > 200) && sharedRawExchangeData.Count() < 500)
             {
-                await DownloadAdditionalData();
+                try
+                {
+                    await DownloadAdditionalData();
+                }
+                catch (Exception ex)
+                {
+                    Logger.WriteLog("Error downloading additional data: " + ex.InnerException.Message);
+                    throw;
+                }
+
+                
             }
 
             TIME_INTERVAL = timeIntInMin;
@@ -125,7 +143,7 @@ namespace CoinbaseExchange.NET.Data
             MADataPoints.Add(new CandleData { Close = TickerPriceClient.CurrentPrice, Time = DateTime.UtcNow.ToLocalTime()});
 
             var itemsInSlice = MADataPoints.Take(SLICES);
-            itemsInSlice.ToList().ForEach((t) => Logger.WriteLog(t.Close.ToString()));
+            //itemsInSlice.ToList().ForEach((t) => Logger.WriteLog(t.Close.ToString()));
             var itemsInSLiceAvg = itemsInSlice.Average((d) => d.Close);
 
             //MADataPoints.ForEach((t) => Logger.WriteLog(t.Time + "\t" + t.Close));
@@ -178,7 +196,7 @@ namespace CoinbaseExchange.NET.Data
 
             Logger.WriteLog("Additional data is being downloaded ");
 
-            int days = 5; //36 hours data in 1 min interval in total
+            int days = 10; //36 hours data in 1 min interval in total
 
             HistoricPrices historicData = new HistoricPrices();
 
@@ -191,7 +209,7 @@ namespace CoinbaseExchange.NET.Data
             {
                 //var x = Task.Delay(200);
 
-                System.Threading.Thread.Sleep(200);
+                System.Threading.Thread.Sleep(300);
                 var temp = await historicData.GetPrices(
                     product: "LTC-USD",
                     granularity: "60",
