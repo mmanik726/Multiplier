@@ -36,10 +36,9 @@ namespace Multiplier
             var msg = (LoggerEventArgs)args;
             try
             {
-                lock (writeLock)
-                {
-                    this.Dispatcher.Invoke(() => txtLog.AppendText(msg.LogMessage)) ;
-                }
+
+                this.Dispatcher.Invoke(() => txtLog.AppendText(msg.LogMessage)) ;
+
             }
             catch (Exception)
             {

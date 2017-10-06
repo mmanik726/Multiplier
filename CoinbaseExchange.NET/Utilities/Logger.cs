@@ -26,9 +26,9 @@ namespace CoinbaseExchange.NET.Utilities
 
         private static Logger LoggerInstance;
 
-        private static Queue<string> writeQue;
+        //private static Queue<string> writeQue;
 
-        public static object WriteLock = new object();
+        private static object WriteLock = new object();
 
         private static void InitLogger(string logFileName = "")
         {
