@@ -11,6 +11,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using CoinbaseExchange.NET.Utilities;
 
 namespace CoinbaseExchange.NET.Core
 {
@@ -79,27 +80,36 @@ namespace CoinbaseExchange.NET.Core
 
                 httpClient.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0");
 
-                switch(method)
+                try
                 {
-                    case "GET":
-                        response = await httpClient.GetAsync(absoluteUri);
-                        break;
-                    case "POST":
+                    switch (method)
+                    {
+                        case "GET":
+                            response = await httpClient.GetAsync(absoluteUri);
+                            break;
+                        case "POST":
 
-                        timestamp = (request.TimeStamp).ToString(System.Globalization.CultureInfo.InvariantCulture);
-                        signature = _authContainer.ComputeSignature(timestamp, relativeUrl, method, body);
-                        httpClient.DefaultRequestHeaders.Add("CB-ACCESS-SIGN", signature);
+                            timestamp = (request.TimeStamp).ToString(System.Globalization.CultureInfo.InvariantCulture);
+                            signature = _authContainer.ComputeSignature(timestamp, relativeUrl, method, body);
+                            httpClient.DefaultRequestHeaders.Add("CB-ACCESS-SIGN", signature);
 
-                        var requestBody = new StringContent(body, Encoding.UTF8, "application/json");
-                        response = httpClient.PostAsync(absoluteUri, requestBody).Result;
-                        break;
-                    case "DELETE":
-                        //var requestBody = new StringContent(body, Encoding.UTF8, "application/json");
-                        response = await httpClient.DeleteAsync(absoluteUri);
-                        break;
-                    default:
-                        throw new NotImplementedException("The supplied HTTP method is not supported: " + method ?? "(null)");
+                            var requestBody = new StringContent(body, Encoding.UTF8, "application/json");
+                            response = httpClient.PostAsync(absoluteUri, requestBody).Result;
+                            break;
+                        case "DELETE":
+                            //var requestBody = new StringContent(body, Encoding.UTF8, "application/json");
+                            response = await httpClient.DeleteAsync(absoluteUri);
+                            break;
+                        default:
+                            throw new NotImplementedException("The supplied HTTP method is not supported: " + method ?? "(null)");
+                    }
                 }
+                catch (Exception ex)
+                {
+                    Logger.WriteLog("Error getting server response/data: " + ex.Message);
+                    throw new Exception("HTTP_GET_POST_DELTE_Error");
+                }
+
 
 
                 var contentBody = await response.Content.ReadAsStringAsync();

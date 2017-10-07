@@ -32,7 +32,16 @@ namespace CoinbaseExchange.NET.Endpoints.PublicData
 
             TickerRequest tickerRequest = new TickerRequest(product);
 
-            ExchangeResponse response = await this.GetResponse(tickerRequest);
+            ExchangeResponse response;
+
+            try
+            {
+                response = await this.GetResponse(tickerRequest);
+            }
+            catch (Exception)
+            {
+                throw new Exception("RealTimePriceError");
+            }
 
             decimal price = 0;
 

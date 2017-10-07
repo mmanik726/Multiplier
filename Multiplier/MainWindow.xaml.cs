@@ -54,7 +54,7 @@ namespace Multiplier
 
 
             LTCManager = new Manager("LTC-USD", myPassphrase, myKey, mySecret);
-
+            //LTCManager = new Manager("BTC-USD", myPassphrase, myKey, mySecret);
 
             LTCManager.BuySellAmountChangedEvent += BuySellAmountChangedEventHandler;
             LTCManager.BuySellBufferChangedEvent += BuySellBufferChangedEventHandler;
@@ -64,6 +64,10 @@ namespace Multiplier
             LTCManager.TickerPriceUpdateEvent += TickerPriceUpdateEventHandler;
             LTCManager.AutoTradingStartedEvent += AutoTradingStartedEventHandler;
 
+            LTCManager.TickerConnectedEvent += TickerConnectedEventHandler;
+            LTCManager.TickerDisConnectedEvent += TickerDisConnectedEventHandler;
+
+            LTCManager.InitializeManager(); 
 
 
             sharedCurrentAveragePrice = 0;
@@ -79,6 +83,27 @@ namespace Multiplier
             
         }
 
+        private void TickerDisConnectedEventHandler(object sender, EventArgs e)
+        {
+            this.Dispatcher.Invoke(() => 
+            {
+                lblWarning.Visibility = Visibility.Visible;
+                lblWarning.Foreground = Brushes.Red;
+                lblWarning.Content = "Warning: Realtime Data Offline. Autotrading OFF"; 
+            });
+
+        }
+
+        private void TickerConnectedEventHandler(object sender, EventArgs e)
+        {
+            this.Dispatcher.Invoke(() =>
+            {
+                lblWarning.Visibility = Visibility.Hidden;
+                //lblWarning.Foreground = Brushes.Red;
+                //lblWarning.Content = "Warning: Realtime Data Offline. Autotrading OFF";
+            });
+
+        }
 
         public void BuySellAmountChangedEventHandler(object sender, EventArgs args)
         {
@@ -361,14 +386,14 @@ namespace Multiplier
 
                 if (slices * timeInt > 200)
                 {
-                    Logger.WriteLog("Additional data needs to be downloaded if not already downloaded");
+                    //Logger.WriteLog("Additional data needs to be downloaded if not already downloaded");
                     //MessageBox.Show("max amount of data points available is 200 at the moment");
                     //return;
                 }
 
                 try
                 {
-                    LTCManager.UpdateSmaParamters(timeInt, slices); 
+                    LTCManager.UpdateSmaParameters(timeInt, slices); 
                 }
                 catch (Exception)
                 {

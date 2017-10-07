@@ -72,6 +72,8 @@ namespace Multiplier
         public EventHandler<SmaParamUpdateArgs> SmaParametersUpdatedEvent;
         public EventHandler AutoTradingStartedEvent;
 
+        public EventHandler TickerConnectedEvent;
+        public EventHandler TickerDisConnectedEvent;
 
         public Manager(string inputProductName, string PassPhrase, string Key, string Secret)
         {
@@ -80,8 +82,14 @@ namespace Multiplier
             MyPassphrase = PassPhrase;
             MyKey = Key;
             MySecret = Secret;
+            //InitializeManager();
 
-            InitManager(ProductName);
+
+        }
+
+        public async void InitializeManager()
+        {
+            await Task.Factory.StartNew(() => InitManager(ProductName));
         }
 
 
@@ -91,7 +99,7 @@ namespace Multiplier
             //logic
 
             LastBuySellTime = DateTime.UtcNow.ToLocalTime();
-            LastCrossTime = DateTime.UtcNow.ToLocalTime().AddSeconds(-1 * WaitTimeAfterCrossInMin * 60);
+            LastCrossTime = DateTime.UtcNow.ToLocalTime().AddMinutes(-1 * WaitTimeAfterCrossInMin);
 
             BuyOrderFilled = true;
             SellOrderFilled = false;
@@ -111,7 +119,7 @@ namespace Multiplier
             //logic
 
             LastBuySellTime = DateTime.UtcNow.ToLocalTime();
-            LastCrossTime = DateTime.UtcNow.ToLocalTime().AddSeconds(-1 * WaitTimeAfterCrossInMin * 60);
+            LastCrossTime = DateTime.UtcNow.ToLocalTime().AddMinutes(-1 * WaitTimeAfterCrossInMin);
 
 
             BuyOrderFilled = false;
@@ -126,8 +134,27 @@ namespace Multiplier
 
             AutoTradingStartedEvent?.Invoke(this, EventArgs.Empty);
         }
-        public void InitManager(string ProductName)
+
+
+        private void InitManager(string ProductName)
         {
+
+
+            //try to get ticker first
+            TickerClient ProductTickerClient;
+
+            try
+            {
+                Logger.WriteLog("Initializing ticker");
+                ProductTickerClient = new TickerClient(ProductName);
+            }
+            catch (Exception ex)
+            {
+                Logger.WriteLog("Manager cant initialize ticker");
+                return;
+            }
+
+
 
             BuySellAmount = 0.01m;//default
 
@@ -156,11 +183,21 @@ namespace Multiplier
 
             LastCrossTime = DateTime.UtcNow.ToLocalTime();
 
-            TickerClient ProductTickerClient = new TickerClient(ProductName);
+            
+
+
+            
+
             ProductTickerClient.PriceUpdated += ProductTickerClient_UpdateHandler;
 
+            ////update ui with initial pice
+            ProductTickerClient_UpdateHandler(this, new TickerMessage(ProductTickerClient.CurrentPrice));
+
+            ProductTickerClient.TickerConnectedEvent += tickerConnectedHandler;
+            ProductTickerClient.TickerDisconnectedEvent += tickerDisconnectedHandler;
+
             MyAuth = new CBAuthenticationContainer(MyKey, MyPassphrase, MySecret);
-            MyOrderBook = new MyOrderBook(MyAuth, ProductName);
+            MyOrderBook = new MyOrderBook(MyAuth, ProductName, ref ProductTickerClient);
             MyOrderBook.OrderUpdateEvent += FillUpdateEventHandler;
 
             Sma = new MovingAverage(ref ProductTickerClient, ProductName, SmaTimeInterval, SmaSlices);
@@ -168,6 +205,27 @@ namespace Multiplier
 
             Logger.WriteLog(string.Format("{0} manager started", ProductName));
 
+        }
+
+        private void tickerDisconnectedHandler(object sender, EventArgs e)
+        {
+            Logger.WriteLog("Ticker disconnected... pausing all buy / sell");
+
+            StartBuyingSelling = false;
+            TickerDisConnectedEvent?.Invoke(this, EventArgs.Empty);
+
+        }
+
+        private void tickerConnectedHandler(object sender, EventArgs args)
+        {
+            Logger.WriteLog("Ticker connected... resuming buy sell");
+
+            
+            Task.Run(()=> UpdateSmaParameters(SmaTimeInterval, SmaSlices, true)).Wait();
+            System.Threading.Thread.Sleep(2 * 1000);
+            StartBuyingSelling = true;
+
+            TickerConnectedEvent?.Invoke(this, EventArgs.Empty);
         }
 
 
@@ -207,7 +265,7 @@ namespace Multiplier
         }
 
 
-        public void ProductTickerClient_UpdateHandler(object sender, EventArgs args)
+        private void ProductTickerClient_UpdateHandler(object sender, EventArgs args)
         {
             var tickerData = (TickerMessage)args;
 
@@ -248,7 +306,7 @@ namespace Multiplier
                 }
                 else
                 {
-                    Logger.WriteLog("Buysell already in progress");
+                    Logger.WriteLog("Buy/sell already in progress");
                 }
             }
 
@@ -272,30 +330,32 @@ namespace Multiplier
             {
                 if (!SellOrderFilled) //if not already sold
                 {
-                    SellOrderFilled = true;
-                    BuyOrderFilled = false;
 
-                    if (MaxSell > 0)
+
+
+                    setNextActionTo_Buy();
+
+                    try
                     {
-                        MaxSell = 0;
-                        MaxBuy = 5;
-
-                        WaitingSellFill = true;
-                        WaitingBuyOrSell = true;
-
-                        LastCrossTime = DateTime.UtcNow.ToLocalTime();
-                        try
-                        {
-                            await MyOrderBook.PlaceNewLimitOrder("sell", ProductName, BuySellAmount.ToString(), CurrentBufferedPrice.ToString(), true);
-                            Logger.WriteLog(string.Format("Waiting {0} min before placing any new order", WaitTimeAfterCrossInMin));
-                        }
-                        catch (Exception ex)
-                        {
-                            Logger.WriteLog("error selling: " + ex.Message);
-                            //throw;
-                        }
+                        await MyOrderBook.PlaceNewLimitOrder("sell", ProductName, BuySellAmount.ToString(), CurrentBufferedPrice.ToString(), true);
+                        Logger.WriteLog(string.Format("Order placed, Waiting {0} min before placing any new order", WaitTimeAfterCrossInMin));
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.WriteLog("Error selling: \n" + ex.Message + "\n"
+                            + ex.InnerException.Message + "\n"
+                            + ex.InnerException.InnerException.Message);
 
 
+                        Logger.WriteLog("Retrying to sell now...");
+                        setNextActionTo_Sell();
+
+
+                        WaitingBuyFill = false;
+                        WaitingBuyOrSell = false; //set wait flag to false to place new order
+
+                        //simulate last cross time so sells immidiately instead of waiting. since error occured
+                        LastCrossTime = DateTime.UtcNow.ToLocalTime().AddMinutes((-1 * WaitTimeAfterCrossInMin) - 1);
                     }
 
 
@@ -310,31 +370,31 @@ namespace Multiplier
                 if (!BuyOrderFilled) //if not already bought
                 {
 
-                    SellOrderFilled = false;
-                    BuyOrderFilled = true;
 
-                    if (MaxBuy > 0)
+                    setNextActionTo_Sell();
+
+                    try
                     {
-                        MaxSell = 5;
-                        MaxBuy = 0;
+                        await MyOrderBook.PlaceNewLimitOrder("buy", ProductName, BuySellAmount.ToString(), CurrentBufferedPrice.ToString(), true);
+                        Logger.WriteLog(string.Format("Order placed, waiting {0} min before placing any new order", WaitTimeAfterCrossInMin));
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.WriteLog("Error buying: \n" + ex.Message + "\n" 
+                            + ex.InnerException.Message + "\n"
+                            + ex.InnerException.InnerException.Message);
 
-                        WaitingBuyFill = true;
-                        WaitingBuyOrSell = true;
+                        Logger.WriteLog("Retrying to buy now...");
+                        setNextActionTo_Buy();
 
-                        LastCrossTime = DateTime.UtcNow.ToLocalTime();
+                        WaitingBuyFill = false; 
+                        WaitingBuyOrSell = false; //set wait flag to false to place new order
 
-                        try
-                        {
-                            await MyOrderBook.PlaceNewLimitOrder("buy", ProductName, BuySellAmount.ToString(), CurrentBufferedPrice.ToString(), true);
-                            Logger.WriteLog(string.Format("Waiting {0} min before placing any new order", WaitTimeAfterCrossInMin));
-                        }
-                        catch (Exception ex)
-                        {
-                            Logger.WriteLog("Error buying: " + ex.Message);
-                            //throw;
-                        }
+                        //simulate last cross time so buys immididtely instead of waiting. since error occured
+                        LastCrossTime = DateTime.UtcNow.ToLocalTime().AddMinutes ((-1 * WaitTimeAfterCrossInMin) - 1);
 
                     }
+
 
                 }
 
@@ -342,12 +402,44 @@ namespace Multiplier
 
         }
 
-        public void UpdateSmaParamters(int InputTimerInterval, int InputSlices)
+
+
+        private void setNextActionTo_Sell()
+        {
+            SellOrderFilled = false;
+            BuyOrderFilled = true;
+
+            //MaxSell = 5;
+            //MaxBuy = 0;
+
+            WaitingBuyFill = true;
+            WaitingBuyOrSell = true;
+
+            LastCrossTime = DateTime.UtcNow.ToLocalTime();
+        }
+
+        private void setNextActionTo_Buy()
+        {
+            SellOrderFilled = true;
+            BuyOrderFilled = false;
+
+            //MaxSell = 0;
+            //MaxBuy = 5;
+
+            WaitingSellFill = true;
+            WaitingBuyOrSell = true;
+
+            LastCrossTime = DateTime.UtcNow.ToLocalTime();
+
+        }
+
+
+        public void UpdateSmaParameters(int InputTimerInterval, int InputSlices, bool forceRedownload = false)
         {
 
             try
             {
-                Sma.updateValues(InputTimerInterval, InputSlices);
+                Sma.updateValues(InputTimerInterval, InputSlices, forceRedownload);
                 SmaSlices = InputSlices;
                 SmaTimeInterval = InputTimerInterval;
                 WaitTimeAfterCrossInMin = SmaTimeInterval;

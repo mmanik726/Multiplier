@@ -63,7 +63,20 @@ namespace CoinbaseExchange.NET.Endpoints.PublicData
 
             HistoricPriceRequest request = new HistoricPriceRequest(endpoint);
 
-            var genericResponse = await this.GetResponse(request);
+
+            ExchangeResponse genericResponse; 
+
+            try
+            {
+                genericResponse = await this.GetResponse(request);
+            }
+            catch (Exception ex)
+            {
+                Logger.WriteLog("Error getting historic data prices: " + ex.Message + " InnerEx msg:" + ex.InnerException.Message); 
+                throw new Exception("HistoricDataError");
+            }
+
+            
 
             IEnumerable<CandleData> result;
             if (genericResponse.IsSuccessStatusCode)

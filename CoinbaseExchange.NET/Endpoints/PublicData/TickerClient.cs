@@ -31,24 +31,73 @@ namespace CoinbaseExchange.NET.Endpoints.PublicData
         public decimal CurrentPrice;
         public static bool isTryingToReconnect;
 
+        public static bool TickerClientConnected;
+
+        public EventHandler TickerDisconnectedEvent;
+        public EventHandler TickerConnectedEvent;
+
+        private static bool tickerDisconnectNotified;
+        private static bool tickerConnectedNotified;  
+
         public TickerClient(string ProductName) : base()
         {
             //OnUpdated();
             isTryingToReconnect = false;
-            updateLatestPrice(ProductName);
+            TickerClientConnected = false;
+
+            tickerConnectedNotified = false;
+            tickerDisconnectNotified = false;
+
+
+            //updateLatestPrice(ProductName);
+
+            updateLatestPrice(ProductName).Wait(); //wait till result 
+
+            while (!TickerClientConnected)
+            {
+                updateLatestPrice(ProductName).Wait();
+
+                Thread.Sleep(5 * 1000);
+
+                if (!TickerClientConnected)
+                {
+                    Logger.WriteLog("Ticker client not ready / cannot connect to server... retrying in 5 sec");
+                }
+            }
+
+            TickerConnectedEvent?.Invoke(this, EventArgs.Empty);
+            tickerConnectedNotified = true;
+
             Subscribe(ProductName, onTickerUpdateReceived);
         }
 
 
-        private async void updateLatestPrice(string product)
+        private async Task<bool> updateLatestPrice(string product)
         {
-            RealtimePrice curPrice = new RealtimePrice();
-            //error: stops here when http erros including no internet
-            var price = await curPrice.GetRealtimePrice(product);
 
-            TickerMessage tickerMsg = new TickerMessage(price);
-            NotifyListener(tickerMsg);
+            //error: stops here when http erros including no internet
+            decimal price = 0;
+
+            try
+            {
+                RealtimePrice curPrice = new RealtimePrice();
+                price = await curPrice.GetRealtimePrice(product);
+                TickerClientConnected = true;
+                CurrentPrice = price;
+                NotifyListener(new TickerMessage(price));
+                return true;
+            }
+            catch (Exception ex)
+            {
+                TickerClientConnected = false;
+                return false;
+                //throw ex; //new Exception("LatestPriceError");
+            }
+
+
+
         }
+
 
         private void NotifyListener(TickerMessage message)
         {
@@ -71,7 +120,7 @@ namespace CoinbaseExchange.NET.Endpoints.PublicData
         }
 
 
-        private static async void Subscribe(string product, Action<RealtimeMessage> onMessageReceived)
+        private  async void Subscribe(string product, Action<RealtimeMessage> onMessageReceived)
         {
             if (String.IsNullOrWhiteSpace(product))
                 throw new ArgumentNullException("product");
@@ -108,10 +157,18 @@ namespace CoinbaseExchange.NET.Endpoints.PublicData
 
                 if (webSocketClient.State == WebSocketState.Open)
                 {
+                    Logger.WriteLog("Websocket connected");
                     var subscribeRequest = new ArraySegment<byte>(requestBytes);
                     var sendCancellationToken = new CancellationToken();
                     await webSocketClient.SendAsync(subscribeRequest, WebSocketMessageType.Text, true, sendCancellationToken);
 
+                    if (!tickerConnectedNotified)
+                    {
+                        tickerConnectedNotified = true;
+                        TickerConnectedEvent?.Invoke(null, EventArgs.Empty);
+                    }
+                    TickerClientConnected = true;
+                    tickerDisconnectNotified = false;
 
                     while (webSocketClient.State == WebSocketState.Open)
                     {
@@ -143,6 +200,8 @@ namespace CoinbaseExchange.NET.Endpoints.PublicData
                         if (realtimeMessage == null)
                             continue;
 
+
+
                         onMessageReceived(realtimeMessage);
                     }
 
@@ -154,25 +213,43 @@ namespace CoinbaseExchange.NET.Endpoints.PublicData
                 Logger.WriteLog("Error in ticker websocket: " + ex.Message);
                 //webSocketClient.Abort();
                 webSocketClient = null;
+
+                TickerClientConnected = false;
+
+                Reconnect(product, onMessageReceived);
+
+                tickerConnectedNotified = false;
+                if (!tickerDisconnectNotified)
+                {
+                    tickerDisconnectNotified = true;
+                    TickerDisconnectedEvent?.Invoke(null,EventArgs.Empty);
+                }
             }
 
-            //if (isTryingToReconnect)
-            //{
-            //    return;
-            //}
+            Reconnect(product, onMessageReceived);
+
+
+        }
+
+        private  void Reconnect(string prodName, Action<RealtimeMessage> onMessageReceived)
+        {
+
+            if (isTryingToReconnect)
+            {
+                return;
+            }
 
             isTryingToReconnect = true;
 
-            Logger.WriteLog(string.Format("websocket ticker feed closed, retrying in 5 sec {0}"));
+            Logger.WriteLog(string.Format("websocket ticker feed closed or cannot connect, retrying in 5 sec"));
 
             System.Threading.Thread.Sleep(5 * 1000);
             //Task.Delay(10 * 1000);
 
-            Subscribe(product, onMessageReceived);
+            Subscribe(prodName, onMessageReceived);
 
             isTryingToReconnect = false;
+
         }
-
-
     }
 }

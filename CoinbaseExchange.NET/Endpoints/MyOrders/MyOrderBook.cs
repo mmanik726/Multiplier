@@ -255,7 +255,7 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
         }
 
 
-        public MyOrderBook (CBAuthenticationContainer authContainer, string product) : base(authContainer)
+        public MyOrderBook (CBAuthenticationContainer authContainer, string product, ref TickerClient inputTickerClient) : base(authContainer)
         {
             isUpdatingOrderList = false;
 
@@ -268,7 +268,7 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
 
             lastTickTIme = DateTime.UtcNow;
 
-            PriceTicker = new TickerClient(product);
+            PriceTicker = inputTickerClient; //new TickerClient(product); //no need to create two different ticker, use one global ticker
             PriceTicker.PriceUpdated += PriceUpdateEventHandler;
 
             fillsClient = new FillsClient(_auth, this);
@@ -422,8 +422,16 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
 
             Logger.WriteLog("Orders in ActiveOrderList:");
 
+            try
+            {
+                MyChaseOrderList.ForEach(x => Logger.WriteLog("\t" + x.OrderId));
 
-            MyChaseOrderList.ForEach(x => Logger.WriteLog("\t" + x.OrderId));
+            }
+            catch (Exception)
+            {
+
+                Logger.WriteLog("Error enumerating list, list changed");
+            }
                 
             isBusyCancelAndReorder = false;
 

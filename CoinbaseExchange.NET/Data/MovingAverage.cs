@@ -40,17 +40,25 @@ namespace CoinbaseExchange.NET.Data
         public decimal CurrentSMAPrice;
         public decimal currentSandardDeviation ;
 
-        public static System.Timers.Timer aTimer; 
+        public static System.Timers.Timer aTimer;
+
+        private bool ForceRedownloadData;
+
+
+        private static bool isBusyCalculatingSMA; 
 
         public MovingAverage(ref TickerClient tickerClient, string ProductName, int timeInterValInMin = 3, int smaSlices = 40)
         {
             //var a = tickerClient.CurrentPrice;
 
             //Logger.WriteLog("Starting moving avg calculations");
+            isBusyCalculatingSMA = false;
 
             Product = ProductName;
 
             isBusyUpdatingMA = false;
+
+            ForceRedownloadData = false;
 
             sharedRawExchangeData = new List<CandleData>();
 
@@ -68,14 +76,26 @@ namespace CoinbaseExchange.NET.Data
         async void Init(int updateInterval)
         {
 
+            if (isBusyCalculatingSMA)
+            {
+                return;
+            }
+
+            isBusyCalculatingSMA = true;
+
+            
             try
             {
                 MADataPoints = await getMaData();
             }
             catch (Exception ex)
             {
-                Console.WriteLine("error in sma calculation: " + ex.Message);
-                throw new Exception("SMAInitError");
+                Logger.WriteLog("Error in sma calculation, retrying in 500 ms... : " + ex.Message + " innerExMsg: " + ex.InnerException.Message);
+                isBusyCalculatingSMA = false;
+                System.Threading.Thread.Sleep(500);
+                Init(updateInterval); // retry
+                return;
+                //throw new Exception("SMAInitError");
             }
 
             if(aTimer != null) //timer already in place
@@ -94,38 +114,45 @@ namespace CoinbaseExchange.NET.Data
             NotifyListener(new MAUpdateEventArgs
             {
                 CurrentMAPrice = CurrentSMAPrice,
-                CurrentSd = Math.Round(currentSandardDeviation, 3),
+                CurrentSd = Math.Round(currentSandardDeviation, 4),
                 CurrentSlices = SLICES,
                 CurrentTimeInterval = TIME_INTERVAL
             });
 
-            
+            isBusyCalculatingSMA = false;
 
         }
 
         async Task<List<CandleData>> getMaData()
         {
             var z = await Task.Factory.StartNew(() => GetSmaData());
+            z.Wait();
             return z.Result;
         }
 
-        public async void updateValues(int timeIntInMin = 3, int newSlices = 40)
+        public async void updateValues(int timeIntInMin = 3, int newSlices = 40, bool forceRedownload = false)
         {
 
+            if (forceRedownload)
+            {
+                ForceRedownloadData = true;
+            }
 
             if ((timeIntInMin * newSlices > 200) && sharedRawExchangeData.Count() < 500)
             {
-                try
-                {
-                    await DownloadAdditionalData();
-                }
-                catch (Exception ex)
-                {
-                    Logger.WriteLog("Error downloading additional data: " + ex.InnerException.Message);
-                    throw;
-                }
+                await DownloadAdditionalData();
 
-                
+                //try
+                //{
+                //    await DownloadAdditionalData();
+                //}
+                //catch (Exception ex)
+                //{
+                //    Logger.WriteLog("Error downloading additional data: " + ex.InnerException.Message);
+                //    throw new Exception("MovingAvgError");
+                //}
+
+
             }
 
             TIME_INTERVAL = timeIntInMin;
@@ -164,10 +191,13 @@ namespace CoinbaseExchange.NET.Data
 
             //updateOccured(CurrentSMA, NotifyListener);
 
+
             NotifyListener(new MAUpdateEventArgs
             {
                 CurrentMAPrice = CurrentSMAPrice,
-                CurrentSd = Math.Round(Convert.ToDecimal(sdDouble), 3)
+                CurrentSd = Math.Round(currentSandardDeviation, 4),
+                CurrentSlices = SLICES,
+                CurrentTimeInterval = TIME_INTERVAL
             });
 
         }
@@ -209,22 +239,33 @@ namespace CoinbaseExchange.NET.Data
 
             List<CandleData> extraData = new List<CandleData>();
 
-            for (int i = 0; i < days; i++)
+            try
             {
-                //var x = Task.Delay(200);
+                for (int i = 0; i < days; i++)
+                {
+                    //var x = Task.Delay(200);
 
-                System.Threading.Thread.Sleep(300);
-                var temp = await historicData.GetPrices(
-                    product: Product,
-                    granularity: "60",
-                    startTime: startDt.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ"),
-                    endTime: endDt.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ"));
+                    System.Threading.Thread.Sleep(300);
+                    var temp = await historicData.GetPrices(
+                        product: Product,
+                        granularity: "60",
+                        startTime: startDt.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ"),
+                        endTime: endDt.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ"));
 
-                startDt = temp.Last().Time.AddMinutes(-1).AddHours(-6);
-                endDt = temp.Last().Time.AddMinutes(-1);
+                    startDt = temp.Last().Time.AddMinutes(-1).AddHours(-6);
+                    endDt = temp.Last().Time.AddMinutes(-1);
 
-                extraData.AddRange(temp);
+                    extraData.AddRange(temp);
+                }
             }
+            catch (Exception ex)
+            {
+                Logger.WriteLog("Error downloading additional data: " + ex.Message);
+                return false;
+                throw ex;
+            }
+
+
 
             sharedRawExchangeData.AddRange(extraData);
 
@@ -251,11 +292,19 @@ namespace CoinbaseExchange.NET.Data
             //const int SLICES = 40;
 
 
-            if (sharedRawExchangeData.Count() == 0) //download initial data if there is no data already
+            if (sharedRawExchangeData.Count() == 0 || ForceRedownloadData) //download initial data if there is no data already
             {
                 HistoricPrices historicData = new HistoricPrices();
                 var temp = await historicData.GetPrices(product: Product, granularity: "60");
+
+                sharedRawExchangeData.Clear(); //clear existing data
                 sharedRawExchangeData = temp.ToList();
+
+                if (ForceRedownloadData)
+                    if (TIME_INTERVAL * SLICES > 200)
+                        await DownloadAdditionalData();
+
+                ForceRedownloadData = false;
             }
 
 

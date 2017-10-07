@@ -45,6 +45,7 @@
         <TextBox x:Name="txtBuySellAmount" HorizontalAlignment="Left" Height="23" Margin="305,446,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="107"/>
         <Button Content="Update buy/sell Size" HorizontalAlignment="Left" Margin="305,474,0,0" VerticalAlignment="Top" Width="127" Click="Button_Click_1"/>
         <Button x:Name="btnShowLog" Content="Log" HorizontalAlignment="Left" Margin="814,400,0,0" VerticalAlignment="Top" Width="27" Height="23" Click="btnShowLog_Click"/>
+        <Label x:Name="lblWarning" Content="Warning:" HorizontalAlignment="Left" Margin="191,362,0,0" VerticalAlignment="Top" Width="585" FontSize="16" Visibility="Hidden"/>
 
     </Grid>
 </Window>
