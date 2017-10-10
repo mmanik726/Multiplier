@@ -90,6 +90,7 @@ namespace CoinbaseExchange.NET.Endpoints.PublicData
             catch (Exception ex)
             {
                 TickerClientConnected = false;
+                Logger.WriteLog("Error updating latest price: " + ex.Message);
                 return false;
                 //throw ex; //new Exception("LatestPriceError");
             }

@@ -36,7 +36,11 @@ namespace CoinbaseExchange.NET.Utilities
             filePath = AppDomain.CurrentDomain.BaseDirectory;//System.Reflection.Assembly.GetExecutingAssembly().Location;
 
             if (logFileName == "")
-                fileName = "Multiplier_Log.txt";
+            {
+                var dateName = DateTime.UtcNow.ToLocalTime().ToString("yyyy_MMM_dd");
+                fileName = "Multiplier_Log_" + dateName + ".txt";
+            }
+
             else
                 fileName = logFileName;
 
@@ -47,7 +51,7 @@ namespace CoinbaseExchange.NET.Utilities
 
             if (File.Exists(fileNamePath))
             {
-                WriteLog("Multiplier Logging started\n\n");
+                WriteLog("\n\n\tMultiplier Logging started\n\n");
 
                 try
                 {
@@ -63,7 +67,7 @@ namespace CoinbaseExchange.NET.Utilities
             }
             else
             {
-                WriteLog("Multiplier Logging started\n\n");
+                WriteLog("\n\n\tMultiplier Logging started\n\n");
             }
 
         }
@@ -104,6 +108,10 @@ namespace CoinbaseExchange.NET.Utilities
 
                 //    writeQue.Dequeue();
                 //}
+
+                if (string.IsNullOrWhiteSpace(fileNamePath))
+                    return;
+
 
                 lock (WriteLock)
                 {

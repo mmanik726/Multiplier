@@ -46,6 +46,8 @@
         <Button Content="Update buy/sell Size" HorizontalAlignment="Left" Margin="305,474,0,0" VerticalAlignment="Top" Width="127" Click="Button_Click_1"/>
         <Button x:Name="btnShowLog" Content="Log" HorizontalAlignment="Left" Margin="814,400,0,0" VerticalAlignment="Top" Width="27" Height="23" Click="btnShowLog_Click"/>
         <Label x:Name="lblWarning" Content="Warning:" HorizontalAlignment="Left" Margin="191,362,0,0" VerticalAlignment="Top" Width="585" FontSize="16" Visibility="Hidden"/>
+        <Label Content="Product" HorizontalAlignment="Left" Margin="539,362,0,0" VerticalAlignment="Top"/>
+        <ComboBox x:Name="cmbProduct" HorizontalAlignment="Left" Margin="539,388,0,0" VerticalAlignment="Top" Width="120" SelectionChanged="cmbProduct_SelectionChanged"/>
 
     </Grid>
 </Window>

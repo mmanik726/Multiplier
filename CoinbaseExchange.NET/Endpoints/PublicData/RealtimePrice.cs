@@ -32,7 +32,7 @@ namespace CoinbaseExchange.NET.Endpoints.PublicData
 
             TickerRequest tickerRequest = new TickerRequest(product);
 
-            ExchangeResponse response;
+            ExchangeResponse response = null;
 
             try
             {

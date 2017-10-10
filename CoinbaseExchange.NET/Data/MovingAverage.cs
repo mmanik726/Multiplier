@@ -42,7 +42,7 @@ namespace CoinbaseExchange.NET.Data
 
         public static System.Timers.Timer aTimer;
 
-        private bool ForceRedownloadData;
+        //private bool ForceRedownloadData;
 
 
         private static bool isBusyCalculatingSMA; 
@@ -58,7 +58,7 @@ namespace CoinbaseExchange.NET.Data
 
             isBusyUpdatingMA = false;
 
-            ForceRedownloadData = false;
+            //ForceRedownloadData = false;
 
             sharedRawExchangeData = new List<CandleData>();
 
@@ -90,9 +90,9 @@ namespace CoinbaseExchange.NET.Data
             }
             catch (Exception ex)
             {
-                Logger.WriteLog("Error in sma calculation, retrying in 500 ms... : " + ex.Message + " innerExMsg: " + ex.InnerException.Message);
+                System.Threading.Thread.Sleep(1000);
+                Logger.WriteLog("Error in sma calculation, retrying in 1 sec... : " + ex.Message + " innerExMsg: " + ex.InnerException.Message);
                 isBusyCalculatingSMA = false;
-                System.Threading.Thread.Sleep(500);
                 Init(updateInterval); // retry
                 return;
                 //throw new Exception("SMAInitError");
@@ -130,36 +130,20 @@ namespace CoinbaseExchange.NET.Data
             return z.Result;
         }
 
-        public async void updateValues(int timeIntInMin = 3, int newSlices = 40, bool forceRedownload = false)
+        public async Task<bool> updateValues(int timeIntInMin = 3, int newSlices = 40, bool forceRedownload = false)
         {
 
-            if (forceRedownload)
-            {
-                ForceRedownloadData = true;
-            }
-
-            if ((timeIntInMin * newSlices > 200) && sharedRawExchangeData.Count() < 500)
-            {
-                await DownloadAdditionalData();
-
-                //try
-                //{
-                //    await DownloadAdditionalData();
-                //}
-                //catch (Exception ex)
-                //{
-                //    Logger.WriteLog("Error downloading additional data: " + ex.InnerException.Message);
-                //    throw new Exception("MovingAvgError");
-                //}
-
-
-            }
+            //if (forceRedownload)
+            //{
+            //    ForceRedownloadData = true;
+            //}
 
             TIME_INTERVAL = timeIntInMin;
             SLICES = newSlices;
 
             Init(timeIntInMin);
 
+            return true; //done 
         }
 
         private void UpdateSMA(object sender, System.Timers.ElapsedEventArgs e)
@@ -167,14 +151,31 @@ namespace CoinbaseExchange.NET.Data
             //Logger.WriteLog("Updating SMA");
 
             //const int SLICES = 40;
+            if (isBusyUpdatingMA)
+            {
+                Logger.WriteLog("Already busy updating sma");
+                return;
+            }
 
             isBusyUpdatingMA = true;
 
-            MADataPoints.RemoveAt(0);
-            MADataPoints.Add(new CandleData { Close = TickerPriceClient.CurrentPrice, Time = DateTime.UtcNow.ToLocalTime()});
+            var maDtPtsRemoveIndex = MADataPoints.Count - 1;
 
-            var itemsInSlice = MADataPoints.Take(SLICES);
-            //itemsInSlice.ToList().ForEach((t) => Logger.WriteLog(t.Close.ToString()));
+            //var rawDtPtsRemoveIndex = sharedRawExchangeData.Count - 1;
+
+            if (maDtPtsRemoveIndex != -1)
+                MADataPoints.RemoveAt(maDtPtsRemoveIndex);
+
+            //if (rawDtPtsRemoveIndex != -1)
+            //    sharedRawExchangeData.RemoveAt(rawDtPtsRemoveIndex);
+
+            var newDataPoint = new CandleData { Close = TickerPriceClient.CurrentPrice, Time = DateTime.UtcNow.ToLocalTime() };
+            MADataPoints.Insert(0, newDataPoint); //insert at top
+
+            //sharedRawExchangeData.Insert(0, newDataPoint);
+
+            var itemsInSlice = MADataPoints.Take(SLICES); //MADataPoints.OrderBy((c) => c.Time).ToList().Take(SLICES);
+            itemsInSlice.OrderBy((c) => c.Time).ToList().ForEach((t) => Logger.WriteLog(t.Time + "\t" + t.Close));
             var itemsInSLiceAvg = itemsInSlice.Average((d) => d.Close);
 
             //MADataPoints.ForEach((t) => Logger.WriteLog(t.Time + "\t" + t.Close));
@@ -230,7 +231,7 @@ namespace CoinbaseExchange.NET.Data
 
             Logger.WriteLog("Additional data is being downloaded ");
 
-            int days = 10; //36 hours data in 1 min interval in total
+            int days = 6; //36 hours data in 1 min interval in total
 
             HistoricPrices historicData = new HistoricPrices();
 
@@ -260,7 +261,13 @@ namespace CoinbaseExchange.NET.Data
             }
             catch (Exception ex)
             {
-                Logger.WriteLog("Error downloading additional data: " + ex.Message);
+                var msg = "Error downloading additional data: " + ex.Message;
+                while (ex.InnerException != null)
+                {
+                    ex = ex.InnerException;
+                    msg = msg + "\n" + ex.Message;
+                }
+                Logger.WriteLog(msg);
                 return false;
                 throw ex;
             }
@@ -286,26 +293,40 @@ namespace CoinbaseExchange.NET.Data
 
         }
 
-        public async Task<List<CandleData>> GetSmaData()
+        private async Task<List<CandleData>> GetSmaData()
         {
             //const int TIME_INTERVAL = 3;
             //const int SLICES = 40;
 
 
-            if (sharedRawExchangeData.Count() == 0 || ForceRedownloadData) //download initial data if there is no data already
-            {
+            //if (sharedRawExchangeData.Count() == 0 || ForceRedownloadData) //download initial data if there is no data already
+            //{
+            //    HistoricPrices historicData = new HistoricPrices();
+            //    var temp = await historicData.GetPrices(product: Product, granularity: "60");
+
+
+            //    sharedRawExchangeData.Clear(); //clear existing data
+            //    sharedRawExchangeData = temp.ToList();
+
+            //    if (ForceRedownloadData)
+            //        if (TIME_INTERVAL * SLICES > 200)
+            //            await DownloadAdditionalData();
+
+            //    ForceRedownloadData = false;
+            //}
+
+
+
                 HistoricPrices historicData = new HistoricPrices();
                 var temp = await historicData.GetPrices(product: Product, granularity: "60");
-
+            
                 sharedRawExchangeData.Clear(); //clear existing data
                 sharedRawExchangeData = temp.ToList();
 
-                if (ForceRedownloadData)
-                    if (TIME_INTERVAL * SLICES > 200)
-                        await DownloadAdditionalData();
+                if (TIME_INTERVAL * SLICES > 200)
+                    await DownloadAdditionalData();
 
-                ForceRedownloadData = false;
-            }
+
 
 
             lastDataPointDateTime = sharedRawExchangeData.First().Time;
@@ -326,7 +347,8 @@ namespace CoinbaseExchange.NET.Data
 
             //requiredIntervalData.ForEach((a) => Logger.WriteLog(a.Time + "\t"+ a.Close));
 
-            for (int i = 0; i < groupCount - 1; i++)
+            //for (int i = 0; i < groupCount; i++)
+            for (int i = 0; i <= groupCount - 1; i++)
             {
                 var itemsInSlice = requiredIntervalData.Skip(i * SLICES).Take(SLICES);
                 //itemsInSlice.ToList().ForEach((t) => Logger.WriteLog(t.Time + "\t" + t.Close));
@@ -348,7 +370,7 @@ namespace CoinbaseExchange.NET.Data
 
             //List<CandleData> priceDataPoints = new List<CandleData>();
 
-            var maDataList = requiredIntervalData.Take(SLICES).OrderBy((c)=>c.Time).ToList();
+            var maDataList = requiredIntervalData.OrderByDescending((c) => c.Time).Take(SLICES).ToList();
 
             List<double> itemsInSliceDbl = maDataList.Select(candle => (double)candle.Close).ToList();
             var sdDouble = CalculateStdDev(itemsInSliceDbl);

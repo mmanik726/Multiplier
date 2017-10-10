@@ -5,11 +5,12 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:Multiplier"
         mc:Ignorable="d"
-        Title="Mani Log" Height="558" Width="652">
+        Title="Mani Log" Height="563.675" Width="866">
     <Grid>
-        <RichTextBox x:Name="txtLog" HorizontalAlignment="Left" Height="507" Margin="10,10,0,0" VerticalAlignment="Top" Width="627" TextChanged="txtLog_TextChanged" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch">
-            <FlowDocument/>
-        </RichTextBox>
-
+        <DockPanel HorizontalAlignment="Left" Height="506" LastChildFill="False" Margin="10,10,0,0" VerticalAlignment="Top" Width="834">
+            <RichTextBox x:Name="txtLog" HorizontalAlignment="Left" Height="479" VerticalAlignment="Top" Width="829" TextChanged="txtLog_TextChanged" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch">
+                <FlowDocument/>
+            </RichTextBox>
+        </DockPanel>
     </Grid>
 </Window>

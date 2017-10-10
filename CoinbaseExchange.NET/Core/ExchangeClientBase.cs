@@ -24,6 +24,7 @@ namespace CoinbaseExchange.NET.Core
 
         private readonly CBAuthenticationContainer _authContainer;
 
+
         public ExchangeClientBase(CBAuthenticationContainer authContainer, 
             string apiEndPoint = "https://api.gdax.com/")
         {
@@ -44,39 +45,20 @@ namespace CoinbaseExchange.NET.Core
             var relativeUrl = request.RequestUrl;
             var absoluteUri = new Uri(new Uri(API_ENDPOINT_URL), relativeUrl);
 
-            var timestamp = (request.TimeStamp).ToString(System.Globalization.CultureInfo.InvariantCulture);
+            var timeStamp = (request.TimeStamp).ToString(System.Globalization.CultureInfo.InvariantCulture);
             var body = request.RequestBody;
             var method = request.Method;
             var url = absoluteUri.ToString();
 
-            String passphrase = "";
-            String apiKey = "";
-            // Caution: Use the relative URL, *NOT* the absolute one.
-            var signature = "";
+            //String passphrase = "";
+            //String apiKey = "";
+            //// Caution: Use the relative URL, *NOT* the absolute one.
+            //var signature = "";
+
 
             using (var httpClient = new HttpClient())
             {
-                HttpResponseMessage response;
-
-                if (!UsePublicExchange)
-                {
-
-                    passphrase = _authContainer.Passphrase;
-                    apiKey = _authContainer.ApiKey;
-
-                    if (method !="POST")
-                    {
-                        signature = _authContainer.ComputeSignature(timestamp, relativeUrl, method, body);
-                        httpClient.DefaultRequestHeaders.Add("CB-ACCESS-SIGN", signature);
-                    }
-
-
-                    httpClient.DefaultRequestHeaders.Add("CB-ACCESS-KEY", apiKey);
-                    httpClient.DefaultRequestHeaders.Add("CB-ACCESS-TIMESTAMP", timestamp);
-                    httpClient.DefaultRequestHeaders.Add("CB-ACCESS-PASSPHRASE", passphrase);
-                }
-
-
+                HttpResponseMessage response = null;
 
                 httpClient.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0");
 
@@ -85,32 +67,132 @@ namespace CoinbaseExchange.NET.Core
                     switch (method)
                     {
                         case "GET":
-                            response = await httpClient.GetAsync(absoluteUri);
+                            try
+                            {
+                                response = await CoreGetRequest(request);//await httpClient.GetAsync(absoluteUri);
+                            }
+                            catch (Exception ex)
+                            {
+                                if (ex.Message.ToLower().Contains("task was cancelled"))
+                                {
+                                    await GetResponse(request);
+                                    return null; 
+                                } 
+
+                                var innerExMsg = ex.InnerException.Message.ToLower();
+
+                                Logger.WriteLog("Exception occured in GET: " + ex.InnerException.Message);
+                                //
+                                if (innerExMsg.Contains("could not be resolved") || 
+                                    innerExMsg.Contains("unable to connect"))
+                                {
+
+                                    while (response == null)
+                                    {
+                                        Thread.Sleep(5 * 1000);
+                                        Logger.WriteLog("Cant connect to server, retryin in 5 sec");
+
+                                        try
+                                        {
+                                            //SharedTimeStamp = DateTime.UtcNow.ToUnixTimestamp().ToString(System.Globalization.CultureInfo.InvariantCulture);
+                                            response = await CoreGetRequest(request); // await httpClient.GetAsync(absoluteUri);
+                                        }
+                                        catch { };
+                                        
+                                    }
+                                }
+
+
+                                //throw;
+                            }
+
+
+
                             break;
                         case "POST":
 
-                            timestamp = (request.TimeStamp).ToString(System.Globalization.CultureInfo.InvariantCulture);
-                            signature = _authContainer.ComputeSignature(timestamp, relativeUrl, method, body);
-                            httpClient.DefaultRequestHeaders.Add("CB-ACCESS-SIGN", signature);
+                            try
+                            {
+                                response = await CorePostRequest(request);//await httpClient.GetAsync(absoluteUri);
+                            }
+                            catch (Exception ex)
+                            {
+                                var innerExMsg = ex.InnerException.Message.ToLower();
 
-                            var requestBody = new StringContent(body, Encoding.UTF8, "application/json");
-                            response = httpClient.PostAsync(absoluteUri, requestBody).Result;
+                                Logger.WriteLog("Exception occured in POST: " + ex.InnerException.Message);
+                                //
+                                if (innerExMsg.Contains("could not be resolved") ||
+                                    innerExMsg.Contains("unable to connect"))
+                                {
+
+                                    while (response == null)
+                                    {
+                                        Thread.Sleep(5 * 1000);
+                                        Logger.WriteLog("Cant connect to server, retryin in 5 sec");
+
+                                        try
+                                        {
+                                            //SharedTimeStamp = DateTime.UtcNow.ToUnixTimestamp().ToString(System.Globalization.CultureInfo.InvariantCulture);
+                                            response = await CorePostRequest(request); // await httpClient.GetAsync(absoluteUri);
+                                        }
+                                        catch { };
+
+                                    }
+                                }
+
+
+                                //throw;
+                            }
                             break;
+
+
                         case "DELETE":
                             //var requestBody = new StringContent(body, Encoding.UTF8, "application/json");
-                            response = await httpClient.DeleteAsync(absoluteUri);
+                            try
+                            {
+                                response = await CoreDeleteRequest(request);//await httpClient.GetAsync(absoluteUri);
+                            }
+                            catch (Exception ex)
+                            {
+                                var innerExMsg = ex.InnerException.Message.ToLower();
+
+                                Logger.WriteLog("Exception occured in DELETE: " + ex.InnerException.Message);
+                                //
+                                if (innerExMsg.Contains("could not be resolved") ||
+                                    innerExMsg.Contains("unable to connect"))
+                                {
+
+                                    while (response == null)
+                                    {
+                                        Thread.Sleep(5 * 1000);
+                                        Logger.WriteLog("Cant connect to server, retryin in 5 sec");
+
+                                        try
+                                        {
+                                            //SharedTimeStamp = DateTime.UtcNow.ToUnixTimestamp().ToString(System.Globalization.CultureInfo.InvariantCulture);
+                                            response = await CoreDeleteRequest(request); // await httpClient.GetAsync(absoluteUri);
+                                        }
+                                        catch { };
+
+                                    }
+                                }
+
+
+                                //throw;
+                            }
                             break;
+
                         default:
                             throw new NotImplementedException("The supplied HTTP method is not supported: " + method ?? "(null)");
                     }
                 }
                 catch (Exception ex)
                 {
-                    Logger.WriteLog("Error getting server response/data: " + ex.Message);
+                    Logger.WriteLog("Error getting/setting server response/data: " + ex.Message);
                     throw new Exception("HTTP_GET_POST_DELTE_Error");
                 }
 
-
+                //Logger.WriteLog("processing rest of http request");
 
                 var contentBody = await response.Content.ReadAsStringAsync();
                 var headers = response.Headers.AsEnumerable();
@@ -119,6 +201,141 @@ namespace CoinbaseExchange.NET.Core
 
                 var genericExchangeResponse = new ExchangeResponse(statusCode, isSuccess, headers, contentBody);
                 return genericExchangeResponse;
+            }
+        }
+
+        private async Task<HttpResponseMessage> CoreGetRequest(ExchangeRequestBase request)
+        {
+
+            using (var httpClient = new HttpClient())
+            {
+
+                var relativeUrl = request.RequestUrl;
+                var absoluteUri = new Uri(new Uri(API_ENDPOINT_URL), relativeUrl);
+
+                var timeStamp = DateTime.UtcNow.ToUnixTimestamp().ToString(System.Globalization.CultureInfo.InvariantCulture); //(request.TimeStamp).ToString(System.Globalization.CultureInfo.InvariantCulture);
+                var body = request.RequestBody;
+                var method = request.Method;
+                var url = absoluteUri.ToString();
+
+                String passphrase = "";
+                String apiKey = "";
+
+                var signature = "";
+
+                httpClient.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0");
+
+                if (UsePublicExchange == false)
+                {
+
+                    passphrase = _authContainer.Passphrase;
+                    apiKey = _authContainer.ApiKey;
+
+                    signature = _authContainer.ComputeSignature(timeStamp, relativeUrl, method, body);
+                    httpClient.DefaultRequestHeaders.Add("CB-ACCESS-SIGN", signature);
+
+                    httpClient.DefaultRequestHeaders.Add("CB-ACCESS-KEY", apiKey);
+                    httpClient.DefaultRequestHeaders.Add("CB-ACCESS-TIMESTAMP", timeStamp);
+                    httpClient.DefaultRequestHeaders.Add("CB-ACCESS-PASSPHRASE", passphrase);
+
+                }
+
+                HttpResponseMessage response = null;
+                response = await httpClient.GetAsync(absoluteUri);
+                return response;
+
+            }
+        }
+
+        private async Task<HttpResponseMessage> CorePostRequest(ExchangeRequestBase request)
+        {
+
+            using (var httpClient = new HttpClient())
+            {
+
+                var relativeUrl = request.RequestUrl;
+                var absoluteUri = new Uri(new Uri(API_ENDPOINT_URL), relativeUrl);
+
+                var timeStamp = DateTime.UtcNow.ToUnixTimestamp().ToString(System.Globalization.CultureInfo.InvariantCulture);
+                var body = request.RequestBody;
+                var method = request.Method;
+                var url = absoluteUri.ToString();
+
+                String passphrase = "";
+                String apiKey = "";
+
+                var signature = "";
+
+                httpClient.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0");
+
+                if (UsePublicExchange == false)
+                {
+
+                    passphrase = _authContainer.Passphrase;
+                    apiKey = _authContainer.ApiKey;
+
+                    signature = _authContainer.ComputeSignature(timeStamp, relativeUrl, method, body);
+                    httpClient.DefaultRequestHeaders.Add("CB-ACCESS-SIGN", signature);
+
+                    httpClient.DefaultRequestHeaders.Add("CB-ACCESS-KEY", apiKey);
+                    httpClient.DefaultRequestHeaders.Add("CB-ACCESS-TIMESTAMP", timeStamp);
+                    httpClient.DefaultRequestHeaders.Add("CB-ACCESS-PASSPHRASE", passphrase);
+
+                }
+
+                //timestamp = (request.TimeStamp).ToString(System.Globalization.CultureInfo.InvariantCulture);
+                //signature = _authContainer.ComputeSignature(timestamp, relativeUrl, method, body);
+                //httpClient.DefaultRequestHeaders.Add("CB-ACCESS-SIGN", signature);
+
+                HttpResponseMessage response = null;
+                var requestBody = new StringContent(body, Encoding.UTF8, "application/json");
+                response = await httpClient.PostAsync(absoluteUri, requestBody);
+
+                return response;
+
+            }
+        }
+
+        private async Task<HttpResponseMessage> CoreDeleteRequest(ExchangeRequestBase request)
+        {
+
+            using (var httpClient = new HttpClient())
+            {
+
+                var relativeUrl = request.RequestUrl;
+                var absoluteUri = new Uri(new Uri(API_ENDPOINT_URL), relativeUrl);
+
+                var timeStamp = DateTime.UtcNow.ToUnixTimestamp().ToString(System.Globalization.CultureInfo.InvariantCulture); //(request.TimeStamp).ToString(System.Globalization.CultureInfo.InvariantCulture);
+                var body = request.RequestBody;
+                var method = request.Method;
+                var url = absoluteUri.ToString();
+
+                String passphrase = "";
+                String apiKey = "";
+
+                var signature = "";
+
+                httpClient.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0");
+
+                if (UsePublicExchange == false)
+                {
+
+                    passphrase = _authContainer.Passphrase;
+                    apiKey = _authContainer.ApiKey;
+
+                    signature = _authContainer.ComputeSignature(timeStamp, relativeUrl, method, body);
+                    httpClient.DefaultRequestHeaders.Add("CB-ACCESS-SIGN", signature);
+
+                    httpClient.DefaultRequestHeaders.Add("CB-ACCESS-KEY", apiKey);
+                    httpClient.DefaultRequestHeaders.Add("CB-ACCESS-TIMESTAMP", timeStamp);
+                    httpClient.DefaultRequestHeaders.Add("CB-ACCESS-PASSPHRASE", passphrase);
+
+                }
+
+                HttpResponseMessage response = null;
+                response = await httpClient.DeleteAsync(absoluteUri);
+                return response;
+
             }
         }
 

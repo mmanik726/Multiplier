@@ -18,7 +18,21 @@ namespace CoinbaseExchange.NET.Endpoints.Account
         public async Task<ListAccountsResponse> ListAccounts(string accountId = null, string cursor = null, long recordCount = 100, RequestPaginationType paginationType = RequestPaginationType.After)
         {
             var request = new ListAccountsRequest(accountId, cursor, recordCount, paginationType);
-            var response = await this.GetResponse(request);
+
+
+
+            ExchangeResponse response = null;
+
+            try
+            {
+                response = await this.GetResponse(request);
+            }
+            catch (Exception)
+            {
+                throw new Exception("ListAccountError");
+            }
+
+
             var accountResponse = new ListAccountsResponse(response);
             return accountResponse;
         }
@@ -26,7 +40,19 @@ namespace CoinbaseExchange.NET.Endpoints.Account
         public async Task<GetAccountHistoryResponse> GetAccountHistory(string accountId)
         {
             var request = new GetAccountHistoryRequest(accountId);
-            var response = await this.GetResponse(request);
+
+
+            ExchangeResponse response = null;
+
+            try
+            {
+                response = await this.GetResponse(request);
+            }
+            catch (Exception)
+            {
+                throw new Exception("GetAcHistoryError");
+            }
+
             var accountHistoryResponse = new GetAccountHistoryResponse(response);
             return accountHistoryResponse;
         }
@@ -34,7 +60,18 @@ namespace CoinbaseExchange.NET.Endpoints.Account
         public async Task<GetAccountHoldsResponse> GetAccountHolds(string accountId)
         {
             var request = new GetAccountHoldsRequest(accountId);
-            var response = await this.GetResponse(request);
+
+            ExchangeResponse response = null;
+
+            try
+            {
+                response = await this.GetResponse(request);
+            }
+            catch (Exception)
+            {
+                throw new Exception("GetAcHoldsError");
+            }
+
             var accountHoldsResponse = new GetAccountHoldsResponse(response);
             return accountHoldsResponse;
         }

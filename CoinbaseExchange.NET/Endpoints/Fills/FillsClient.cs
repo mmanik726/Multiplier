@@ -8,6 +8,7 @@ using Newtonsoft.Json.Linq;
 using CoinbaseExchange.NET.Endpoints.MyOrders;
 using System.Diagnostics;
 using CoinbaseExchange.NET.Utilities;
+using System.Threading;
 namespace CoinbaseExchange.NET.Endpoints.Fills
 {
 
@@ -101,7 +102,17 @@ namespace CoinbaseExchange.NET.Endpoints.Fills
         {
             var endpoint = String.Format("/fills");
             var request = new GetFillsRequest(endpoint);
-            var response = await this.GetResponse(request);
+
+            ExchangeResponse response = null;
+            try
+            {
+                response = await this.GetResponse(request);
+            }
+            catch (Exception)
+            {
+                throw new Exception("GetFillsError");
+            }
+
             var accountHistoryResponse = new FillResponse(response);
             return accountHistoryResponse;
         }
@@ -111,7 +122,18 @@ namespace CoinbaseExchange.NET.Endpoints.Fills
             var endpoint = string.Format(@"/fills?order_id={0}", orderId);
             var request = new GetFillsRequest(endpoint);
 
-            var response = await this.GetResponse(request);
+
+            ExchangeResponse response = null;
+            try
+            {
+                response = await this.GetResponse(request);
+            }
+            catch (Exception)
+            {
+                throw new Exception("GetFillsStatusError");
+            }
+
+
             var orderStats = new FillResponse(response);
 
             return orderStats;
@@ -143,13 +165,15 @@ namespace CoinbaseExchange.NET.Endpoints.Fills
             while (FillWatchList.Count() > 0)
             {
 
+                //if ticker is offline then return
+
                 Logger.WriteLog(string.Format("Watching {0} order(s)", FillWatchList.Count()));
 
                 //Logger.WriteLog(FillWatchList.FirstOrDefault());
                 try
                 {
                     //list may change in the middle of operation
-                    FillWatchList.ForEach((x) => Logger.WriteLog(string.Format("{0} -> {1}", x.OrderId, x.Side)));
+                    FillWatchList.ForEach((x) => Logger.WriteLog(string.Format("{0} -> {1} @{2}", x.OrderId, x.Side,x.UsdAmount)));
                 }
                 catch (Exception ex)
                 {
@@ -162,12 +186,14 @@ namespace CoinbaseExchange.NET.Endpoints.Fills
                     if (FillWatchList.Count == 0)
                         break;
 
-                    var orderStat = await GetFillStatus(FillWatchList.ElementAt(i).OrderId);
+                        var orderStat = await GetFillStatus(FillWatchList.ElementAt(i)?.OrderId);
+
                     //orderStat.Fills.FirstOrDefault();
 
-                    await Task.Delay(400);
+                    //await Task.Delay(400);
+                    Thread.Sleep(300);
 
-                    if (orderStat.Fills.Count > 0)
+                    if (orderStat?.Fills.Count > 0)
                     {
                         //busy waiting
                         while(myActiveOrderBook.isUpdatingOrderList)
@@ -195,8 +221,8 @@ namespace CoinbaseExchange.NET.Endpoints.Fills
                 }
 
 
-                await Task.Delay(1000); //check fills every 1 sec
-
+                //await Task.Delay(1000); //check fills every 1 sec
+                Thread.Sleep(500);
             }
 
             IsBusy_TrackIngOrder = false;

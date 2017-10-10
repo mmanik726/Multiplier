@@ -95,7 +95,17 @@ namespace CoinbaseExchange.NET.Endpoints.OrderBook
         public async Task<GetProductOrderBookResponse> GetProductOrderBook(string productId, int level = 1)
         {
             var request = new GetProductOrderBookRequest(productId, level);
-            var response = await this.GetResponse(request);
+
+            ExchangeResponse response = null;
+            try
+            {
+                response = await this.GetResponse(request);
+            }
+            catch (Exception)
+            {
+                throw new Exception("GetProductOrderBookError");
+            }
+
             var orderBookResponse = new GetProductOrderBookResponse(response);
             return orderBookResponse;
         }

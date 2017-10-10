@@ -7,7 +7,7 @@ using CoinbaseExchange.NET.Core;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using CoinbaseExchange.NET.Utilities;
-using CoinbaseExchange.NET.Utilities;
+
 namespace CoinbaseExchange.NET.Endpoints.PublicData
 {
 
@@ -64,7 +64,7 @@ namespace CoinbaseExchange.NET.Endpoints.PublicData
             HistoricPriceRequest request = new HistoricPriceRequest(endpoint);
 
 
-            ExchangeResponse genericResponse; 
+            ExchangeResponse genericResponse = null; 
 
             try
             {

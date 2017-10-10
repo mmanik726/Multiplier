@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Multiplier
@@ -41,8 +42,8 @@ namespace Multiplier
 
         private bool WaitingBuyOrSell { get; set; }
 
-        private int SmaSlices { get; set; }
-        private int SmaTimeInterval { get; set; }
+        private int CurrentSmaSlices { get; set; }
+        private int CurrentSmaTimeInterval { get; set; }
 
 
         private bool StartBuyingSelling { get; set; }
@@ -69,7 +70,6 @@ namespace Multiplier
         public EventHandler SmaUpdateEvent;
         public EventHandler BuySellBufferChangedEvent;
         public EventHandler BuySellAmountChangedEvent;
-        public EventHandler<SmaParamUpdateArgs> SmaParametersUpdatedEvent;
         public EventHandler AutoTradingStartedEvent;
 
         public EventHandler TickerConnectedEvent;
@@ -158,8 +158,8 @@ namespace Multiplier
 
             BuySellAmount = 0.01m;//default
 
-            SmaTimeInterval = 3; //default
-            SmaSlices = 40; //default
+            CurrentSmaTimeInterval = 3; //default
+            CurrentSmaSlices = 40; //default
 
             PriceBuffer = 0.05m; //default
 
@@ -174,7 +174,7 @@ namespace Multiplier
             WaitingBuyFill = false;
             WaitingBuyOrSell = false;
 
-            WaitTimeAfterCrossInMin = SmaTimeInterval; //buy sell every time interval
+            WaitTimeAfterCrossInMin = CurrentSmaTimeInterval; //buy sell every time interval
 
             MaxBuy = 5;
             MaxSell = 5;
@@ -193,14 +193,14 @@ namespace Multiplier
             ////update ui with initial pice
             ProductTickerClient_UpdateHandler(this, new TickerMessage(ProductTickerClient.CurrentPrice));
 
-            ProductTickerClient.TickerConnectedEvent += tickerConnectedHandler;
+            ProductTickerClient.TickerConnectedEvent += TickerConnectedHandler;
             ProductTickerClient.TickerDisconnectedEvent += tickerDisconnectedHandler;
 
             MyAuth = new CBAuthenticationContainer(MyKey, MyPassphrase, MySecret);
             MyOrderBook = new MyOrderBook(MyAuth, ProductName, ref ProductTickerClient);
             MyOrderBook.OrderUpdateEvent += FillUpdateEventHandler;
 
-            Sma = new MovingAverage(ref ProductTickerClient, ProductName, SmaTimeInterval, SmaSlices);
+            Sma = new MovingAverage(ref ProductTickerClient, ProductName, CurrentSmaTimeInterval, CurrentSmaSlices);
             Sma.MovingAverageUpdated += SmaChangeEventHandler;
 
             Logger.WriteLog(string.Format("{0} manager started", ProductName));
@@ -216,13 +216,23 @@ namespace Multiplier
 
         }
 
-        private void tickerConnectedHandler(object sender, EventArgs args)
+        private void TickerConnectedHandler(object sender, EventArgs args)
         {
             Logger.WriteLog("Ticker connected... resuming buy sell");
 
-            
-            Task.Run(()=> UpdateSmaParameters(SmaTimeInterval, SmaSlices, true)).Wait();
-            System.Threading.Thread.Sleep(2 * 1000);
+            //Logger.WriteLog("SMA updating starts here");
+            //Task.Run(()=> UpdateSmaParameters(SmaTimeInterval, SmaSlices, true)).Wait();
+            var x = UpdateSmaParameters(CurrentSmaTimeInterval, CurrentSmaSlices, true);
+
+            x.Wait();
+
+            Logger.WriteLog("SMA updating ends here");
+            //System.Threading.Thread.Sleep(2 * 1000);
+
+            Logger.WriteLog("waiting 8 sec for sma to update");
+            Thread.Sleep(8 * 1000);
+            Logger.WriteLog("buy sell resumed here");
+
             StartBuyingSelling = true;
 
             TickerConnectedEvent?.Invoke(this, EventArgs.Empty);
@@ -342,9 +352,14 @@ namespace Multiplier
                     }
                     catch (Exception ex)
                     {
-                        Logger.WriteLog("Error selling: \n" + ex.Message + "\n"
-                            + ex.InnerException.Message + "\n"
-                            + ex.InnerException.InnerException.Message);
+                        var msg = ex.Message + "\n";
+                        while (ex.InnerException != null)
+                        {
+                            ex = ex.InnerException;
+                            msg = msg + ex.Message;
+                        }
+
+                        Logger.WriteLog("Error Selling: \n" + msg);
 
 
                         Logger.WriteLog("Retrying to sell now...");
@@ -380,10 +395,14 @@ namespace Multiplier
                     }
                     catch (Exception ex)
                     {
-                        Logger.WriteLog("Error buying: \n" + ex.Message + "\n" 
-                            + ex.InnerException.Message + "\n"
-                            + ex.InnerException.InnerException.Message);
+                        var msg = ex.Message + "\n";
+                        while(ex.InnerException != null)
+                        {
+                            ex = ex.InnerException;
+                            msg = msg + ex.Message;
+                        }
 
+                        Logger.WriteLog("Error buying: \n" + msg);
                         Logger.WriteLog("Retrying to buy now...");
                         setNextActionTo_Buy();
 
@@ -434,25 +453,32 @@ namespace Multiplier
         }
 
 
-        public void UpdateSmaParameters(int InputTimerInterval, int InputSlices, bool forceRedownload = false)
+        public async Task<bool> UpdateSmaParameters(int InputTimerInterval, int InputSlices, bool forceRedownload = false)
         {
 
             try
             {
-                Sma.updateValues(InputTimerInterval, InputSlices, forceRedownload);
-                SmaSlices = InputSlices;
-                SmaTimeInterval = InputTimerInterval;
-                WaitTimeAfterCrossInMin = SmaTimeInterval;
+                var x = await Task.Run(() => Sma.updateValues(InputTimerInterval, InputSlices, forceRedownload));
+                if (x == true) //wait for task to complete above
+                {
+                    //done;
+                }
+                
+                //Sma.updateValues(InputTimerInterval, InputSlices, forceRedownload);
+                //CurrentSmaSlices = InputSlices;
+                //CurrentSmaTimeInterval = InputTimerInterval;
+                //WaitTimeAfterCrossInMin = CurrentSmaTimeInterval;
 
-                SmaParametersUpdatedEvent?.Invoke(this, new SmaParamUpdateArgs { NewTimeinterval = SmaTimeInterval, NewSlices = SmaSlices });
+                ////SmaParametersUpdatedEvent?.Invoke(this, new SmaParamUpdateArgs { NewTimeinterval = SmaTimeInterval, NewSlices = SmaSlices });
 
-                var msg = string.Format("New SMA values, Time interval: {0} Slices: {1}", InputTimerInterval.ToString(), InputSlices.ToString());
-                Logger.WriteLog(msg);
-
+                //var msg = string.Format("New SMA values, Time interval: {0} Slices: {1}", InputTimerInterval.ToString(), InputSlices.ToString());
+                //Logger.WriteLog(msg);
+                return true;
             }
             catch (Exception ex)
             {
                 Logger.WriteLog("Error occured while updating SMA parameters: " + ex.Message);
+                return false;
             }
 
         }
@@ -466,7 +492,17 @@ namespace Multiplier
 
             CurrentAveragePrice = newSmaPrice;
 
-            Logger.WriteLog(string.Format("SMA updated: {0}", newSmaPrice));
+            
+
+
+            CurrentSmaSlices = currentSmaData.CurrentSlices;// InputSlices;
+            CurrentSmaTimeInterval = currentSmaData.CurrentTimeInterval; // InputTimerInterval;
+            WaitTimeAfterCrossInMin = CurrentSmaTimeInterval;
+
+
+            var msg = string.Format("SMA updated: {0} (Time interval: {1} Slices: {2})", newSmaPrice, CurrentSmaTimeInterval, CurrentSmaSlices);
+            Logger.WriteLog(msg);
+
 
             SmaUpdateEvent?.Invoke(this, currentSmaData);
         }

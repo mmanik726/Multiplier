@@ -14,7 +14,7 @@ using CoinbaseExchange.NET.Endpoints.Fills;
 
 using System.Diagnostics;
 using CoinbaseExchange.NET.Utilities;
-
+using System.Threading;
 namespace CoinbaseExchange.NET.Endpoints.MyOrders
 {
     public class Order
@@ -104,7 +104,17 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
 
             MyPostOrdersRequest request = new MyPostOrdersRequest(orderEndpoint, messageBody);
 
-            var genericResponse = await this.GetResponse(request);
+            ExchangeResponse genericResponse = null;
+
+            try
+            {
+                genericResponse = await this.GetResponse(request);
+            }
+            catch (Exception)
+            {
+                throw new Exception("PlaceOrderError");
+            }
+
 
             Order newOrderDetails = null; 
 
@@ -132,10 +142,6 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
 
     }
 
-
-
-
-
     public class OrderList : ExchangeClientBase
     {
         public string RequestEndpoint { get; set; }
@@ -147,7 +153,17 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
         public async Task<List<Order>> GetAllOpenOrders(string endpoint)
         {
             var requestEndPoint = string.Format(endpoint);
-            var genericResponse = await this.GetResponse(new MyGetOrdersRequest(requestEndPoint));
+
+            ExchangeResponse genericResponse = null;
+
+            try
+            {
+                genericResponse = await this.GetResponse(new MyGetOrdersRequest(requestEndPoint));
+            }
+            catch (Exception)
+            {
+                throw new Exception("GetOpenOrderError");
+            }
 
             var json = genericResponse.ContentBody;
             var allOrders = GetOrderListFromJson(json);
@@ -182,7 +198,6 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
         }
 
     }
-
     
 
     public class MyOrder
@@ -238,6 +253,7 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
 
         private static decimal currentPrice;
 
+        private string ProductName; 
 
         private static DateTime lastTickTIme;  
 
@@ -261,6 +277,7 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
 
             isBusyCancelAndReorder = false;
 
+            ProductName = product;
             _auth = authContainer;
             orderList = new OrderList(_auth);
 
@@ -270,11 +287,75 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
 
             PriceTicker = inputTickerClient; //new TickerClient(product); //no need to create two different ticker, use one global ticker
             PriceTicker.PriceUpdated += PriceUpdateEventHandler;
+            PriceTicker.TickerConnectedEvent += TickerConnectedEventHandler;
+            PriceTicker.TickerDisconnectedEvent += TickerDisconnectedEventHandler;
 
             fillsClient = new FillsClient(_auth, this);
             fillsClient.FillUpdated += OrderFilledEventHandler;
 
         }
+
+        private void TickerDisconnectedEventHandler (object sender, EventArgs args)
+        {
+            //remove all the items from the watch list
+
+        }
+
+        private void TickerConnectedEventHandler(object sender, EventArgs args)
+        {
+            //get all pending orders from server and update the watch list
+
+
+            Logger.WriteLog("Syncing open orders with server, after reconnect");
+            Logger.WriteLog("Orders is active order list before syncing:");
+
+            printActiveOrderList();
+
+            var allOpenOrders = GetAllOpenOrders();
+            allOpenOrders.Wait();
+            UpdateOrderListWithServer(allOpenOrders.Result);
+
+            Logger.WriteLog("Orders is active order list after syncing:");
+            printActiveOrderList();
+
+        }
+
+        void printActiveOrderList()
+        {
+            try
+            {
+                MyChaseOrderList.ForEach(x => Logger.WriteLog("\t" + x.OrderId));
+            }
+            catch (Exception)
+            {
+                Logger.WriteLog("Error enumerating list, list changed");
+            }
+        }
+
+
+        private void UpdateOrderListWithServer(List<Order> orders)
+        {
+            //busy waiting
+            while (isUpdatingOrderList)
+                Logger.WriteLog("waiting for order list update lock release");
+
+            var openServerOderList = orders.Select((x) => x.Id).ToList();
+
+            isUpdatingOrderList = true;
+
+            //remove all the items from the watch list that does not exists in the servers open oders list
+            try
+            {
+                MyChaseOrderList.RemoveAll((item) => !openServerOderList.Contains(item.OrderId));
+            }
+            catch (Exception)
+            {
+                Logger.WriteLog("Error removing orders from active orderlist that are already filled in server after ticker reconnect");
+                //throw;
+            }
+            isUpdatingOrderList = false;
+        }
+
 
         public void OrderFilledEventHandler(object sender, EventArgs args)
         {
@@ -389,7 +470,7 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
                 {
                     cancelledOrder = CancelSingleOrder(myCurrentOrder.OrderId).Result;
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
                     Logger.WriteLog(string.Format("error cancelling order {0}, retrying...", myCurrentOrder.OrderId));
                     continue; //continue and try again to cancel and reorder
@@ -507,7 +588,8 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
                 else
                 {
                     //wait before placing a new order
-                    Task.Delay(200);
+                    //Task.Delay(200);
+                    Thread.Sleep(200);
 
                     decimal adjustedPrice = getAdjustedCurrentPrice(myCurOrder.Side);
 
@@ -556,7 +638,17 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
 
             MyDeleteOrdersRequest request = new MyDeleteOrdersRequest("/orders");
 
-            var genericResponse = await this.GetResponse(request);
+            ExchangeResponse genericResponse = null;
+
+            try
+            {
+                genericResponse = await this.GetResponse(request);
+            }
+            catch (Exception)
+            {
+                throw new Exception("CancelAllOrderError");
+            }
+
 
             List<string> cancelledOrderList = new List<string>();
 
@@ -594,7 +686,19 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
             var endPoint = string.Format(@"/orders/{0}", orderId);
             MyDeleteOrdersRequest request = new MyDeleteOrdersRequest(endPoint);
 
-            var genericResponse = await this.GetResponse(request);
+            //var genericResponse = await this.GetResponse(request);
+
+            ExchangeResponse genericResponse = null;
+
+            try
+            {
+                genericResponse = await this.GetResponse(request);
+            }
+            catch (Exception)
+            {
+                throw new Exception("CancelSingleOrderError");
+            }
+
 
             List<string> cancelledOrder = new List<string>();
 
@@ -648,6 +752,7 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
 
         public async Task<List<Order>> GetAllOrders() 
         {
+            //gets all pending order by default arguments 
             var requestEndPoint = string.Format(@"/orders");
             var allorders = await orderList.GetAllOpenOrders(requestEndPoint);
 
@@ -658,8 +763,10 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
 
         public async Task<List<Order>> GetAllOpenOrders()
         {
-            var requestEndPoint = string.Format(@"/orders?status=open");
+            Logger.WriteLog("Getting all open orders from server");
+            var requestEndPoint = string.Format(@"/orders?status=open&product_id={0}", ProductName);
             var allorders = await orderList.GetAllOpenOrders(requestEndPoint);
+            
             return allorders;
         }
 
