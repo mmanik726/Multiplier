@@ -15,6 +15,7 @@ namespace CoinbaseExchange.NET.Data
         public int CurrentSlices { get; set; }
         public decimal CurrentSd { get; set; }
         public int CurrentTimeInterval { get; set; }
+        public decimal CiBuffer { get; set; }
     }
 
 
@@ -39,6 +40,8 @@ namespace CoinbaseExchange.NET.Data
 
         public decimal CurrentSMAPrice;
         public decimal currentSandardDeviation ;
+
+        public decimal CurrentConfidenceIntervalBuffer;
 
         public static System.Timers.Timer aTimer;
 
@@ -115,6 +118,7 @@ namespace CoinbaseExchange.NET.Data
             {
                 CurrentMAPrice = CurrentSMAPrice,
                 CurrentSd = Math.Round(currentSandardDeviation, 4),
+                CiBuffer = Math.Round(CurrentConfidenceIntervalBuffer, 4),
                 CurrentSlices = SLICES,
                 CurrentTimeInterval = TIME_INTERVAL
             });
@@ -175,7 +179,7 @@ namespace CoinbaseExchange.NET.Data
             //sharedRawExchangeData.Insert(0, newDataPoint);
 
             var itemsInSlice = MADataPoints.Take(SLICES); //MADataPoints.OrderBy((c) => c.Time).ToList().Take(SLICES);
-            itemsInSlice.OrderBy((c) => c.Time).ToList().ForEach((t) => Logger.WriteLog(t.Time + "\t" + t.Close));
+            //itemsInSlice.OrderBy((c) => c.Time).ToList().ForEach((t) => Logger.WriteLog(t.Time + "\t" + t.Close));
             var itemsInSLiceAvg = itemsInSlice.Average((d) => d.Close);
 
             //MADataPoints.ForEach((t) => Logger.WriteLog(t.Time + "\t" + t.Close));
@@ -188,6 +192,8 @@ namespace CoinbaseExchange.NET.Data
             List<double> itemsInSliceDbl = itemsInSlice.Select(candle => (double)candle.Close).ToList();
             var sdDouble = CalculateStdDev(itemsInSliceDbl);
 
+            var ConfidenceInterval = CalculateConfidenceInterval(sdDouble, SLICES);
+
             isBusyUpdatingMA = false;
 
             //updateOccured(CurrentSMA, NotifyListener);
@@ -197,6 +203,7 @@ namespace CoinbaseExchange.NET.Data
             {
                 CurrentMAPrice = CurrentSMAPrice,
                 CurrentSd = Math.Round(currentSandardDeviation, 4),
+                CiBuffer = Math.Round(CurrentConfidenceIntervalBuffer, 4),
                 CurrentSlices = SLICES,
                 CurrentTimeInterval = TIME_INTERVAL
             });
@@ -218,9 +225,20 @@ namespace CoinbaseExchange.NET.Data
                 //Perform the Sum of (value-avg)_2_2      
                 double sum = values.Sum(d => Math.Pow(d - avg, 2));
                 //Put it all together      
-                ret = Math.Sqrt((sum) / (values.Count() - 1));
+                //ret = Math.Sqrt((sum) / (values.Count() - 1)); //sd of sample
+                ret = Math.Sqrt((sum) / (values.Count())); //sd of population 
             }
             return ret;
+        }
+
+        private double CalculateConfidenceInterval(double sd, int n)
+        {
+            double zValue = 2.576D; //1.96D; //D is for double. z value of 1.96 indicates a 95% confidence level. 2.576 -> 99%
+
+            double ci = zValue * (sd / Math.Sqrt(n));
+
+            CurrentConfidenceIntervalBuffer = Convert.ToDecimal(ci); //set property value
+            return ci;
         }
 
         public async Task<bool> DownloadAdditionalData()
@@ -240,39 +258,56 @@ namespace CoinbaseExchange.NET.Data
 
             List<CandleData> extraData = new List<CandleData>();
 
-            try
+            var doneDownloadingExtraData = false;
+
+            Int32 delayTime = 300;
+
+            while (!doneDownloadingExtraData)
             {
-                for (int i = 0; i < days; i++)
+                try
                 {
-                    //var x = Task.Delay(200);
+                    for (int i = 0; i < days; i++)
+                    {
+                        //var x = Task.Delay(200);
 
-                    System.Threading.Thread.Sleep(300);
-                    var temp = await historicData.GetPrices(
-                        product: Product,
-                        granularity: "60",
-                        startTime: startDt.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ"),
-                        endTime: endDt.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ"));
+                        System.Threading.Thread.Sleep(delayTime);
+                        var temp = await historicData.GetPrices(
+                            product: Product,
+                            granularity: "60",
+                            startTime: startDt.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ"),
+                            endTime: endDt.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ"));
 
-                    startDt = temp.Last().Time.AddMinutes(-1).AddHours(-6);
-                    endDt = temp.Last().Time.AddMinutes(-1);
+                        startDt = temp.Last().Time.AddMinutes(-1).AddHours(-6);
+                        endDt = temp.Last().Time.AddMinutes(-1);
 
-                    extraData.AddRange(temp);
+                        extraData.AddRange(temp);
+                    }
+
+                    doneDownloadingExtraData = true;
                 }
-            }
-            catch (Exception ex)
-            {
-                var msg = "Error downloading additional data: " + ex.Message;
-                while (ex.InnerException != null)
+                catch (Exception ex)
                 {
-                    ex = ex.InnerException;
-                    msg = msg + "\n" + ex.Message;
+                    delayTime += 200; //increase the delay time 
+                    var msg = "Error downloading additional data, retrying with " + delayTime.ToString() + " ms delay. (" + ex.Message + ")";
+                    while (ex.InnerException != null)
+                    {
+                        ex = ex.InnerException;
+                        msg = msg + "\n" + ex.Message;
+                    }
+                    Logger.WriteLog(msg);
+                    //return false;
+                    //throw ex;
+
+                    //reset vars;
+                    doneDownloadingExtraData = false;
+                    startDt = firstDataPointDateTime.AddMinutes(-1).AddHours(-6);
+                    endDt = firstDataPointDateTime.AddMinutes(-1);
+                    extraData.Clear();  //clear incomplete donwloaded data
+                    
+
                 }
-                Logger.WriteLog(msg);
-                return false;
-                throw ex;
+
             }
-
-
 
             sharedRawExchangeData.AddRange(extraData);
 
@@ -317,24 +352,46 @@ namespace CoinbaseExchange.NET.Data
 
 
 
-                HistoricPrices historicData = new HistoricPrices();
-                var temp = await historicData.GetPrices(product: Product, granularity: "60");
-            
-                sharedRawExchangeData.Clear(); //clear existing data
-                sharedRawExchangeData = temp.ToList();
-
-                if (TIME_INTERVAL * SLICES > 200)
-                    await DownloadAdditionalData();
-
-
+            HistoricPrices historicData = new HistoricPrices();
+            var temp = historicData.GetPrices(product: Product, granularity: "60");
+            temp.Wait();
+                
+            sharedRawExchangeData.Clear(); //clear existing data
+            sharedRawExchangeData = temp.Result.ToList();
 
 
             lastDataPointDateTime = sharedRawExchangeData.First().Time;
             firstDataPointDateTime = sharedRawExchangeData.Last().Time;
 
+            //Logger.WriteLog("Before downloading additional data");
+
+            if (TIME_INTERVAL * SLICES > 200)
+            {
+                var res = await DownloadAdditionalData();
+                if (res)
+                {
+                }
+                
+            }
+
+            //Logger.WriteLog("after downloading additional data");
+
+
+
+
             //exchangeData.ToList().ForEach((a) => Logger.WriteLog(a.Time + "\t" + a.Close));
 
+            sharedRawExchangeData = sharedRawExchangeData.OrderByDescending((x) => x.Time).ToList();
+
+
+
+
+            //sharedRawExchangeData.ForEach((a) => System.Diagnostics.Debug.WriteLine(a.Time + "\t"+ a.Close));
+
+
             var intervalData = sharedRawExchangeData.Where((candleData, i) => i % TIME_INTERVAL == 0).ToList();// select every third item in list ie select data from every x min 
+
+            //intervalData.ForEach((l) => Logger.WriteLog(l.Time + "\t" + l.Close));
 
             var takeCount = intervalData.Count - (intervalData.Count() % SLICES);
             var requiredIntervalData = intervalData.Take(takeCount).ToList();
@@ -348,6 +405,8 @@ namespace CoinbaseExchange.NET.Data
             //requiredIntervalData.ForEach((a) => Logger.WriteLog(a.Time + "\t"+ a.Close));
 
             //for (int i = 0; i < groupCount; i++)
+
+            
             for (int i = 0; i <= groupCount - 1; i++)
             {
                 var itemsInSlice = requiredIntervalData.Skip(i * SLICES).Take(SLICES);
@@ -373,7 +432,10 @@ namespace CoinbaseExchange.NET.Data
             var maDataList = requiredIntervalData.OrderByDescending((c) => c.Time).Take(SLICES).ToList();
 
             List<double> itemsInSliceDbl = maDataList.Select(candle => (double)candle.Close).ToList();
+
             var sdDouble = CalculateStdDev(itemsInSliceDbl);
+
+            var ConfidenceInterval = CalculateConfidenceInterval(sdDouble, SLICES);
 
             currentSandardDeviation = Convert.ToDecimal(sdDouble);
 

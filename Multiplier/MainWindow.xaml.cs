@@ -127,10 +127,14 @@ namespace Multiplier
         public void BuySellBufferChangedEventHandler(object sender, EventArgs args)
         {
             var data = (BuySellBufferUpdateArgs)args;
-            var msg = "Buy Sell Price buffer updated to " + data.NewBuySellBuffer.ToString(); 
+            var msg = "Buy Sell Price buffer updated to " + data.NewBuySellBuffer.ToString();
             //MessageBox.Show(msg);
 
-            lblBuySellBuffer.Content = data.NewBuySellBuffer.ToString();
+            this.Dispatcher.Invoke(() => 
+            {
+                lblBuySellBuffer.Content = data.NewBuySellBuffer.ToString();
+            });
+            
 
         }
 
@@ -173,7 +177,10 @@ namespace Multiplier
 
             var x = this.Dispatcher.Invoke(() => chkUseSd.IsChecked);
             if (x == true)
-                LTCManager.UpdateBuySellBuffer(currentSmaData.CurrentSd);
+            {
+                //LTCManager.UpdateBuySellBuffer(currentSmaData.CurrentSd);
+                LTCManager.UpdateBuySellBuffer(currentSmaData.CiBuffer); //use the 95% confidence interval buffer
+            }
 
             this.Dispatcher.Invoke(() =>
             {
