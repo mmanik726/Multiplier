@@ -62,8 +62,9 @@ namespace Multiplier
 
         private CBAuthenticationContainer MyAuth { get; set; }
         private MyOrderBook MyOrderBook { get; set; }
-        
 
+
+        private bool userStartedTrading; 
 
         public EventHandler TickerPriceUpdateEvent;
         public EventHandler OrderFilledEvent;
@@ -111,6 +112,8 @@ namespace Multiplier
 
             Logger.WriteLog("Auto trading started: waiting to sell");
 
+            userStartedTrading = true;
+
             AutoTradingStartedEvent?.Invoke(this, EventArgs.Empty);
 
         }
@@ -131,6 +134,8 @@ namespace Multiplier
             StartBuyingSelling = true;
 
             Logger.WriteLog("Auto trading started: waiting to buy");
+
+            userStartedTrading = true;
 
             AutoTradingStartedEvent?.Invoke(this, EventArgs.Empty);
         }
@@ -154,7 +159,7 @@ namespace Multiplier
                 return;
             }
 
-
+            userStartedTrading = false;
 
             BuySellAmount = 0.01m;//default
 
@@ -211,7 +216,9 @@ namespace Multiplier
         {
             Logger.WriteLog("Ticker disconnected... pausing all buy / sell");
 
-            StartBuyingSelling = false;
+            if (userStartedTrading)
+                StartBuyingSelling = false;
+
             TickerDisConnectedEvent?.Invoke(this, EventArgs.Empty);
 
         }
@@ -233,7 +240,8 @@ namespace Multiplier
             Thread.Sleep(8 * 1000);
             Logger.WriteLog("buy sell resumed here");
 
-            StartBuyingSelling = true;
+            if (userStartedTrading)
+                StartBuyingSelling = true;
 
             TickerConnectedEvent?.Invoke(this, EventArgs.Empty);
         }
@@ -347,7 +355,7 @@ namespace Multiplier
 
                     try
                     {
-                        await MyOrderBook.PlaceNewLimitOrder("sell", ProductName, BuySellAmount.ToString(), CurrentBufferedPrice.ToString(), true);
+                        await MyOrderBook.PlaceNewOrder("sell", ProductName, BuySellAmount.ToString(), CurrentBufferedPrice.ToString(), true);
                         Logger.WriteLog(string.Format("Order placed, Waiting {0} min before placing any new order", WaitTimeAfterCrossInMin));
                     }
                     catch (Exception ex)
@@ -390,7 +398,7 @@ namespace Multiplier
 
                     try
                     {
-                        await MyOrderBook.PlaceNewLimitOrder("buy", ProductName, BuySellAmount.ToString(), CurrentBufferedPrice.ToString(), true);
+                        await MyOrderBook.PlaceNewOrder("buy", ProductName, BuySellAmount.ToString(), CurrentBufferedPrice.ToString(), true);
                         Logger.WriteLog(string.Format("Order placed, waiting {0} min before placing any new order", WaitTimeAfterCrossInMin));
                     }
                     catch (Exception ex)

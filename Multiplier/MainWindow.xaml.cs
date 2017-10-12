@@ -104,8 +104,9 @@ namespace Multiplier
             {
                 lblWarning.Visibility = Visibility.Hidden;
 
-                btnStartByBuying.IsEnabled = false;
-                btnStartBySelling.IsEnabled = false;
+
+                //btnStartByBuying.IsEnabled = false;
+                //btnStartBySelling.IsEnabled = false;
                 //lblWarning.Foreground = Brushes.Red;
                 //lblWarning.Content = "Warning: Realtime Data Offline. Autotrading OFF";
             });

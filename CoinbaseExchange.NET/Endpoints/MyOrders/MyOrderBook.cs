@@ -253,6 +253,9 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
 
         private static decimal currentPrice;
 
+        private static int OrderRetriedCount;
+        private static decimal OrderStartingPrice;
+
         private string ProductName; 
 
         private static DateTime lastTickTIme;  
@@ -276,6 +279,10 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
             isUpdatingOrderList = false;
 
             isBusyCancelAndReorder = false;
+
+            OrderRetriedCount = 0;
+            OrderStartingPrice = 0;
+
 
             ProductName = product;
             _auth = authContainer;
@@ -366,6 +373,12 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
             var filledOrder = filledOrders.filledOrder;
 
 
+
+            //reset the order retry count
+            OrderRetriedCount = 0;
+            OrderStartingPrice = 0;
+
+
             //Logger.WriteLog(string.Format("Order id: {0} has been filled", filledOrder.OrderId));
 
             NotifyOrderUpdateListener(new OrderUpdateEventArgs
@@ -388,9 +401,9 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
 
             
             var curTime = DateTime.UtcNow;
-            var timeSinceLastTick = (curTime - lastTickTIme).TotalMilliseconds; 
+            var timeSinceLastTick = (curTime - lastTickTIme).TotalMilliseconds;
 
-            if (timeSinceLastTick < 3000)
+            if (timeSinceLastTick < (4 * 1000)) //wait 5 sec before next price change. origianlly 3 sec
             {
                 return;
             }
@@ -413,7 +426,7 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
             //check if the new order price is the same as the last placed order
             if (MyChaseOrderList.Count > 0 )
             {
-                decimal tempPrice = getAdjustedCurrentPrice(MyChaseOrderList.FirstOrDefault().Side);
+                decimal tempPrice = getAdjustedCurrentPrice(MyChaseOrderList.FirstOrDefault());
 
 
                 if (MyChaseOrderList.FirstOrDefault().UsdAmount == tempPrice)
@@ -487,19 +500,57 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
                 Logger.WriteLog(string.Format("\t\tcancel {0} order: {1}", myCurrentOrder.Side, myCurrentOrder.OrderId));
 
 
-                decimal adjustedPrice = getAdjustedCurrentPrice(myCurrentOrder.Side);
+                decimal adjustedPrice = 0;
 
-                //place new order
-                var orderAtNewPrice = PlaceNewLimitOrder(
-                    oSide: myCurrentOrder.Side,
-                    oProdName: myCurrentOrder.Productname,
-                    oSize: myCurrentOrder.ProductAmount.ToString(),
-                    oPrice: adjustedPrice.ToString(),
-                    chaseBestPrice: true
-                    );
+
+                decimal curPriceDifference = 0;
+
+                if (OrderStartingPrice > 0)
+                    curPriceDifference = Math.Abs(OrderStartingPrice - PriceTicker.CurrentPrice);
+
+
+
+                //OrderStartingPrice = adjustedPrice;
+
+                var priceChangePercent = PriceTicker.CurrentPrice * 0.0025m;//0.0035m;
+
+                if (OrderRetriedCount <= 10 && curPriceDifference <= priceChangePercent)
+                {
+                    adjustedPrice = getAdjustedCurrentPrice(myCurrentOrder);
+                    //place new order limit order
+                    var orderAtNewPrice = PlaceNewOrder(
+                        oSide: myCurrentOrder.Side,
+                        oProdName: myCurrentOrder.Productname,
+                        oSize: myCurrentOrder.ProductAmount.ToString(),
+                        oPrice: adjustedPrice.ToString(),
+                        chaseBestPrice: true,
+                        orderType: "limit"
+                        );
+                }
+                else
+                {
+                    if (curPriceDifference > priceChangePercent)
+                        Logger.WriteLog("Price changed more than " + curPriceDifference + " Forcing market order");
+                    adjustedPrice = getAdjustedCurrentPrice(myCurrentOrder, "market");
+                    //place new market order
+                    var orderAtNewPrice = PlaceNewOrder(
+                        oSide: myCurrentOrder.Side,
+                        oProdName: myCurrentOrder.Productname,
+                        oSize: myCurrentOrder.ProductAmount.ToString(),
+                        oPrice: adjustedPrice.ToString(),
+                        chaseBestPrice: true,
+                        orderType: "market"
+                        );
+                }
+
+
 
             }
 
+
+            OrderRetriedCount += 1;
+
+            Logger.WriteLog("Order retried count: " + OrderRetriedCount);
 
             Logger.WriteLog("Orders in ActiveOrderList:");
 
@@ -541,8 +592,8 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
             isUpdatingOrderList = false;
         }
 
-        public async Task<Order> PlaceNewLimitOrder(string oSide, string oProdName,
-            string oSize, string oPrice, bool chaseBestPrice)
+        public async Task<Order> PlaceNewOrder(string oSide, string oProdName,
+            string oSize, string oPrice, bool chaseBestPrice, string orderType = "limit")
         {
             OrderPlacer limitOrder = new OrderPlacer(_auth);
 
@@ -550,14 +601,20 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
 
             //orderBodyObj.Add(new JProperty("client_oid", ""));
 
-            orderBodyObj.Add(new JProperty("type", "limit"));
+            orderBodyObj.Add(new JProperty("type", orderType));
             orderBodyObj.Add(new JProperty("product_id", oProdName));
             orderBodyObj.Add(new JProperty("side", oSide));
             orderBodyObj.Add(new JProperty("price", oPrice));
             orderBodyObj.Add(new JProperty("size", oSize));
-            //orderBodyObj.Add(new JProperty("post_only", "T"));
 
-            Logger.WriteLog(string.Format("placing new {0} order @{1}", oSide, oPrice));
+            if(orderType == "limit")
+                orderBodyObj.Add(new JProperty("post_only", "T"));
+
+            if (OrderStartingPrice == 0) //not yet set
+                OrderStartingPrice = Convert.ToDecimal(oPrice);
+
+
+            Logger.WriteLog(string.Format("placing new {0} {1} order @{2}", orderType, oSide, oPrice));
             var newOrder = await limitOrder.PlaceOrder(orderBodyObj);
 
             if (newOrder != null)
@@ -591,14 +648,15 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
                     //Task.Delay(200);
                     Thread.Sleep(200);
 
-                    decimal adjustedPrice = getAdjustedCurrentPrice(myCurOrder.Side);
+                    decimal adjustedPrice = getAdjustedCurrentPrice(myCurOrder);
 
-                    var orderAtNewPrice = PlaceNewLimitOrder(
+                    var orderAtNewPrice = PlaceNewOrder(
                         oSide: myCurOrder.Side,
                         oProdName: myCurOrder.Productname,
                         oSize: myCurOrder.ProductAmount.ToString(),
                         oPrice: adjustedPrice.ToString(),
-                        chaseBestPrice: true
+                        chaseBestPrice: true,
+                        orderType: orderType
                         );
                 }
 
@@ -609,7 +667,7 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
         }
 
 
-        decimal getAdjustedCurrentPrice(string side)
+        decimal getAdjustedCurrentPrice(MyOrder order, string otype = "limit" )
         {
 
             decimal curTmpPrice = 0;
@@ -620,15 +678,21 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
                 curTmpPrice = currentPrice;
 
 
-            if (side == "buy")
-                return curTmpPrice; // - 1.00m; //m is for decimal
-            else
-                return curTmpPrice; // + 1.00m;    
+            if (otype == "market")
+            {
+                return curTmpPrice; 
+            }
+
 
             //if (side == "buy")
-            //    return curTmpPrice - 1.00m; //m is for decimal
+            //    return curTmpPrice; // - 1.00m; //m is for decimal
             //else
-            //    return curTmpPrice + 1.00m;
+            //    return curTmpPrice; // + 1.00m;    
+
+            if (order.Side == "buy")
+                return curTmpPrice - 0.01m; //m is for decimal
+            else
+                return curTmpPrice + 0.01m;
 
         }
 
