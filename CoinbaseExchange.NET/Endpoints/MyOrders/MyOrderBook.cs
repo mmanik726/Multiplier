@@ -512,9 +512,9 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
 
                 //OrderStartingPrice = adjustedPrice;
 
-                var priceChangePercent = PriceTicker.CurrentPrice * 0.0025m;//0.0035m;
+                var priceChangePercent = PriceTicker.CurrentPrice * 0.0025m;
 
-                if (OrderRetriedCount <= 10 && curPriceDifference <= priceChangePercent)
+                if (OrderRetriedCount <= 13 && curPriceDifference <= priceChangePercent) // retry a total of 15 times or while less than a "big jump"
                 {
                     adjustedPrice = getAdjustedCurrentPrice(myCurrentOrder);
                     //place new order limit order
@@ -526,6 +526,16 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
                         chaseBestPrice: true,
                         orderType: "limit"
                         );
+
+                    try
+                    {
+                        orderAtNewPrice.Wait();
+                    }
+                    catch (Exception)
+                    {
+                        Logger.WriteLog("error in cancel and reorder occured while placing new limit order, retrying...");
+                        continue;
+                    }
                 }
                 else
                 {
@@ -541,6 +551,16 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
                         chaseBestPrice: true,
                         orderType: "market"
                         );
+
+                    try
+                    {
+                        orderAtNewPrice.Wait();
+                    }
+                    catch (Exception)
+                    {
+                        Logger.WriteLog("error in cancel and reorder occured while placing new market order, retrying...");
+                        continue;
+                    }
                 }
 
 
@@ -624,7 +644,7 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
                 {
                     OrderId = newOrder.Id,
                     Productname = newOrder.Product_id,
-                    OrderType = "limit",
+                    OrderType = orderType,
                     Status = "OPEN",
                     UsdAmount = Convert.ToDecimal(newOrder.Price),
                     ProductAmount = Convert.ToDecimal(newOrder.Size),
@@ -648,6 +668,7 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
                     //Task.Delay(200);
                     Thread.Sleep(200);
 
+                    Logger.WriteLog("Last order rejected, retrying..."); 
                     decimal adjustedPrice = getAdjustedCurrentPrice(myCurOrder);
 
                     var orderAtNewPrice = PlaceNewOrder(
@@ -684,10 +705,10 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
             }
 
 
-            //if (side == "buy")
-            //    return curTmpPrice; // - 1.00m; //m is for decimal
+            //if (order.Side == "buy")
+            //    return curTmpPrice - 10.00m; //m is for decimal
             //else
-            //    return curTmpPrice; // + 1.00m;    
+            //    return curTmpPrice + 10.00m;    
 
             if (order.Side == "buy")
                 return curTmpPrice - 0.01m; //m is for decimal

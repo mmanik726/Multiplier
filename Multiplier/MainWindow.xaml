@@ -38,7 +38,7 @@
         <Label Content="Buy / Sell buffer: " HorizontalAlignment="Left" VerticalAlignment="Top" Margin="13,324,0,0"/>
         <Label Content="Standard Deviation:" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="448,324,0,0"/>
         <Label x:Name="lblSd" Content="0" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="567,324,0,0"/>
-        <CheckBox x:Name="chkUseInverse" Content="Use Inverse" HorizontalAlignment="Left" Margin="77,393,0,0" VerticalAlignment="Top"/>
+        <CheckBox x:Name="chkUseInverse" Content="Use Inverse" HorizontalAlignment="Left" Margin="235,330,0,0" VerticalAlignment="Top"/>
         <CheckBox x:Name="chkUseSd" Content="Use SD" HorizontalAlignment="Left" Margin="160,330,0,0" VerticalAlignment="Top"/>
         <Label Content="Buy / Sell size:" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="305,415,0,0"/>
         <Label x:Name="lblBuySellAmount" Content="0" HorizontalAlignment="Left" Margin="395,415,0,0" VerticalAlignment="Top" Height="23" RenderTransformOrigin="0.522,-0.196"/>

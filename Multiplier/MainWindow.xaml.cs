@@ -180,7 +180,10 @@ namespace Multiplier
             if (x == true)
             {
                 //LTCManager.UpdateBuySellBuffer(currentSmaData.CurrentSd);
-                LTCManager.UpdateBuySellBuffer(currentSmaData.CiBuffer); //use the 95% confidence interval buffer
+
+                bool isUseInvers = (bool)Dispatcher.Invoke(() => chkUseInverse.IsChecked);
+
+                LTCManager.UpdateBuySellBuffer(currentSmaData.CiBuffer, isUseInvers); //use the 95% confidence interval buffer
             }
 
             this.Dispatcher.Invoke(() =>
@@ -454,7 +457,7 @@ namespace Multiplier
                     return;
                 }
 
-                LTCManager.UpdateBuySellBuffer(buySellBuffer);
+                LTCManager.UpdateBuySellBuffer(buySellBuffer, (bool)chkUseInverse.IsChecked);
 
             }
             catch (Exception ex)

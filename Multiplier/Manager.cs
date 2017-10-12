@@ -356,6 +356,7 @@ namespace Multiplier
                     try
                     {
                         await MyOrderBook.PlaceNewOrder("sell", ProductName, BuySellAmount.ToString(), CurrentBufferedPrice.ToString(), true);
+                        //for testing //await MyOrderBook.PlaceNewOrder("sell", ProductName, BuySellAmount.ToString(), (CurrentBufferedPrice + 10m).ToString(), true);
                         Logger.WriteLog(string.Format("Order placed, Waiting {0} min before placing any new order", WaitTimeAfterCrossInMin));
                     }
                     catch (Exception ex)
@@ -399,6 +400,7 @@ namespace Multiplier
                     try
                     {
                         await MyOrderBook.PlaceNewOrder("buy", ProductName, BuySellAmount.ToString(), CurrentBufferedPrice.ToString(), true);
+                        //for testing //await MyOrderBook.PlaceNewOrder("buy", ProductName, BuySellAmount.ToString(), (CurrentBufferedPrice - 10).ToString(), true);
                         Logger.WriteLog(string.Format("Order placed, waiting {0} min before placing any new order", WaitTimeAfterCrossInMin));
                     }
                     catch (Exception ex)
@@ -516,10 +518,18 @@ namespace Multiplier
         }
 
 
-        public void UpdateBuySellBuffer(decimal newPriceBuffer)
+        public void UpdateBuySellBuffer(decimal newPriceBuffer, bool useInverse = false)
         {
 
-            PriceBuffer = Math.Round(newPriceBuffer, 4);
+            decimal tempValue = newPriceBuffer; 
+
+            if (useInverse)
+            {
+                if(newPriceBuffer > 0) //posible div by zero error 
+                    tempValue = 1 / (newPriceBuffer / 50); 
+            }
+
+            PriceBuffer = Math.Round(tempValue, 4);
 
             var msg = "Buy Sell Price buffer updated to " + PriceBuffer.ToString();
             Logger.WriteLog(msg);
