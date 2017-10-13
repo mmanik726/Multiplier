@@ -8,7 +8,7 @@
         Title="Mani Log" Height="563.675" Width="866">
     <Grid>
         <DockPanel HorizontalAlignment="Left" Height="506" LastChildFill="False" Margin="10,10,0,0" VerticalAlignment="Top" Width="834">
-            <RichTextBox x:Name="txtLog" HorizontalAlignment="Left" Height="479" VerticalAlignment="Top" Width="829" TextChanged="txtLog_TextChanged" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch">
+            <RichTextBox x:Name="txtLog" HorizontalAlignment="Left" Height="479" VerticalAlignment="Top" Width="829" LostFocus="txtLog_LostFocus" GotFocus="txtLog_GotFocus" TextChanged="txtLog_TextChanged" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch">
                 <FlowDocument/>
             </RichTextBox>
         </DockPanel>

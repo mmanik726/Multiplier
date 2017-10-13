@@ -396,7 +396,7 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
 
         }
 
-        public async void PriceUpdateEventHandler(object sender, EventArgs args)
+        public void PriceUpdateEventHandler(object sender, EventArgs args)
         {
 
             
@@ -449,15 +449,19 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
 
             //await Task.Factory.StartNew(() => cancelAndReorder());
             isBusyCancelAndReorder = true;
-            await Task.Run(() => CancelAndReorder());
+
+
+            Task<bool> cancelAndReorderResult = Task.Run(() => CancelAndReorder());
+            cancelAndReorderResult.Wait(); //wait for cancel and reorder to finish
+            
         }
 
 
-        private void CancelAndReorder()
+        private bool CancelAndReorder()
         {
             isBusyCancelAndReorder = true;
 
-
+            //Logger.WriteLog("\t\t in cancel and reorder"); 
 
             for (int i = 0; i < MyChaseOrderList.Count; i++)
             {
@@ -581,12 +585,12 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
             }
             catch (Exception)
             {
-
-                Logger.WriteLog("Error enumerating list, list changed");
+                Logger.WriteLog("Error enumerating order list, list changed");
             }
                 
             isBusyCancelAndReorder = false;
 
+            return true;
         }
 
 
@@ -708,7 +712,7 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
             //if (order.Side == "buy")
             //    return curTmpPrice - 10.00m; //m is for decimal
             //else
-            //    return curTmpPrice + 10.00m;    
+            //    return curTmpPrice + 10.00m;
 
             if (order.Side == "buy")
                 return curTmpPrice - 0.01m; //m is for decimal

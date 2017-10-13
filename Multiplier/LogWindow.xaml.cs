@@ -22,9 +22,13 @@ namespace Multiplier
     {
         public static object writeLock = new object();
 
+        private bool AutoScrolling; 
+
         public LogWindow()
         {
             InitializeComponent();
+
+            AutoScrolling = true;
 
             Logger.Logupdated += LogUpdatedHandler;
             txtLog.HorizontalScrollBarVisibility = ScrollBarVisibility.Visible;
@@ -52,7 +56,21 @@ namespace Multiplier
         private void txtLog_TextChanged(object sender, TextChangedEventArgs e)
         {
             // scroll it automatically
-            txtLog.ScrollToEnd();
+            if (AutoScrolling)
+            {
+                txtLog.ScrollToEnd();
+            }
+        }
+
+        private void txtLog_GotFocus(object sender, RoutedEventArgs e)
+        {
+            AutoScrolling = false; 
+        }
+
+
+        private void txtLog_LostFocus(object sender, RoutedEventArgs e)
+        {
+            AutoScrolling = true;
         }
     }
 }
