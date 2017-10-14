@@ -24,6 +24,7 @@ using CoinbaseExchange.NET.Data;
 using CoinbaseExchange.NET.Utilities;
 using static Multiplier.Manager;
 
+
 namespace Multiplier
 {
     /// <summary>
@@ -33,11 +34,11 @@ namespace Multiplier
     {
 
 
-        Manager LTCManager; 
+        Manager LTCManager;
 
-        private const string myPassphrase = "n6yci6u4i0g";
-        private const string myKey = "b006d82554b495e227b9e7a1251ad745";
-        private const string mySecret = "NhAb9pmbZaY9cPb2+eXOGWIILje7iFe/nF+dV9n6FOxazl6Kje2/03GuSiQYTsj3a/smh92m/lrvfu7kYkxQMg==";
+        private string myPassphrase; // = "n6yci6u4i0g";
+        private string myKey; // = "b006d82554b495e227b9e7a1251ad745";
+        private string mySecret; // = "NhAb9pmbZaY9cPb2+eXOGWIILje7iFe/nF+dV9n6FOxazl6Kje2/03GuSiQYTsj3a/smh92m/lrvfu7kYkxQMg==";
         LogWindow logWindow;
 
         private static decimal sharedCurrentAveragePrice;
@@ -51,13 +52,20 @@ namespace Multiplier
         {
             InitializeComponent();
 
+            var appVersion = Assembly.GetExecutingAssembly().GetName().Version;
+            Dispatcher.Invoke(()=> 
+            {
+                FrmMainWindow.Title = "Mani (" + appVersion.ToString() + ")"; 
+            });
 
             logWindow = new LogWindow();
             logWindow.Show();
             InitListView();
 
-            cmbProduct.Items.Add("LTC-USD");
             cmbProduct.Items.Add("BTC-USD");
+            cmbProduct.Items.Add("ETH-USD");
+            cmbProduct.Items.Add("LTC-USD");
+            
 
             btnSellAtNow.IsEnabled = false;
             btnStartByBuying.IsEnabled = false;
@@ -599,6 +607,31 @@ namespace Multiplier
 
         Task<bool> startApp(string inputProduct)
         {
+
+            //get user settings 
+            var currentUser = Properties.Settings.Default.UserName;
+
+            myPassphrase = Properties.Settings.Default.Passpharase;
+            myKey = Properties.Settings.Default.Key;
+            mySecret = Properties.Settings.Default.Secret;
+
+            if (currentUser == "" ||
+                myPassphrase == "" ||
+                myKey == "" ||
+                mySecret == "")
+            {
+                MessageBox.Show("User credentials are empty, please check config file and restart application");
+                Environment.Exit(0); 
+            }
+
+
+            Dispatcher.Invoke(() => 
+            {
+                FrmMainWindow.Title = FrmMainWindow.Title + " User: " + currentUser;  
+            });
+            
+
+
             AutoTradingOn = false;
 
             LTCManager = new Manager(inputProduct, myPassphrase, myKey, mySecret);
