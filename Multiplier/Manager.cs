@@ -45,8 +45,10 @@ namespace Multiplier
         private int CurrentSmaSlices { get; set; }
         private int CurrentSmaTimeInterval { get; set; }
 
+        private List<String> TradeActionList { get; set; }
+        private static bool ForceSold { get; set; }
 
-        private bool StartBuyingSelling { get; set; }
+        private bool StartAutoTrading { get; set; }
 
         private decimal PriceBuffer { get; set; }
 
@@ -71,10 +73,15 @@ namespace Multiplier
         public EventHandler SmaUpdateEvent;
         public EventHandler BuySellBufferChangedEvent;
         public EventHandler BuySellAmountChangedEvent;
+
         public EventHandler AutoTradingStartedEvent;
+        public EventHandler AutoTradingStoppedEvent;
 
         public EventHandler TickerConnectedEvent;
         public EventHandler TickerDisConnectedEvent;
+
+        public EventHandler PriceBelowAverageEvent;
+        public EventHandler PriceAboveAverageEvent;
 
         public Manager(string inputProductName, string PassPhrase, string Key, string Secret)
         {
@@ -108,7 +115,7 @@ namespace Multiplier
             MaxBuy = 0;
             MaxSell = 5;
 
-            StartBuyingSelling = true;
+            StartAutoTrading = true;
 
             Logger.WriteLog("Auto trading started: waiting to sell");
 
@@ -131,7 +138,7 @@ namespace Multiplier
             MaxBuy = 5;
             MaxSell = 0;
 
-            StartBuyingSelling = true;
+            StartAutoTrading = true;
 
             Logger.WriteLog("Auto trading started: waiting to buy");
 
@@ -160,6 +167,8 @@ namespace Multiplier
             }
 
             userStartedTrading = false;
+            TradeActionList = new List<string>();
+            ForceSold = false;
 
             BuySellAmount = 0.01m;//default
 
@@ -184,7 +193,9 @@ namespace Multiplier
             MaxBuy = 5;
             MaxSell = 5;
 
-            StartBuyingSelling = false;
+            StartAutoTrading = false;
+            AutoTradingStoppedEvent?.Invoke(this, EventArgs.Empty);
+
 
             LastCrossTime = DateTime.UtcNow.ToLocalTime();
 
@@ -217,7 +228,10 @@ namespace Multiplier
             Logger.WriteLog("Ticker disconnected... pausing all buy / sell");
 
             if (userStartedTrading)
-                StartBuyingSelling = false;
+            {
+                StartAutoTrading = false;
+                AutoTradingStoppedEvent?.Invoke(this, EventArgs.Empty);
+            }
 
             TickerDisConnectedEvent?.Invoke(this, EventArgs.Empty);
 
@@ -241,7 +255,10 @@ namespace Multiplier
             Logger.WriteLog("buy sell resumed here");
 
             if (userStartedTrading)
-                StartBuyingSelling = true;
+            {
+                StartAutoTrading = true;
+                AutoTradingStartedEvent?.Invoke(this, EventArgs.Empty);
+            }
 
             TickerConnectedEvent?.Invoke(this, EventArgs.Empty);
         }
@@ -276,10 +293,82 @@ namespace Multiplier
             WaitingBuyOrSell = false;
 
 
-            OrderFilledEvent?.Invoke(this, filledOrder);
+            if (ForceSold) 
+            {
+                ForcedOrderFilledEventArgs tempArgs = new ForcedOrderFilledEventArgs();
+                tempArgs.filledAtPrice = filledOrder.filledAtPrice;
+                tempArgs.fillFee = filledOrder.fillFee;
+                tempArgs.fillSize = filledOrder.fillSize;
+                tempArgs.Message = filledOrder.Message;
+                tempArgs.OrderId = filledOrder.OrderId;
+                tempArgs.ProductName = filledOrder.ProductName;
+                tempArgs.side = filledOrder.side;
+                tempArgs.ForcedOrder = true;
+                //var temp = (ForcedOrderFilledEventArgs)filledOrder;
+                tempArgs.ForcedOrder = true;
+                ForceSold = false;
+                OrderFilledEvent?.Invoke(this, tempArgs);
+            }
+            else
+            {
+                OrderFilledEvent?.Invoke(this, filledOrder);
+            }
+
 
 
             //this.Dispatcher.Invoke(() => updateListView(filledOrder));
+        }
+
+
+        public async void ForceSellAtNow()
+        {
+
+            
+
+            try
+            {
+                Logger.WriteLog(string.Format("Placing Sell at NOW order "));
+                StartAutoTrading = false; //pause auto trading
+                AutoTradingStoppedEvent?.Invoke(this, EventArgs.Empty);
+
+                WaitingBuyOrSell = true;
+
+                var ForceOrderResult = await MyOrderBook.PlaceNewOrder("sell", ProductName, BuySellAmount.ToString(), CurrentBufferedPrice.ToString(), true);
+                ForceSold = true;
+                //ForceOrderResult.Wait();
+
+                
+
+
+            }
+            catch (Exception ex)
+            {
+                var msg = ex.Message + "\n";
+                while (ex.InnerException != null)
+                {
+                    ex = ex.InnerException;
+                    msg = msg + ex.Message;
+                }
+
+                //Logger.WriteLog("Error Selling: \n" + msg);
+
+
+
+                //setNextActionTo_Sell();
+
+
+                //WaitingBuyFill = false;
+                //WaitingBuyOrSell = false; //set wait flag to false to place new order
+
+                ////simulate last cross time so sells immidiately instead of waiting. since error occured
+                //LastCrossTime = DateTime.UtcNow.ToLocalTime().AddMinutes((-1 * WaitTimeAfterCrossInMin) - 1);
+            }
+
+
+
+
+
+
         }
 
 
@@ -297,7 +386,26 @@ namespace Multiplier
             TickerPriceUpdateEvent?.Invoke(this, tickerData);
 
 
-            if (StartBuyingSelling)
+
+            if (ForceSold)
+            {
+                if (CurrentBufferedPrice <= (CurrentAveragePrice - PriceBuffer)) // price below average 
+                {
+
+                    PriceBelowAverageEvent?.Invoke(this, EventArgs.Empty);
+
+                    ForceSold = false;
+
+                    if (userStartedTrading)
+                    {
+                        StartTrading_ByBuying();
+                    }
+                }
+
+            }
+
+
+            if (StartAutoTrading)
             {
                 if ((LastTickerUpdateTime - LastBuySellTime).TotalMilliseconds < 1000)
                 {
@@ -321,6 +429,7 @@ namespace Multiplier
                     LastBuySellTime = DateTime.UtcNow.ToLocalTime();
 
                     buysell();
+
                 }
                 else
                 {
@@ -428,6 +537,8 @@ namespace Multiplier
                 }
 
             }
+
+            //return true;
 
         }
 
@@ -563,11 +674,15 @@ namespace Multiplier
     public class BuySellBufferUpdateArgs : EventArgs { public decimal NewBuySellBuffer { get; set; } }
     public class BuySellAmountUpdateArgs : EventArgs { public decimal NewBuySellAmount { get; set; } }
 
+    public class ForcedOrderFilledEventArgs: OrderUpdateEventArgs {public bool ForcedOrder { get; set; } }
+
     public class SmaParamUpdateArgs : EventArgs
     {
         public int NewTimeinterval { get; set; }
         public decimal NewSlices { get; set; }
     }
+
+
 }
 
 

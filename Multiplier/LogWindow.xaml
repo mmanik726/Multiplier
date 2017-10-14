@@ -12,5 +12,6 @@
                 <FlowDocument/>
             </RichTextBox>
         </DockPanel>
+        <Button Content="auto scroll" HorizontalAlignment="Left" Margin="730,496,0,0" VerticalAlignment="Top" Width="114"/>
     </Grid>
 </Window>

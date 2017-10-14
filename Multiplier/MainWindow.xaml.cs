@@ -43,7 +43,9 @@ namespace Multiplier
         private static decimal sharedCurrentAveragePrice;
 
 
-        private string SelectedProduct; 
+        private string SelectedProduct;
+
+        private static bool AutoTradingOn; 
 
         public MainWindow()
         {
@@ -56,6 +58,10 @@ namespace Multiplier
 
             cmbProduct.Items.Add("LTC-USD");
             cmbProduct.Items.Add("BTC-USD");
+
+            btnSellAtNow.IsEnabled = false;
+            btnStartByBuying.IsEnabled = false;
+            btnStartBySelling.IsEnabled = false;
 
             //////LTCManager = new Manager("LTC-USD", myPassphrase, myKey, mySecret);
             ////////LTCManager = new Manager("BTC-USD", myPassphrase, myKey, mySecret);
@@ -93,7 +99,7 @@ namespace Multiplier
             {
                 lblWarning.Visibility = Visibility.Visible;
                 lblWarning.Foreground = Brushes.Red;
-                lblWarning.Content = "Warning: Realtime Data Offline. Autotrading OFF"; 
+                lblWarning.Content = "Warning: Realtime Data Offline"; 
             });
 
         }
@@ -139,9 +145,44 @@ namespace Multiplier
 
         }
 
+        public void PriceBelowAverageEventHandler(object sender, EventArgs args)
+        {
+            Dispatcher.Invoke(() =>
+            {
+                btnStartByBuying.IsEnabled = false;
+                btnSellAtNow.IsEnabled = false;
+            });
+        }
+
+        public void PriceAboveAverageEventHandler(object sender, EventArgs args)
+        {
+            //Dispatcher.Invoke(() =>
+            //{
+
+            //});
+        }
+
         public void OrderFilledEventHandler(object sender, EventArgs args)
         {
-            var filledOrder = ((OrderUpdateEventArgs)args);
+            OrderUpdateEventArgs filledOrder = null;
+
+            if (args is ForcedOrderFilledEventArgs)
+            {
+                filledOrder = (ForcedOrderFilledEventArgs)args;
+
+                Dispatcher.Invoke(() => 
+                {
+                    btnSellAtNow.IsEnabled = false;
+                    btnStartByBuying.IsEnabled = true;
+                });
+
+            }
+            else
+            {
+                filledOrder = ((OrderUpdateEventArgs)args);
+            }
+
+            
 
 
             //MessageBox.Show(string.Format("{0} order ({1}) filled @{2} ", filledOrder.side, filledOrder.OrderId, filledOrder.filledAtPrice));
@@ -211,9 +252,15 @@ namespace Multiplier
                 if (tickerData.RealTimePrice - sharedCurrentAveragePrice >= 0)
                 {
                     lblCurPrice.Foreground = Brushes.Green;
+
+                    if (AutoTradingOn) 
+                        btnSellAtNow.IsEnabled = true;
                 }
                 else
                 {
+                    if (AutoTradingOn)
+                        btnSellAtNow.IsEnabled = false;
+
                     lblCurPrice.Foreground = Brushes.Red;
                 }
             });
@@ -224,9 +271,29 @@ namespace Multiplier
         public void AutoTradingStartedEventHandler(object sender,EventArgs args)
         {
             //auto trading started
+            AutoTradingOn = true;
+
+            Dispatcher.Invoke(()=> 
+            {
+                lblStatus.FontSize = 16;
+                lblStatus.Foreground = Brushes.Orange; 
+                lblStatus.Content = "Auto Trading ON";
+            });
+
         }
 
+        public void AutoTradingStoppedEventHandler(object sender, EventArgs args)
+        {
+            //auto trading started
+            AutoTradingOn = false;
 
+            Dispatcher.Invoke(() =>
+            {
+                lblStatus.FontSize = 16;
+                lblStatus.Foreground = Brushes.Black;
+                lblStatus.Content = "Auto Trading OFF";
+            });
+        }
 
 
         private void btnStartBySelling_Click(object sender, RoutedEventArgs e)
@@ -520,12 +587,19 @@ namespace Multiplier
 
             //await this.Dispatcher.Invoke(() => startApp(productSelected));
             await Task.Run(() => { this.Dispatcher.Invoke(() => startApp(productSelected)); });
+
+            Dispatcher.Invoke(() => 
+            {
+                btnStartByBuying.IsEnabled = true;
+                btnStartBySelling.IsEnabled = true;
+            }); 
             //await Task.Run();
 
         }
 
         Task<bool> startApp(string inputProduct)
         {
+            AutoTradingOn = false;
 
             LTCManager = new Manager(inputProduct, myPassphrase, myKey, mySecret);
             //LTCManager = new Manager("BTC-USD", myPassphrase, myKey, mySecret);
@@ -537,6 +611,10 @@ namespace Multiplier
             LTCManager.SmaUpdateEvent += SmaUpdateEventHandler;
             LTCManager.TickerPriceUpdateEvent += TickerPriceUpdateEventHandler;
             LTCManager.AutoTradingStartedEvent += AutoTradingStartedEventHandler;
+            LTCManager.AutoTradingStoppedEvent += AutoTradingStoppedEventHandler;
+
+            LTCManager.PriceAboveAverageEvent += PriceAboveAverageEventHandler;
+            LTCManager.PriceBelowAverageEvent += PriceBelowAverageEventHandler;
 
             LTCManager.TickerConnectedEvent += TickerConnectedEventHandler;
             LTCManager.TickerDisConnectedEvent += TickerDisConnectedEventHandler;
@@ -552,6 +630,11 @@ namespace Multiplier
             return null;
         }
 
+        private void btnSellAtNow_Click(object sender, RoutedEventArgs e)
+        {
+            btnSellAtNow.IsEnabled = false;
+            LTCManager.ForceSellAtNow();
+        }
     }
 
 

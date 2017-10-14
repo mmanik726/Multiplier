@@ -48,6 +48,8 @@
         <Label x:Name="lblWarning" Content="Warning:" HorizontalAlignment="Left" Margin="191,362,0,0" VerticalAlignment="Top" Width="585" FontSize="16" Visibility="Hidden"/>
         <Label Content="Product" HorizontalAlignment="Left" Margin="539,362,0,0" VerticalAlignment="Top"/>
         <ComboBox x:Name="cmbProduct" HorizontalAlignment="Left" Margin="539,388,0,0" VerticalAlignment="Top" Width="120" SelectionChanged="cmbProduct_SelectionChanged"/>
+        <Button x:Name="btnSellAtNow" Content="Sell NOW" HorizontalAlignment="Left" Margin="705,347,0,0" VerticalAlignment="Top" Width="136" Click="btnSellAtNow_Click"/>
+        <Label x:Name="lblStatus" Content="Status" HorizontalAlignment="Left" Margin="235,45,0,0" VerticalAlignment="Top"/>
 
     </Grid>
 </Window>
