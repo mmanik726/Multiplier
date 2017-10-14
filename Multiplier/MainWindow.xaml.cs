@@ -629,7 +629,8 @@ namespace Multiplier
             {
                 FrmMainWindow.Title = FrmMainWindow.Title + " User: " + currentUser;  
             });
-            
+
+            Logger.WriteLog("\tCurrent user: " + currentUser + "\n");
 
 
             AutoTradingOn = false;
