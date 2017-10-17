@@ -20,6 +20,8 @@ namespace Multiplier
 
         public string ProductName;
 
+        private string CurrentAction; 
+
         private string MyPassphrase { get; set; }
         private string MyKey { get; set; }
         private string MySecret { get; set; }
@@ -66,7 +68,9 @@ namespace Multiplier
         private MyOrderBook MyOrderBook { get; set; }
 
 
-        private bool userStartedTrading; 
+        private bool userStartedTrading;
+
+        public EventHandler CurrentActionChangedEvent;
 
         public EventHandler TickerPriceUpdateEvent;
         public EventHandler OrderFilledEvent;
@@ -121,6 +125,9 @@ namespace Multiplier
 
             userStartedTrading = true;
 
+            setCurrentAction("SELL");
+
+
             AutoTradingStartedEvent?.Invoke(this, EventArgs.Empty);
 
         }
@@ -144,6 +151,8 @@ namespace Multiplier
 
             userStartedTrading = true;
 
+            setCurrentAction("BUY");
+
             AutoTradingStartedEvent?.Invoke(this, EventArgs.Empty);
         }
 
@@ -165,6 +174,8 @@ namespace Multiplier
                 Logger.WriteLog("Manager cant initialize ticker");
                 return;
             }
+
+            setCurrentAction("NOT_SET"); 
 
             userStartedTrading = false;
             TradeActionList = new List<string>();
@@ -269,9 +280,31 @@ namespace Multiplier
 
             var filledOrder = ((OrderUpdateEventArgs)args);
 
-            Logger.WriteLog(string.Format("{0} order of {1} {2} ({3}) filled @{4}", filledOrder.side, filledOrder.fillSize, filledOrder.ProductName , filledOrder.OrderId, filledOrder.filledAtPrice));
+            if (filledOrder.side == "UNKNOWN")
+            {
+                Logger.WriteLog("Order not filled properly, retrying last buy / sell action ");
+
+                if (CurrentAction == "BUY")
+                {
+                    //StartTrading_BySelling();
+                    StartTrading_BySelling(); //start by selling since last failed action was sell
+                }
+                else if (CurrentAction == "SELL")
+                {
+                    //StartTrading_BySelling();
+                    StartTrading_ByBuying(); //start by buying since last failed action was buy
+                }
+
+            }
+            else
+            {
+                Logger.WriteLog(string.Format("{0} order of {1} {2} ({3}) filled @{4}", filledOrder.side, filledOrder.fillSize, filledOrder.ProductName, filledOrder.OrderId, filledOrder.filledAtPrice));
+            }
+
 
             //MessageBox.Show(string.Format("{0} order ({1}) filled @{2} ", filledOrder.side, filledOrder.OrderId, filledOrder.filledAtPrice));
+
+
 
             if (filledOrder.side == "buy")
             {
@@ -465,7 +498,7 @@ namespace Multiplier
                     try
                     {
                         await MyOrderBook.PlaceNewOrder("sell", ProductName, BuySellAmount.ToString(), CurrentBufferedPrice.ToString(), true);
-                        //for testing //await MyOrderBook.PlaceNewOrder("sell", ProductName, BuySellAmount.ToString(), (CurrentBufferedPrice + 10m).ToString(), true);
+                        //test//await MyOrderBook.PlaceNewOrder("sell", ProductName, BuySellAmount.ToString(), (CurrentBufferedPrice + 10.00m).ToString(), true);
                         Logger.WriteLog(string.Format("Order placed, Waiting {0} min before placing any new order", WaitTimeAfterCrossInMin));
                     }
                     catch (Exception ex)
@@ -509,7 +542,7 @@ namespace Multiplier
                     try
                     {
                         await MyOrderBook.PlaceNewOrder("buy", ProductName, BuySellAmount.ToString(), CurrentBufferedPrice.ToString(), true);
-                        //for testing //await MyOrderBook.PlaceNewOrder("buy", ProductName, BuySellAmount.ToString(), (CurrentBufferedPrice - 10).ToString(), true);
+                        //test//await MyOrderBook.PlaceNewOrder("buy", ProductName, BuySellAmount.ToString(), (CurrentBufferedPrice - 10.00m).ToString(), true);
                         Logger.WriteLog(string.Format("Order placed, waiting {0} min before placing any new order", WaitTimeAfterCrossInMin));
                     }
                     catch (Exception ex)
@@ -555,6 +588,8 @@ namespace Multiplier
             WaitingBuyFill = true;
             WaitingBuyOrSell = true;
 
+            setCurrentAction("SELL");
+
             LastCrossTime = DateTime.UtcNow.ToLocalTime();
         }
 
@@ -569,10 +604,19 @@ namespace Multiplier
             WaitingSellFill = true;
             WaitingBuyOrSell = true;
 
+            setCurrentAction("BUY");
+
             LastCrossTime = DateTime.UtcNow.ToLocalTime();
 
         }
 
+
+        private void setCurrentAction(string curAction)
+        {
+            CurrentAction = curAction;
+
+            CurrentActionChangedEvent?.Invoke(this, new ActionChangedArgs (curAction));
+        }
 
         public async Task<bool> UpdateSmaParameters(int InputTimerInterval, int InputSlices, bool forceRedownload = false)
         {
@@ -673,6 +717,18 @@ namespace Multiplier
 
     public class BuySellBufferUpdateArgs : EventArgs { public decimal NewBuySellBuffer { get; set; } }
     public class BuySellAmountUpdateArgs : EventArgs { public decimal NewBuySellAmount { get; set; } }
+
+    public class ActionChangedArgs : EventArgs
+    {
+        public string CurrentAction { get; set; }
+        public ActionChangedArgs(string curAction)
+        {
+            if (curAction == "NOT_SET")
+                CurrentAction = "NOT SET";
+            else
+                CurrentAction = curAction;
+        }
+    }
 
     public class ForcedOrderFilledEventArgs: OrderUpdateEventArgs {public bool ForcedOrder { get; set; } }
 

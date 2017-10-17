@@ -50,6 +50,8 @@
         <ComboBox x:Name="cmbProduct" HorizontalAlignment="Left" Margin="539,388,0,0" VerticalAlignment="Top" Width="120" SelectionChanged="cmbProduct_SelectionChanged"/>
         <Button x:Name="btnSellAtNow" Content="Sell NOW" HorizontalAlignment="Left" Margin="705,347,0,0" VerticalAlignment="Top" Width="136" Click="btnSellAtNow_Click"/>
         <Label x:Name="lblStatus" Content="Status" HorizontalAlignment="Left" Margin="235,45,0,0" VerticalAlignment="Top"/>
+        <Label Content="Next action:" HorizontalAlignment="Left" Margin="504,468,0,0" VerticalAlignment="Top"/>
+        <Label x:Name="lblNextAction" Content="NOT SET" HorizontalAlignment="Left" Margin="582,468,0,0" VerticalAlignment="Top"/>
 
     </Grid>
 </Window>

@@ -205,11 +205,13 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
         public string OrderId;
         public string Productname { get; set; }
         public string Status { get; set; }
-        public decimal ProductAmount { get; set; }
-        public decimal UsdAmount { get; set; }
+        public decimal ProductSize { get; set; }
+        public decimal FilledSize { get; set; }
+        public decimal UsdPrice { get; set; }
         public string OrderType { get; set; }
         public bool ChaseBestPrice { get; set; }
         public string Side { get; set; }
+        public decimal OriginalOrderAmount { get; set; }
 
         public MyOrder(string productName = "")
         {
@@ -217,8 +219,10 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
             Productname = productName;
             OrderType = "limit";
             Status = "";
-            UsdAmount = 0;
-            ProductAmount = 0;
+            UsdPrice = 0;
+            FilledSize = 0;
+            ProductSize = 0;
+            OriginalOrderAmount = 0;
             ChaseBestPrice = false;
 
         }
@@ -251,6 +255,8 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
 
         private static bool isBusyCancelAndReorder;
 
+        public bool BusyWithWithCancelReorder;
+
         private static decimal currentPrice;
 
         private static int OrderRetriedCount;
@@ -279,6 +285,7 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
             isUpdatingOrderList = false;
 
             isBusyCancelAndReorder = false;
+            BusyWithWithCancelReorder = false;
 
             OrderRetriedCount = 0;
             OrderStartingPrice = 0;
@@ -429,7 +436,7 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
                 decimal tempPrice = getAdjustedCurrentPrice(MyChaseOrderList.FirstOrDefault());
 
 
-                if (MyChaseOrderList.FirstOrDefault().UsdAmount == tempPrice)
+                if (MyChaseOrderList.FirstOrDefault().UsdPrice == tempPrice)
                 {
                     return;
                 }
@@ -463,33 +470,87 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
 
             //Logger.WriteLog("\t\t in cancel and reorder"); 
 
+            //wait until fill status check is done
+            if (fillsClient.BusyCheckingOrder)
+                Logger.WriteLog("waiting for fill status check to finish");
+
+            int chekingOrderWaitCount = 0;
+            while (fillsClient.BusyCheckingOrder)
+                Thread.Sleep(50);
+                //chekingOrderWaitCount += 1;
+
+
+
+
+            BusyWithWithCancelReorder = true;
+
             for (int i = 0; i < MyChaseOrderList.Count; i++)
             {
                 if (MyChaseOrderList.Count == 0)
                     break;
-
+                
                 MyOrder myCurrentOrder = MyChaseOrderList.FirstOrDefault();
+
+
+
+                //if order has been partially filled, move to next order in list
+                if (myCurrentOrder.Status == "PARTIALLY_FILLED")
+                {
+                    //change the order size to the remaining of unfilled 
+                    var UnfilledAmount = myCurrentOrder.ProductSize - myCurrentOrder.FilledSize;
+                    if (UnfilledAmount <= 0)
+                        UnfilledAmount = 0.01m;
+                    myCurrentOrder.ProductSize = UnfilledAmount; //myCurrentOrder.ProductSize - myCurrentOrder.FilledSize;
+                    //myCurrentOrder.Status = "OPEN";
+                    myCurrentOrder.FilledSize = 0;
+
+                    OrderRetriedCount = 1; //reset the retried count
+                    Logger.WriteLog(string.Format(
+                        "Modifying partially filled order, retrying to {0} unfilled size of {1} {2} ",
+                        myCurrentOrder.Side, UnfilledAmount, myCurrentOrder.Productname));
+                }
+
 
                 //cancell ALL the current orders
                 List<string> cancelledOrder = new List<string>();
 
-
-                //////problem code
-                ////var temp = CancelSingleOrder(myCurrentOrder.OrderId);
-                ////temp.Wait();
-                ////cancelledOrder = temp.Result;
-
-
-
-                //var temp = CancelSingleOrder(myCurrentOrder.OrderId).Result;
-                //temp.Wait();
                 try
                 {
-                    cancelledOrder = CancelSingleOrder(myCurrentOrder.OrderId).Result;
+                    //pratially filled order already cancelled in FillCLients filled event
+                    if (myCurrentOrder.Status != "PARTIALLY_FILLED")
+                        cancelledOrder = CancelSingleOrder(myCurrentOrder.OrderId).Result;
+                    else
+                        myCurrentOrder.Status = "OPEN";
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
-                    Logger.WriteLog(string.Format("error cancelling order {0}, retrying...", myCurrentOrder.OrderId));
+                    Logger.WriteLog(string.Format(
+                        "error cancelling order {0}, retrying...", myCurrentOrder.OrderId));
+
+                    if (ex.InnerException.Message == "OrderNotFound")
+                    {
+                        Logger.WriteLog("Order not found " + myCurrentOrder.OrderId);
+
+                        NotifyOrderUpdateListener(new OrderUpdateEventArgs
+                        {
+                            side = "UNKNOWN",
+                            filledAtPrice = "0",
+                            Message = "ORDER_NOT_FOUND",
+                            OrderId = "UNKNOWN",
+                            fillFee = "0",
+                            fillSize = "0",
+                            ProductName = "UNKNOWN"
+
+                        });
+
+                        RemoveFromOrderList(myCurrentOrder.OrderId);
+                    }
+
+                    if (ex.InnerException.Message == "OrderAlreadyDone")
+                    {
+                        Logger.WriteLog("Order already done " + myCurrentOrder.OrderId);
+                    }
+
                     continue; //continue and try again to cancel and reorder
                     //throw;
                 }
@@ -501,7 +562,9 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
 
 
 
-                Logger.WriteLog(string.Format("\t\tcancel {0} order: {1}", myCurrentOrder.Side, myCurrentOrder.OrderId));
+                Logger.WriteLog(string.Format("\tCancelled {0} order ({1}): {2} {3} @{4}", 
+                    myCurrentOrder.Side, myCurrentOrder.OrderId, myCurrentOrder.ProductSize, myCurrentOrder.Productname, 
+                    myCurrentOrder.UsdPrice));
 
 
                 decimal adjustedPrice = 0;
@@ -513,9 +576,11 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
                     curPriceDifference = Math.Abs(OrderStartingPrice - PriceTicker.CurrentPrice);
 
 
-
+                //if (myCurrentOrder == null)
+                //    continue;
                 //OrderStartingPrice = adjustedPrice;
 
+                //var priceChangePercent = PriceTicker.CurrentPrice * 10.00m;//0.0025m; //for testing
                 var priceChangePercent = PriceTicker.CurrentPrice * 0.0025m;
 
                 if (OrderRetriedCount <= 13 && curPriceDifference <= priceChangePercent) // retry a total of 15 times or while less than a "big jump"
@@ -525,7 +590,7 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
                     var orderAtNewPrice = PlaceNewOrder(
                         oSide: myCurrentOrder.Side,
                         oProdName: myCurrentOrder.Productname,
-                        oSize: myCurrentOrder.ProductAmount.ToString(),
+                        oSize: myCurrentOrder.ProductSize.ToString(),
                         oPrice: adjustedPrice.ToString(),
                         chaseBestPrice: true,
                         orderType: "limit"
@@ -538,6 +603,17 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
                     catch (Exception)
                     {
                         Logger.WriteLog("error in cancel and reorder occured while placing new limit order, retrying...");
+
+                        //put the order back in the active order list if there are no 
+                        //orders since it was cancelled above. this prevents it from 
+                        //locking up in case the order was cancelled 
+                        //and an error was encountered while placing a new order
+
+                        if (MyChaseOrderList.Count == 0)
+                        {
+                            AddToOrderList(myCurrentOrder);
+                        }
+
                         continue;
                     }
                 }
@@ -550,7 +626,7 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
                     var orderAtNewPrice = PlaceNewOrder(
                         oSide: myCurrentOrder.Side,
                         oProdName: myCurrentOrder.Productname,
-                        oSize: myCurrentOrder.ProductAmount.ToString(),
+                        oSize: myCurrentOrder.ProductSize.ToString(),
                         oPrice: adjustedPrice.ToString(),
                         chaseBestPrice: true,
                         orderType: "market"
@@ -562,7 +638,13 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
                     }
                     catch (Exception)
                     {
-                        Logger.WriteLog("error in cancel and reorder occured while placing new market order, retrying...");
+                        Logger.WriteLog("Error in cancel and reorder occured while placing new market order, retrying...");
+
+                        if (MyChaseOrderList.Count == 0)
+                        {
+                            AddToOrderList(myCurrentOrder);
+                        }
+
                         continue;
                     }
                 }
@@ -570,7 +652,7 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
 
 
             }
-
+            BusyWithWithCancelReorder = false;
 
             OrderRetriedCount += 1;
 
@@ -594,11 +676,21 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
         }
 
 
-        private void RemoveFromOrderList(string orderId)
+        public void RemoveFromOrderList(string orderId)
         {
             //busy waiting
             while (isUpdatingOrderList)
                 Logger.WriteLog("waiting for order list update lock release");
+
+
+            if (fillsClient.BusyCheckingOrder)
+                Logger.WriteLog("waiting for fill status check to finish");
+
+
+            //wait until fill status check is done
+            int chekingOrderWaitCount = 0;
+            while (fillsClient.BusyCheckingOrder)
+                chekingOrderWaitCount += 1;
 
             isUpdatingOrderList = true;
             MyChaseOrderList.RemoveAll(x => x.OrderId == orderId);
@@ -650,8 +742,8 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
                     Productname = newOrder.Product_id,
                     OrderType = orderType,
                     Status = "OPEN",
-                    UsdAmount = Convert.ToDecimal(newOrder.Price),
-                    ProductAmount = Convert.ToDecimal(newOrder.Size),
+                    UsdPrice = Convert.ToDecimal(newOrder.Price),
+                    ProductSize = Convert.ToDecimal(newOrder.Size),
                     Side = newOrder.Side,
                     ChaseBestPrice = chaseBestPrice
                 };
@@ -678,7 +770,7 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
                     var orderAtNewPrice = PlaceNewOrder(
                         oSide: myCurOrder.Side,
                         oProdName: myCurOrder.Productname,
-                        oSize: myCurOrder.ProductAmount.ToString(),
+                        oSize: myCurOrder.ProductSize.ToString(),
                         oPrice: adjustedPrice.ToString(),
                         chaseBestPrice: true,
                         orderType: orderType
@@ -812,6 +904,16 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
                 {
                     Logger.WriteLog(string.Format("order {0} not found, may have been already filled or cancelled otherwise", orderId));
                     throw new Exception("OrderNotFound");
+                }
+                else if (genericResponse.StatusCode == System.Net.HttpStatusCode.BadRequest)
+                {
+                    if (genericResponse.ContentBody.ToLower().Contains("order already done"))
+                    {
+                        Logger.WriteLog(string.Format("order {0} already done, may have been already filled or cancelled otherwise", orderId));
+                        throw new Exception("OrderAlreadyDone");
+                    }
+
+                    throw new Exception("OrderBadRequest");
                 }
                 else
                 {

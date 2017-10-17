@@ -3,16 +3,16 @@
   <Profiles />
   <Settings>
     <Setting Name="UserName" Type="System.String" Scope="User">
-      <Value Profile="(Default)" />
+      <Value Profile="(Default)">Manik</Value>
     </Setting>
     <Setting Name="Passpharase" Type="System.String" Scope="User">
-      <Value Profile="(Default)" />
+      <Value Profile="(Default)">a02fosbimtft</Value>
     </Setting>
     <Setting Name="Key" Type="System.String" Scope="User">
-      <Value Profile="(Default)" />
+      <Value Profile="(Default)">2a094a11336ae1a5fa248101e0ce60bb</Value>
     </Setting>
     <Setting Name="Secret" Type="System.String" Scope="User">
-      <Value Profile="(Default)" />
+      <Value Profile="(Default)">NXmcu07qBfmAq45L2l/Cm1jOXWHfozaMw3s9xYHKjGjmIHtbypyc2TqF62SK61NJcuAr1whiOjvDrRupEHnl5w==</Value>
     </Setting>
   </Settings>
 </SettingsFile>

@@ -80,13 +80,16 @@ namespace CoinbaseExchange.NET.Endpoints.Fills
 
         private MyOrderBook myActiveOrderBook; 
 
-        private static bool IsBusy_TrackIngOrder; 
+        private static bool IsBusy_TrackIngOrder;
+
+        public bool BusyCheckingOrder; 
 
         public FillsClient(CBAuthenticationContainer authenticationContainer, MyOrderBook orderBook) : base(authenticationContainer)
         {
             myActiveOrderBook = orderBook;
             FillWatchList = orderBook.MyChaseOrderList ;
             IsBusy_TrackIngOrder = false;
+            BusyCheckingOrder = false;
             //startTracker();
         }
 
@@ -139,17 +142,108 @@ namespace CoinbaseExchange.NET.Endpoints.Fills
             return orderStats;
         }
 
-        private void orderFilledEvent(Fill fillDetails)
+        private void orderFilledEvent(List<Fill> FillList)
         {
-            if (FillUpdated != null)
+            var fillDetails = FillList.FirstOrDefault();
+            var orderIndex = FillWatchList.FindIndex((o) => o.OrderId == fillDetails.OrderId);
+
+            decimal totalFilled = 0;
+
+
+            //test
+            //var testFill = FillList.First();//new Fill(null);
+            //testFill = FillList.First();
+            ////testFill.
+            //FillList.Add(testFill);
+
+
+
+            //reset the filled size assuming all the split orders are retunred
+            if (FillList.Count > 0)
             {
-                FillUpdated(this, new FillEventArgs { filledOrder = fillDetails });
+                FillWatchList[orderIndex].FilledSize = 0.00m; 
+                foreach (var curFill in FillList)
+                {
+                    totalFilled += Convert.ToDecimal(curFill.Size);
+                    FillWatchList[orderIndex].FilledSize = FillWatchList[orderIndex].FilledSize 
+                        + Convert.ToDecimal(curFill.Size);
+                }
+
             }
+            else
+            {
+                //error condition where there is no data in filled order
+                return;
+            }
+
+
+
+
+            //check if ordered size and fill size match, 
+            //if it does then remove from watch list
+            //else mark it was partially filled
+
+            var majorityFillSize = FillWatchList[orderIndex].ProductSize * 1;//0.99m;
+
+            if (FillWatchList[orderIndex].FilledSize == majorityFillSize) //if filled size is more than 90%
+            {
+                //BusyCheckingOrder = false;
+                //myActiveOrderBook.RemoveFromOrderList(fillDetails.OrderId);
+
+                FillWatchList.RemoveAll(x => x.OrderId == fillDetails.OrderId);
+
+                Logger.WriteLog("Order filled with following sizes:");
+                FillList.ForEach((f) => Logger.WriteLog(f.Size));
+
+                fillDetails.Size = totalFilled.ToString();
+                FillUpdated?.Invoke(this, new FillEventArgs { filledOrder = fillDetails });
+
+
+            }
+            else
+            {
+                //cancel the order here the first time and retry to fill unfilled amount in OrderBook
+
+                var myCurrentOrder = FillWatchList[orderIndex];
+
+                //when checking the same order after the first time
+                if (FillWatchList[orderIndex].Status == "PARTIALLY_FILLED")
+                {
+
+                    Logger.WriteLog(string.Format("{0} order({1}) of {2} {3} filled partially with following sizes:",
+                        fillDetails.Side, fillDetails.OrderId, FillWatchList[orderIndex].ProductSize,
+                        fillDetails.ProductId));
+
+                    FillList.ForEach((f) => Logger.WriteLog(f.Size));
+
+                    try
+                    {
+                        Logger.WriteLog("Cancelling remainder of partially filled order: " + myCurrentOrder.OrderId);
+                        var cancelledOrder = myActiveOrderBook.CancelSingleOrder(myCurrentOrder.OrderId).Result;
+                        if (cancelledOrder.Count > 0)
+                            FillWatchList[orderIndex].Status = "PARTIALLY_FILLED";
+                    }
+                    catch (Exception)
+                    {
+                        Logger.WriteLog("Error cancelling partially filled order " + myCurrentOrder.OrderId);
+                    }
+
+
+                }
+            }
+
+
+            //fillDetails.Size = totalFilled.ToString(); //modify the filled size with the total instead of the first size in list
+
+            //BusyCheckingOrder = false;
+
+            //notify only if fully filled?
+            //FillUpdated?.Invoke(this, new FillEventArgs { filledOrder = fillDetails });
 
         }
 
 
-        private async void TrackOrder()
+        private void TrackOrder()
         {
 
 
@@ -167,62 +261,71 @@ namespace CoinbaseExchange.NET.Endpoints.Fills
 
                 //if ticker is offline then return
 
+
+
                 Logger.WriteLog(string.Format("Watching {0} order(s)", FillWatchList.Count()));
 
                 //Logger.WriteLog(FillWatchList.FirstOrDefault());
                 try
                 {
                     //list may change in the middle of operation
-                    FillWatchList.ForEach((x) => Logger.WriteLog(string.Format("{0} -> {1} @{2}", x.OrderId, x.Side,x.UsdAmount)));
+                    FillWatchList.ForEach((x) => Logger.WriteLog(string.Format("{0} -> {1} {2} {3} @{4}",
+                        x.OrderId, x.Side, x.ProductSize, x.Productname, x.UsdPrice)));
                 }
                 catch (Exception ex)
                 {
-                    Logger.WriteLog("Error writing wathc list (" + ex.Message + ")");
+                    Logger.WriteLog("Error writing watch list (" + ex.Message + ")");
                 };
 
+
+                if (myActiveOrderBook.BusyWithWithCancelReorder)
+                    Logger.WriteLog("Waiting for cancel and reorder to finish");
+
+
+                //wait until cancel and reorder is done in orderbook 
+                int cancelReorderWaitCount = 0;
+                while (myActiveOrderBook.BusyWithWithCancelReorder)
+                {
+                    Thread.Sleep(50);
+                    //cancelReorderWaitCount += 1;
+                }
+
+
+
+                BusyCheckingOrder = true; 
 
                 for (int i = 0; i < FillWatchList.Count; i++)
                 {
                     if (FillWatchList.Count == 0)
                         break;
 
-                        var orderStat = await GetFillStatus(FillWatchList.ElementAt(i)?.OrderId);
+                    //var orderStat = await GetFillStatus(FillWatchList.ElementAt(i)?.OrderId);
+                    var currentOrder = FillWatchList.ElementAt(i);
 
-                    //orderStat.Fills.FirstOrDefault();
-
-                    //await Task.Delay(400);
-                    Thread.Sleep(300);
+                    FillResponse orderStat = null;
+                    try
+                    {
+                        orderStat = GetFillStatus(currentOrder?.OrderId).Result;
+                    }
+                    catch (Exception)
+                    {
+                        Logger.WriteLog("Error getting fill response");
+                    }
+                    
 
                     if (orderStat?.Fills.Count > 0)
                     {
-                        //busy waiting
-                        while(myActiveOrderBook.isUpdatingOrderList)
-                            Logger.WriteLog("waiting for order list update lock release");
-
-                        try
-                        {
-                            myActiveOrderBook.isUpdatingOrderList = true; //wait
-                            FillWatchList.RemoveAll(x => x.OrderId == orderStat.Fills.FirstOrDefault().OrderId);
-                            myActiveOrderBook.isUpdatingOrderList = false; //release
-                        }
-                        catch (Exception ex)
-                        {
-                            Debug.Write("Error removing item from filled list (" + ex.Message + ")");
-
-                            //throw;
-                        }
-
-
-                        orderFilledEvent(orderStat.Fills.FirstOrDefault());
+                        //BusyCheckingOrder = false;
+                        orderFilledEvent(orderStat.Fills);
                     }
 
-
+                    Thread.Sleep(300);
 
                 }
 
-
+                BusyCheckingOrder = false;
                 //await Task.Delay(1000); //check fills every 1 sec
-                Thread.Sleep(500);
+                //Thread.Sleep(500);
             }
 
             IsBusy_TrackIngOrder = false;

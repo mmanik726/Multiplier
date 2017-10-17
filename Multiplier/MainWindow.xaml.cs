@@ -180,8 +180,12 @@ namespace Multiplier
 
                 Dispatcher.Invoke(() => 
                 {
-                    btnSellAtNow.IsEnabled = false;
-                    btnStartByBuying.IsEnabled = true;
+                    if (filledOrder.side != "UNKNOWN")
+                    {
+                        btnSellAtNow.IsEnabled = false;
+                        btnStartByBuying.IsEnabled = true;
+                    }
+
                 });
 
             }
@@ -324,7 +328,15 @@ namespace Multiplier
         }
 
 
+        private void CurrentActionChangedEventHandler(object sender, EventArgs args)
+        {
+            var curAction = (ActionChangedArgs)args;
 
+            Dispatcher.Invoke(() => 
+            {
+                lblNextAction.Content = curAction.CurrentAction;
+            });
+        }
 
 
         void InitListView()
@@ -652,6 +664,8 @@ namespace Multiplier
 
             LTCManager.TickerConnectedEvent += TickerConnectedEventHandler;
             LTCManager.TickerDisConnectedEvent += TickerDisConnectedEventHandler;
+
+            LTCManager.CurrentActionChangedEvent += CurrentActionChangedEventHandler;
 
             LTCManager.InitializeManager();
 

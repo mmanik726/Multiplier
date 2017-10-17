@@ -25,7 +25,7 @@ namespace Multiplier.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        [global::System.Configuration.DefaultSettingValueAttribute("Manik")]
         public string UserName {
             get {
                 return ((string)(this["UserName"]));
@@ -37,7 +37,7 @@ namespace Multiplier.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        [global::System.Configuration.DefaultSettingValueAttribute("a02fosbimtft")]
         public string Passpharase {
             get {
                 return ((string)(this["Passpharase"]));
@@ -49,7 +49,7 @@ namespace Multiplier.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        [global::System.Configuration.DefaultSettingValueAttribute("2a094a11336ae1a5fa248101e0ce60bb")]
         public string Key {
             get {
                 return ((string)(this["Key"]));
@@ -61,7 +61,8 @@ namespace Multiplier.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        [global::System.Configuration.DefaultSettingValueAttribute("NXmcu07qBfmAq45L2l/Cm1jOXWHfozaMw3s9xYHKjGjmIHtbypyc2TqF62SK61NJcuAr1whiOjvDrRupE" +
+            "Hnl5w==")]
         public string Secret {
             get {
                 return ((string)(this["Secret"]));
