@@ -29,15 +29,20 @@ namespace CoinbaseExchange.NET.Endpoints.PublicData
     {
         public EventHandler PriceUpdated;
         public decimal CurrentPrice;
-        public static bool isTryingToReconnect;
+        public bool isTryingToReconnect;
 
         public static bool TickerClientConnected;
 
         public EventHandler TickerDisconnectedEvent;
         public EventHandler TickerConnectedEvent;
 
+        ClientWebSocket webSocketClient;
+
         private static bool tickerDisconnectNotified;
-        private static bool tickerConnectedNotified;  
+        private static bool tickerConnectedNotified;
+
+        private string tempProduct;
+        private Action<RealtimeMessage> tempOnMessageReceived;
 
         public TickerClient(string ProductName) : base()
         {
@@ -130,12 +135,13 @@ namespace CoinbaseExchange.NET.Endpoints.PublicData
                 throw new ArgumentNullException("onMessageReceived", "Message received callback must not be null.");
             JArray aj = new JArray();
 
-
+            tempProduct = product;
+            tempOnMessageReceived = onMessageReceived;
 
 
 
             var uri = new Uri("wss://ws-feed.gdax.com");
-            var webSocketClient = new ClientWebSocket();
+            webSocketClient = new ClientWebSocket();
             var cancellationToken = new CancellationToken();
 
             //jStr.Append()
@@ -217,6 +223,7 @@ namespace CoinbaseExchange.NET.Endpoints.PublicData
 
                 TickerClientConnected = false;
 
+                
                 Reconnect(product, onMessageReceived);
 
                 tickerConnectedNotified = false;
@@ -248,9 +255,48 @@ namespace CoinbaseExchange.NET.Endpoints.PublicData
             //Task.Delay(10 * 1000);
 
             Subscribe(prodName, onMessageReceived);
+            //CloseAndReconnect();
 
             isTryingToReconnect = false;
 
         }
+
+
+        public void CloseAndReconnect()
+        {
+            if (isTryingToReconnect)
+            {
+                return;
+            }
+
+            if (webSocketClient != null)
+            {
+                if (webSocketClient.State == WebSocketState.Aborted || 
+                    webSocketClient.State == WebSocketState.Connecting || 
+                    webSocketClient.State == WebSocketState.CloseSent)
+                {
+                    return;
+                }
+
+                //Logger.WriteLog(webSocketClient.State.ToString());
+
+                try
+                {
+                    //webSocketClient.Abort();
+                    //webSocketClient.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, string.Empty, CancellationToken.None);
+                    webSocketClient.CloseAsync(WebSocketCloseStatus.NormalClosure, string.Empty, CancellationToken.None);
+                    Thread.Sleep(1000);
+                    Logger.WriteLog("Closing and reconnecting ticker");
+                    //webSocketClient.Cl
+                    webSocketClient = null;
+                    //Subscribe(tempProduct, tempOnMessageReceived);
+                }
+                catch (Exception ex)
+                {
+                    Logger.WriteLog("Error occured Closing and reconnecting ticker: " + ex.Message);
+                }
+            }
+        }
+
     }
 }

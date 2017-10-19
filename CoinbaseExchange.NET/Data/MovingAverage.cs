@@ -26,7 +26,7 @@ namespace CoinbaseExchange.NET.Data
 
         private string Product;
 
-        private static bool isBusyUpdatingMA;
+        private bool isBusyUpdatingMA;
         private DateTime firstDataPointDateTime;
         private DateTime lastDataPointDateTime;
 
@@ -43,7 +43,7 @@ namespace CoinbaseExchange.NET.Data
 
         public decimal CurrentConfidenceIntervalBuffer;
 
-        public static System.Timers.Timer aTimer;
+        public System.Timers.Timer aTimer;
 
         //private bool ForceRedownloadData;
 

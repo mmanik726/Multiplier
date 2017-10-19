@@ -34,14 +34,14 @@ namespace Multiplier
     {
 
 
-        Manager LTCManager;
+        Manager ProductManager;
 
         private string myPassphrase; // = "n6yci6u4i0g";
         private string myKey; // = "b006d82554b495e227b9e7a1251ad745";
         private string mySecret; // = "NhAb9pmbZaY9cPb2+eXOGWIILje7iFe/nF+dV9n6FOxazl6Kje2/03GuSiQYTsj3a/smh92m/lrvfu7kYkxQMg==";
         LogWindow logWindow;
 
-        private static decimal sharedCurrentAveragePrice;
+        private static decimal sharedCurrentLargeSmaPrice;
 
 
         private string SelectedProduct;
@@ -134,7 +134,10 @@ namespace Multiplier
             var msg = "Buy sell amount changed to: " + curBuySellAmount.ToString();
             //MessageBox.Show(msg);
 
-            lblBuySellAmount.Content = curBuySellAmount.ToString();
+            Dispatcher.Invoke(() => 
+            {
+                lblBuySellAmount.Content = curBuySellAmount.ToString();
+            });
 
         }
 
@@ -219,7 +222,7 @@ namespace Multiplier
 
         //}
 
-        public void SmaUpdateEventHandler(object sender, EventArgs args)
+        public void SmaLargeUpdateEventHandler(object sender, EventArgs args)
         {
             var currentSmaData = (MAUpdateEventArgs)args;
             decimal newSmaPrice = currentSmaData.CurrentMAPrice;
@@ -227,7 +230,7 @@ namespace Multiplier
             //MessageBox.Show("handling sma update");
             
 
-            sharedCurrentAveragePrice = currentSmaData.CurrentMAPrice; 
+            sharedCurrentLargeSmaPrice = currentSmaData.CurrentMAPrice; 
 
             var x = this.Dispatcher.Invoke(() => chkUseSd.IsChecked);
             if (x == true)
@@ -236,22 +239,53 @@ namespace Multiplier
 
                 bool isUseInvers = (bool)Dispatcher.Invoke(() => chkUseInverse.IsChecked);
 
-                LTCManager.UpdateBuySellBuffer(currentSmaData.CiBuffer, isUseInvers); //use the 95% confidence interval buffer
+                ProductManager.UpdateBuySellBuffer(currentSmaData.CiBuffer, isUseInvers); //use the 95% confidence interval buffer
             }
 
             this.Dispatcher.Invoke(() =>
             {
-                lblSma.SetValue(ContentProperty, newSmaPrice);
+                lblSma.Content = Math.Round(newSmaPrice, 4);
                 lblUpdatedTime.Content = DateTime.UtcNow.ToLocalTime().ToLongTimeString();
                 lblSmaValue.Content = "SMA-" + currentSmaData.CurrentSlices.ToString() + " (" + currentSmaData.CurrentTimeInterval.ToString() + " min)";
-                lblSd.Content = currentSmaData.CurrentSd;
+                lblSd.Content = Math.Round(currentSmaData.CurrentSd, 4);
                 btnUpdateSmaInterval.IsEnabled = true;
                 //txtPriceBuffer.Text = currentSmaData.CurrentSd.ToString();
             });
 
 
         }
+        public void SmaSmallUpdateEventHandler(object sender, EventArgs args)
+        {
+            var currentSmaData = (MAUpdateEventArgs)args;
+            decimal newSmaPrice = currentSmaData.CurrentMAPrice;
 
+            //MessageBox.Show("handling sma update");
+            
+
+            sharedCurrentLargeSmaPrice = currentSmaData.CurrentMAPrice; 
+
+            //var x = this.Dispatcher.Invoke(() => chkUseSd.IsChecked);
+            //if (x == true)
+            //{
+            //    //LTCManager.UpdateBuySellBuffer(currentSmaData.CurrentSd);
+
+            //    bool isUseInvers = (bool)Dispatcher.Invoke(() => chkUseInverse.IsChecked);
+
+            //    LTCManager.UpdateBuySellBuffer(currentSmaData.CiBuffer, isUseInvers); //use the 95% confidence interval buffer
+            //}
+
+            this.Dispatcher.Invoke(() =>
+            {
+                lblSmaSmall.Content = Math.Round(newSmaPrice, 4);
+            //lblUpdatedTime.Content = DateTime.UtcNow.ToLocalTime().ToLongTimeString();
+            //lblSmaValue.Content = "SMA-" + currentSmaData.CurrentSlices.ToString() + " (" + currentSmaData.CurrentTimeInterval.ToString() + " min)";
+                lblSmallSd.Content = Math.Round(currentSmaData.CurrentSd, 4);
+                btnUpdateSmallSma.IsEnabled = true;
+                //txtPriceBuffer.Text = currentSmaData.CurrentSd.ToString();
+            });
+
+
+        }
         public void TickerPriceUpdateEventHandler(object sender, EventArgs args)
         {
             var tickerData = (TickerMessage)args;
@@ -261,7 +295,7 @@ namespace Multiplier
                 lblCurPrice.Content = tickerData.RealTimePrice.ToString();
                 lblTickUpdate1.Content = DateTime.UtcNow.ToLocalTime().ToLongTimeString();
 
-                if (tickerData.RealTimePrice - sharedCurrentAveragePrice >= 0)
+                if (tickerData.RealTimePrice - sharedCurrentLargeSmaPrice >= 0)
                 {
                     lblCurPrice.Foreground = Brushes.Green;
 
@@ -311,7 +345,7 @@ namespace Multiplier
         private void btnStartBySelling_Click(object sender, RoutedEventArgs e)
         {
 
-            LTCManager.StartTrading_BySelling();
+            ProductManager.StartTrading_BySelling();
 
             btnStartByBuying.IsEnabled = false;
             btnStartBySelling.IsEnabled = false;
@@ -321,7 +355,7 @@ namespace Multiplier
         private void btnStartByBuying_Click(object sender, RoutedEventArgs e)
         {
 
-            LTCManager.StartTrading_ByBuying();
+            ProductManager.StartTrading_ByBuying();
             btnStartByBuying.IsEnabled = false;
             btnStartBySelling.IsEnabled = false;
 
@@ -509,7 +543,7 @@ namespace Multiplier
 
                 try
                 {
-                    await LTCManager.UpdateSmaParameters(timeInt, slices, true); 
+                    await ProductManager.UpdateLargeSmaParameters(timeInt, slices, true); 
                 }
                 catch (Exception)
                 {
@@ -530,6 +564,52 @@ namespace Multiplier
 
         }
 
+        private async void btnUpdateSmallSma_Click(object sender, RoutedEventArgs e)
+        {
+
+            int timeInt = 3;
+            int slices = 20;
+
+            try
+            {
+                timeInt = Convert.ToInt16(txtSmallSmaInterval.Text);
+                slices = Convert.ToInt16(txtSmallSmaSlices.Text);
+
+                if (timeInt < 1)
+                {
+                    MessageBox.Show("time interval cannot be less than 1 min");
+                    return;
+                }
+
+                if (slices <= 1)
+                {
+                    MessageBox.Show("slices cannot be 1 min or less than 1 min");
+                    return;
+                }
+
+                btnUpdateSmallSma.IsEnabled = false;
+
+                try
+                {
+                    await ProductManager.UpdateSmallSmaParameters(timeInt, slices, true);
+                }
+                catch (Exception)
+                {
+                    var msg = "Error occured  in sma calculations. Please check the numbers. default values used";
+                    MessageBox.Show(msg);
+                    Logger.WriteLog(msg);
+                    //throw;
+                }
+
+
+            }
+            catch (Exception)
+            {
+                MessageBox.Show("invalid sma values");
+            }
+
+        }
+
         private void Button_Click(object sender, RoutedEventArgs e)
         {
             decimal buySellBuffer = 0.03m; //default 
@@ -544,7 +624,7 @@ namespace Multiplier
                     return;
                 }
 
-                LTCManager.UpdateBuySellBuffer(buySellBuffer, (bool)chkUseInverse.IsChecked);
+                ProductManager.UpdateBuySellBuffer(buySellBuffer, (bool)chkUseInverse.IsChecked);
 
             }
             catch (Exception ex)
@@ -568,7 +648,7 @@ namespace Multiplier
                     return;
                 }
 
-                LTCManager.UpdateBuySellAmount(tradeAmount);
+                ProductManager.UpdateBuySellAmount(tradeAmount);
                 lblBuySellAmount.Content = tradeAmount.ToString();
 
             }
@@ -606,7 +686,7 @@ namespace Multiplier
 
 
             //await this.Dispatcher.Invoke(() => startApp(productSelected));
-            await Task.Run(() => { this.Dispatcher.Invoke(() => startApp(productSelected)); });
+            await Task.Run(() => { this.Dispatcher.Invoke(() => StartApp(productSelected)); });
 
             Dispatcher.Invoke(() => 
             {
@@ -617,7 +697,7 @@ namespace Multiplier
 
         }
 
-        Task<bool> startApp(string inputProduct)
+        Task<bool> StartApp(string inputProduct)
         {
 
             //get user settings 
@@ -647,33 +727,35 @@ namespace Multiplier
 
             AutoTradingOn = false;
 
-            LTCManager = new Manager(inputProduct, myPassphrase, myKey, mySecret);
+            ProductManager = new Manager(inputProduct, myPassphrase, myKey, mySecret);
             //LTCManager = new Manager("BTC-USD", myPassphrase, myKey, mySecret);
 
-            LTCManager.BuySellAmountChangedEvent += BuySellAmountChangedEventHandler;
-            LTCManager.BuySellBufferChangedEvent += BuySellBufferChangedEventHandler;
-            LTCManager.OrderFilledEvent += OrderFilledEventHandler;
+            ProductManager.BuySellAmountChangedEvent += BuySellAmountChangedEventHandler;
+            ProductManager.BuySellBufferChangedEvent += BuySellBufferChangedEventHandler;
+            ProductManager.OrderFilledEvent += OrderFilledEventHandler;
             //LTCManager.SmaParametersUpdatedEvent += SmaParametersUpdatedEventHandler;
-            LTCManager.SmaUpdateEvent += SmaUpdateEventHandler;
-            LTCManager.TickerPriceUpdateEvent += TickerPriceUpdateEventHandler;
-            LTCManager.AutoTradingStartedEvent += AutoTradingStartedEventHandler;
-            LTCManager.AutoTradingStoppedEvent += AutoTradingStoppedEventHandler;
+            ProductManager.SmaLargeUpdateEvent += SmaLargeUpdateEventHandler;
+            ProductManager.SmaSmallUpdateEvent += SmaSmallUpdateEventHandler;
 
-            LTCManager.PriceAboveAverageEvent += PriceAboveAverageEventHandler;
-            LTCManager.PriceBelowAverageEvent += PriceBelowAverageEventHandler;
+            ProductManager.TickerPriceUpdateEvent += TickerPriceUpdateEventHandler;
+            ProductManager.AutoTradingStartedEvent += AutoTradingStartedEventHandler;
+            ProductManager.AutoTradingStoppedEvent += AutoTradingStoppedEventHandler;
 
-            LTCManager.TickerConnectedEvent += TickerConnectedEventHandler;
-            LTCManager.TickerDisConnectedEvent += TickerDisConnectedEventHandler;
+            ProductManager.PriceAboveAverageEvent += PriceAboveAverageEventHandler;
+            ProductManager.PriceBelowAverageEvent += PriceBelowAverageEventHandler;
 
-            LTCManager.CurrentActionChangedEvent += CurrentActionChangedEventHandler;
+            ProductManager.TickerConnectedEvent += TickerConnectedEventHandler;
+            ProductManager.TickerDisConnectedEvent += TickerDisConnectedEventHandler;
 
-            LTCManager.InitializeManager();
+            ProductManager.CurrentActionChangedEvent += CurrentActionChangedEventHandler;
 
-            sharedCurrentAveragePrice = 0;
+            ProductManager.InitializeManager(inputProduct);
+
+            sharedCurrentLargeSmaPrice = 0;
 
 
-            LTCManager.UpdateBuySellAmount(0.01m);
-            LTCManager.UpdateBuySellBuffer(0.03m);
+            //ProductManager.UpdateBuySellAmount(0.01m);
+            //ProductManager.UpdateBuySellBuffer(0.03m);
 
             return null;
         }
@@ -681,8 +763,10 @@ namespace Multiplier
         private void btnSellAtNow_Click(object sender, RoutedEventArgs e)
         {
             btnSellAtNow.IsEnabled = false;
-            LTCManager.ForceSellAtNow();
+            ProductManager.ForceSellAtNow();
         }
+
+
     }
 
 

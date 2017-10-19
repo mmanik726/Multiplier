@@ -117,9 +117,12 @@ namespace CoinbaseExchange.NET.Core
                             }
                             catch (Exception ex)
                             {
-                                var innerExMsg = ex.InnerException.Message.ToLower();
+                                var innerExMsg = "";
 
-                                Logger.WriteLog("Exception occured in POST: " + ex.InnerException.Message);
+                                if(ex.InnerException !=null)
+                                    ex.InnerException.Message.ToLower();
+
+                                Logger.WriteLog("Exception occured in POST: " + innerExMsg);
                                 //
                                 if (innerExMsg.Contains("could not be resolved") ||
                                     innerExMsg.Contains("unable to connect"))

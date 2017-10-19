@@ -265,7 +265,7 @@ namespace CoinbaseExchange.NET.Endpoints.Fills
 
                 Logger.WriteLog(string.Format("Watching {0} order(s)", FillWatchList.Count()));
 
-                //Logger.WriteLog(FillWatchList.FirstOrDefault());
+                //Logger.WriteLog(FillWatchList.FirstOrDefault().OrderId);
                 try
                 {
                     //list may change in the middle of operation

@@ -706,6 +706,12 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
             isUpdatingOrderList = true;
             MyChaseOrderList.Add(order);
             isUpdatingOrderList = false;
+
+
+            Logger.WriteLog(string.Format("Watching {0} order(s)", MyChaseOrderList.Count()));
+            MyChaseOrderList.ForEach((x) => Logger.WriteLog(string.Format("{0} -> {1} {2} {3} @{4}",
+                x.OrderId, x.Side, x.ProductSize, x.Productname, x.UsdPrice)));
+
         }
 
         public async Task<Order> PlaceNewOrder(string oSide, string oProdName,
@@ -723,8 +729,8 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
             orderBodyObj.Add(new JProperty("price", oPrice));
             orderBodyObj.Add(new JProperty("size", oSize));
 
-            if(orderType == "limit")
-                orderBodyObj.Add(new JProperty("post_only", "T"));
+            //if(orderType == "limit")
+            //    orderBodyObj.Add(new JProperty("post_only", "T"));
 
             if (OrderStartingPrice == 0) //not yet set
                 OrderStartingPrice = Convert.ToDecimal(oPrice);
@@ -806,10 +812,17 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
             //else
             //    return curTmpPrice + 10.00m;
 
+            //if (order.Side == "buy")
+            //    return curTmpPrice - 0.01m; //m is for decimal
+            //else
+            //    return curTmpPrice + 0.01m;
+
+
+            //for not post only sales place at same price as now 
             if (order.Side == "buy")
-                return curTmpPrice - 0.01m; //m is for decimal
+                return curTmpPrice; //m is for decimal
             else
-                return curTmpPrice + 0.01m;
+                return curTmpPrice;
 
         }
 
