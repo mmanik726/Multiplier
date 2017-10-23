@@ -120,7 +120,7 @@ namespace Multiplier
             MyProductOrderBook = new MyOrderBook(MyAuth, ProductName, ref ProductTickerClient);
             MyProductOrderBook.OrderUpdateEvent += FillUpdateEventHandler;
 
-            CurContextValues = new ContextValues(ref MyProductOrderBook);
+            CurContextValues = new ContextValues(ref MyProductOrderBook, ref ProductTickerClient);
             CurContextValues.ProductName = ProductName;
 
             ////update ui with initial prices
@@ -136,7 +136,10 @@ namespace Multiplier
 
 
             //currentTradeStrategy = new TradeStrategyA(ref CurContextValues);
-            currentTradeStrategy = new TradeStrategyB(ref CurContextValues);
+            //currentTradeStrategy = new TradeStrategyB(ref CurContextValues);
+            //currentTradeStrategy = new TradeStrategyC(ref CurContextValues);
+            //currentTradeStrategy = new TradeStrategyB(ref CurContextValues);
+            currentTradeStrategy = new TradeStrategyD(ref CurContextValues);
 
             currentTradeStrategy.CurrentActionChangedEvent += CUrrentActionChangeEventHandler;
 
@@ -324,15 +327,28 @@ namespace Multiplier
             var tickerData = (TickerMessage)args;
 
 
-            CurContextValues.LastTickerUpdateTime = DateTime.UtcNow.ToLocalTime();
+            //CurContextValues.LastTickerUpdateTime = DateTime.UtcNow.ToLocalTime();
 
-            CurContextValues.CurrentRealtimePrice = tickerData.RealTimePrice;
+            //CurContextValues.CurrentRealtimePrice = tickerData.RealTimePrice;
 
 
 
             TickerPriceUpdateEvent?.Invoke(this, tickerData);
 
 
+            var curTime = DateTime.UtcNow.ToLocalTime();
+            var timeSinceLastTick = (curTime.Subtract(CurContextValues.LastTickerUpdateTime)).TotalMilliseconds;
+
+            if (timeSinceLastTick < (100)) //wait 5 sec before next price change. origianlly 3 sec
+            {
+                return;
+            }
+            //else
+            //{
+            //    lastTickTIme = DateTime.UtcNow;
+            //}
+            CurContextValues.CurrentRealtimePrice = tickerData.RealTimePrice;
+            CurContextValues.LastTickerUpdateTime = DateTime.UtcNow.ToLocalTime();
 
             if (CurContextValues.ForceSold)
             {
@@ -383,6 +399,22 @@ namespace Multiplier
                 {
                     Logger.WriteLog("Buy/sell already in progress");
                 }
+
+
+
+                ////////////Testing needed!!!
+
+                ////////////if the order book doesnt have any orders and yet the waitingbuysell flag is on then there must have been an error
+                ////////////reset the flag to false; 
+                //////////if (CurContextValues.MyOrderBook.MyChaseOrderList.Count == 0 && CurContextValues.WaitingBuyOrSell)
+                //////////{
+                //////////    Logger.WriteLog("Orderbook has no orders but WaitingBuyOrSell flag is set to on, resetting flag to off");
+                //////////    Logger.WriteLog("WARNING: check next BUY or SELL action is correct");
+
+                //////////    CurContextValues.WaitingBuyOrSell = false;
+                //////////}
+
+
             }
 
 
@@ -423,8 +455,16 @@ namespace Multiplier
                 var x = await Task.Run(() => SmaSmall.updateValues(InputTimerInterval, InputSlices, forceRedownload));
                 if (x == true) //wait for task to complete above
                 {
-                    //done;
+                    //Logger.WriteLog(x.ToString()); //done;
                 }
+
+
+                //temporary solution
+                var smallestSmaInterval = InputTimerInterval;
+                var smallestSmaSlices = Math.Round(InputSlices / 2.0m, 0);
+                await Task.Run(()=> currentTradeStrategy.updateSmallestSma(smallestSmaInterval, Convert.ToInt32(smallestSmaSlices)));
+                
+
                 return true;
             }
             catch (Exception ex)
@@ -573,7 +613,9 @@ namespace Multiplier
 
         //common 
         public List<String> TradeActionList { get; set; }
-        
+
+        public TickerClient CurrentTicker; 
+
         public string ProductName { get; set; }
         public string CurrentAction { get; set; }
 
@@ -620,10 +662,11 @@ namespace Multiplier
         public double WaitTimeAfterSmallSmaCrossInMin { get; set; }
 
 
-        public ContextValues(ref MyOrderBook orderBook)
+        public ContextValues(ref MyOrderBook orderBook, ref TickerClient inputTicker)
         {
             MyOrderBook = orderBook;
 
+            CurrentTicker = inputTicker; 
 
             UserStartedTrading = false;
             TradeActionList = new List<string>();
@@ -631,11 +674,11 @@ namespace Multiplier
 
             BuySellAmount = 0.01m;//default
 
-            CurrentLargeSmaTimeInterval = 3; //default
+            CurrentLargeSmaTimeInterval = 5; //default
             CurrentLargeSmaSlices = 40; //default
 
 
-            CurrentSmallSmaTimeInterval = 3; //default
+            CurrentSmallSmaTimeInterval = 5; //default
             CurrentSmallSmaSlices = 20; //default
 
             PriceBuffer = 0.05m; //default

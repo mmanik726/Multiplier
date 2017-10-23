@@ -46,11 +46,21 @@ namespace Multiplier
 
         private string SelectedProduct;
 
-        private static bool AutoTradingOn; 
+        private static bool AutoTradingOn;
+
+        private bool LogAutoScrolling;
 
         public MainWindow()
         {
             InitializeComponent();
+
+            LogAutoScrolling = true;
+
+            Logger.Logupdated += LogUpdatedHandler;
+            txtMainLog.HorizontalScrollBarVisibility = ScrollBarVisibility.Visible;
+            txtMainLog.Document.PageWidth = 1000;
+
+
 
             var appVersion = Assembly.GetExecutingAssembly().GetName().Version;
             Dispatcher.Invoke(()=> 
@@ -58,8 +68,8 @@ namespace Multiplier
                 FrmMainWindow.Title = "Mani (" + appVersion.ToString() + ")"; 
             });
 
-            logWindow = new LogWindow();
-            logWindow.Show();
+            //logWindow = new LogWindow();
+            //logWindow.Show();
             InitListView();
 
             cmbProduct.Items.Add("BTC-USD");
@@ -99,6 +109,46 @@ namespace Multiplier
             ////////lblBuySellAmount.Content = sharedBuySellAmount; 
 
             
+        }
+
+
+        
+
+        private void LogUpdatedHandler(object sender, EventArgs args)
+        {
+            var msg = (LoggerEventArgs)args;
+            try
+            {
+
+                this.Dispatcher.Invoke(() => txtMainLog.AppendText(msg.LogMessage));
+
+            }
+            catch (Exception)
+            {
+                Console.WriteLine("error appending to text box");
+                //throw;
+            }
+
+        }
+
+        private void txtMainLog_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            // scroll it automatically
+            if (LogAutoScrolling)
+            {
+                txtMainLog.ScrollToEnd();
+            }
+        }
+
+        private void txtMainLog_GotFocus(object sender, RoutedEventArgs e)
+        {
+            LogAutoScrolling = false;
+        }
+
+
+        private void txtMainLog_LostFocus(object sender, RoutedEventArgs e)
+        {
+            LogAutoScrolling = true;
         }
 
         private void TickerDisConnectedEventHandler(object sender, EventArgs e)
@@ -293,7 +343,8 @@ namespace Multiplier
             this.Dispatcher.Invoke(() =>
             {
                 lblCurPrice.Content = tickerData.RealTimePrice.ToString();
-                lblTickUpdate1.Content = DateTime.UtcNow.ToLocalTime().ToLongTimeString();
+                var curLongTime = DateTime.UtcNow.ToLocalTime(); 
+                lblTickUpdate1.Content = curLongTime.ToLongTimeString() + " " + curLongTime.Millisecond.ToString() ;
 
                 if (tickerData.RealTimePrice - sharedCurrentLargeSmaPrice >= 0)
                 {
@@ -561,7 +612,7 @@ namespace Multiplier
             }
 
 
-
+            //btnUpdateSmallSma_Click(this, null);
         }
 
         private async void btnUpdateSmallSma_Click(object sender, RoutedEventArgs e)
@@ -662,14 +713,14 @@ namespace Multiplier
 
         private void btnShowLog_Click(object sender, RoutedEventArgs e)
         {
-            if (logWindow != null)
-            {
-                logWindow.Close();
-                logWindow = null;
-                logWindow = new LogWindow();
-                logWindow.Show();
-                //logWindow.Closed += LogWindow_Closed;
-            }
+            //if (logWindow != null)
+            //{
+            //    logWindow.Close();
+            //    logWindow = null;
+            //    logWindow = new LogWindow();
+            //    logWindow.Show();
+            //    //logWindow.Closed += LogWindow_Closed;
+            //}
         }
 
         private void Window_Closed(object sender, EventArgs e)
@@ -719,7 +770,7 @@ namespace Multiplier
 
             Dispatcher.Invoke(() => 
             {
-                FrmMainWindow.Title = FrmMainWindow.Title + " User: " + currentUser;  
+                FrmMainWindow.Title = FrmMainWindow.Title + " User: " + currentUser + " " + inputProduct;  
             });
 
             Logger.WriteLog("\tCurrent user: " + currentUser + "\n");

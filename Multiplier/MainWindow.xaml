@@ -5,61 +5,64 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:Multiplier"
         mc:Ignorable="d"
-        Title="Mani" Height="686.786" Width="861.571" WindowStartupLocation="CenterScreen" Closed="Window_Closed">
-    <Grid x:Name="lblTickUpdate" RenderTransformOrigin="0.481,0.279">
+        Title="Mani" Height="788.919" Width="1058.6" WindowStartupLocation="CenterScreen" Closed="Window_Closed">
+    <Grid x:Name="grdMain" RenderTransformOrigin="0.481,0.279">
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="603*"/>
-            <ColumnDefinition Width="253*"/>
+            <ColumnDefinition/>
             <ColumnDefinition Width="0*"/>
         </Grid.ColumnDefinitions>
-        <Label Content="Current Price" HorizontalAlignment="Left" Margin="27,10,0,0" VerticalAlignment="Top" Width="108" Height="35" HorizontalContentAlignment="Center" VerticalContentAlignment="Center"/>
-        <Label x:Name="lblCurPrice" Content="0" HorizontalAlignment="Left" Margin="124,10,0,0" VerticalAlignment="Top" Height="35" Width="150" FontSize="20" Foreground="#FFD60D0D"/>
-        <Label x:Name="lblSmaValue" Content="SMA-" HorizontalAlignment="Left" Margin="339,9,0,0" VerticalAlignment="Top" Height="34" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" RenderTransformOrigin="-0.685,0.412" Width="108"/>
-        <Label x:Name="lblSma" Content="0" HorizontalAlignment="Left" Margin="465,9,0,0" VerticalAlignment="Top" FontSize="20" Width="150" Height="35" Grid.ColumnSpan="2"/>
-        <Label x:Name="lblUpdatedTime" Content="(time)" HorizontalAlignment="Left" Margin="389,44,0,0" VerticalAlignment="Top" Width="108" HorizontalContentAlignment="Center" Height="26"/>
-        <Label x:Name="lblTickUpdate1" Content="(time)" HorizontalAlignment="Left" Margin="47,45,0,0" VerticalAlignment="Top" Width="108" HorizontalContentAlignment="Center" Height="26"/>
-        <Button x:Name="btnStartBySelling" Content="Start by selling" HorizontalAlignment="Left" Margin="102.5,523,0,0" VerticalAlignment="Top" Width="136" Click="btnStartBySelling_Click" Height="26" Grid.Column="1"/>
-        <Button x:Name="btnStartByBuying" Content="Start by buying" HorizontalAlignment="Left" Margin="102.5,562,0,0" VerticalAlignment="Top" Width="136" Click="btnStartByBuying_Click" Height="26" Grid.Column="1"/>
-        <ListView x:Name="lstView" Height="251" Margin="10,143,0,0" VerticalAlignment="Top" HorizontalAlignment="Left" VerticalContentAlignment="Top" Width="836" Grid.ColumnSpan="2">
+        <Label Content="Current Price" HorizontalAlignment="Left" Margin="10,12,0,0" VerticalAlignment="Top" Width="108" Height="35" VerticalContentAlignment="Center"/>
+        <Label x:Name="lblCurPrice" Content="0" HorizontalAlignment="Left" Margin="10,37,0,0" VerticalAlignment="Top" Height="35" Width="150" FontSize="20" Foreground="#FFD60D0D"/>
+        <Label x:Name="lblSmaValue" Content="SMA-" Margin="479,43,0,0" VerticalAlignment="Top" Height="23" RenderTransformOrigin="-0.685,0.412" Width="160" HorizontalAlignment="Left"/>
+        <Label x:Name="lblSma" Content="0" HorizontalAlignment="Left" Margin="479,20,0,0" VerticalAlignment="Top" Width="160" Height="23"/>
+        <Label x:Name="lblUpdatedTime" Content="(time)" HorizontalAlignment="Left" Margin="479,89,0,0" VerticalAlignment="Top" Width="160" Height="26"/>
+        <Label x:Name="lblTickUpdate1" Content="(time)" HorizontalAlignment="Left" Margin="10,81,0,0" VerticalAlignment="Top" Width="108" Height="26"/>
+        <Button x:Name="btnStartBySelling" Content="Start by selling" Margin="908,469,9.5,0" VerticalAlignment="Top" Click="btnStartBySelling_Click" Height="26"/>
+        <Button x:Name="btnStartByBuying" Content="Start by buying" Margin="908,508,9.5,0" VerticalAlignment="Top" Click="btnStartByBuying_Click" Height="26"/>
+        <ListView x:Name="lstView" Height="251" Margin="10,143,9.5,0" VerticalAlignment="Top" VerticalContentAlignment="Top">
             <ListView.View>
                 <GridView>
                     <GridViewColumn/>
                 </GridView>
             </ListView.View>
         </ListView>
-        <Button x:Name="btnUpdateSmaInterval" Content="Update SMA Interval" HorizontalAlignment="Left" Margin="101.938,13,0,0" VerticalAlignment="Top" Width="136" Height="23" Click="btnUpdateSmaInterval_Click" Grid.Column="1"/>
-        <TextBox x:Name="txtSmaTimeInterval" HorizontalAlignment="Left" Height="23" Margin="15.938,13,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="37" Grid.Column="1"/>
-        <TextBox x:Name="txtSmaSlices" HorizontalAlignment="Left" Height="23" Margin="15.938,40,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="37" Grid.Column="1"/>
-        <Label Content="Min" HorizontalAlignment="Left" Margin="52.938,14,0,0" VerticalAlignment="Top" Height="26" Width="31" Grid.Column="1"/>
-        <Label Content="Slices" HorizontalAlignment="Left" Margin="52.938,41,0,0" VerticalAlignment="Top" Grid.Column="1"/>
-        <TextBox x:Name="txtPriceBuffer" HorizontalAlignment="Left" Height="23" Margin="21,481,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="52"/>
-        <Button Content="Update buy/sell buffer" HorizontalAlignment="Left" Margin="21,509,0,0" VerticalAlignment="Top" Width="138" Click="Button_Click"/>
-        <Label Content="Buy / Sell Buffer (Cents)" HorizontalAlignment="Left" Margin="14,450,0,0" VerticalAlignment="Top"/>
-        <Label x:Name="lblBuySellBuffer" Content="0" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="114,412,0,0"/>
-        <Label Content="Buy / Sell buffer: " HorizontalAlignment="Left" VerticalAlignment="Top" Margin="14,412,0,0"/>
-        <Label Content="Standard Deviation:" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="449,412,0,0"/>
-        <Label x:Name="lblSd" Content="0" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="568,412,0,0"/>
-        <CheckBox x:Name="chkUseInverse" Content="Use Inverse" HorizontalAlignment="Left" Margin="236,418,0,0" VerticalAlignment="Top"/>
-        <CheckBox x:Name="chkUseSd" Content="Use SD" HorizontalAlignment="Left" Margin="161,418,0,0" VerticalAlignment="Top"/>
-        <Label Content="Buy / Sell size:" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="306,503,0,0"/>
-        <Label x:Name="lblBuySellAmount" Content="0" HorizontalAlignment="Left" Margin="396,503,0,0" VerticalAlignment="Top" Height="23" RenderTransformOrigin="0.522,-0.196"/>
-        <TextBox x:Name="txtBuySellAmount" HorizontalAlignment="Left" Height="23" Margin="306,534,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="107"/>
-        <Button Content="Update buy/sell Size" HorizontalAlignment="Left" Margin="306,562,0,0" VerticalAlignment="Top" Width="127" Click="Button_Click_1"/>
-        <Button x:Name="btnShowLog" Content="Log" HorizontalAlignment="Left" Margin="211.5,488,0,0" VerticalAlignment="Top" Width="27" Height="23" Click="btnShowLog_Click" Grid.Column="1"/>
-        <Label x:Name="lblWarning" Content="Warning:" HorizontalAlignment="Left" Margin="191,362,0,0" VerticalAlignment="Top" Width="585" FontSize="16" Visibility="Hidden" Grid.ColumnSpan="2"/>
-        <Label Content="Product" HorizontalAlignment="Left" Margin="540,450,0,0" VerticalAlignment="Top"/>
-        <ComboBox x:Name="cmbProduct" HorizontalAlignment="Left" Margin="540,476,0,0" VerticalAlignment="Top" Width="120" SelectionChanged="cmbProduct_SelectionChanged" Grid.ColumnSpan="2"/>
-        <Button x:Name="btnSellAtNow" Content="Sell NOW" HorizontalAlignment="Left" Margin="102.5,435,0,0" VerticalAlignment="Top" Width="136" Click="btnSellAtNow_Click" Grid.Column="1"/>
-        <Label x:Name="lblStatus" Content="Status" HorizontalAlignment="Left" Margin="235,45,0,0" VerticalAlignment="Top"/>
-        <Label Content="Next action:" HorizontalAlignment="Left" Margin="505,556,0,0" VerticalAlignment="Top"/>
-        <Label x:Name="lblNextAction" Content="NOT SET" HorizontalAlignment="Left" Margin="583,556,0,0" VerticalAlignment="Top" Grid.ColumnSpan="2"/>
-        <Label x:Name="lblSmaSmall" Content="(small sma)" HorizontalAlignment="Left" Margin="375,105,0,0" VerticalAlignment="Top"/>
-        <Button x:Name="btnUpdateSmallSma" Content="Update small sma" Grid.Column="1" HorizontalAlignment="Left" Margin="102.5,96,0,0" VerticalAlignment="Top" Width="135" Click="btnUpdateSmallSma_Click"/>
-        <TextBox x:Name="txtSmallSmaInterval" Grid.Column="1" HorizontalAlignment="Left" Height="23" Margin="26.5,91,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="40"/>
-        <TextBox x:Name="txtSmallSmaSlices" Grid.Column="1" HorizontalAlignment="Left" Height="23" Margin="26.5,115,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="40"/>
-        <Label Content="min" HorizontalAlignment="Left" Margin="592,91,0,0" VerticalAlignment="Top" Grid.ColumnSpan="2"/>
-        <Label Content="slices" HorizontalAlignment="Left" Margin="592,114,0,0" VerticalAlignment="Top" Grid.ColumnSpan="2"/>
-        <Label x:Name="lblSmallSd" Content="(small sma sd)" HorizontalAlignment="Left" Margin="465,105,0,0" VerticalAlignment="Top" RenderTransformOrigin="0.228,-0.141"/>
+        <Button x:Name="btnUpdateSmaInterval" Content="Update Large SMA" HorizontalAlignment="Left" Margin="343,43,0,0" VerticalAlignment="Top" Width="136" Height="23" Click="btnUpdateSmaInterval_Click"/>
+        <TextBox x:Name="txtSmaTimeInterval" HorizontalAlignment="Left" Height="23" Margin="343,20,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="64"/>
+        <Label Content="Min" HorizontalAlignment="Left" Margin="343,0,0,0" VerticalAlignment="Top" Height="26" Width="64"/>
+        <TextBox x:Name="txtPriceBuffer" HorizontalAlignment="Left" Height="23" Margin="12,463,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="138"/>
+        <Button Content="Update buy/sell buffer" HorizontalAlignment="Left" Margin="12,491,0,0" VerticalAlignment="Top" Width="138" Click="Button_Click"/>
+        <Label Content="Buy / Sell Buffer (Cents)" HorizontalAlignment="Left" Margin="12,432,0,0" VerticalAlignment="Top" Width="138"/>
+        <Label x:Name="lblBuySellBuffer" Content="0" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="112,401,0,0" Width="38"/>
+        <Label Content="Buy / Sell buffer: " HorizontalAlignment="Left" VerticalAlignment="Top" Margin="12,401,0,0"/>
+        <Label Content="Standard Deviation:" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="343,66,0,0" Width="135" Height="23"/>
+        <Label x:Name="lblSd" Content="0" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="479,66,0,0" Width="160" Height="23"/>
+        <CheckBox x:Name="chkUseInverse" Content="Use Inverse" HorizontalAlignment="Left" Margin="159,427,0,0" VerticalAlignment="Top"/>
+        <CheckBox x:Name="chkUseSd" Content="Use SD" HorizontalAlignment="Left" Margin="159,407,0,0" VerticalAlignment="Top"/>
+        <Label Content="Buy / Sell size:" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="328,415,0,0" Width="92"/>
+        <Label x:Name="lblBuySellAmount" Content="0" HorizontalAlignment="Left" Margin="426,415,0,0" VerticalAlignment="Top" Height="23" RenderTransformOrigin="0.522,-0.196" Width="40"/>
+        <TextBox x:Name="txtBuySellAmount" HorizontalAlignment="Left" Height="23" Margin="328,446,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="138"/>
+        <Button Content="Update buy/sell Size" HorizontalAlignment="Left" Margin="328,474,0,0" VerticalAlignment="Top" Width="138" Click="Button_Click_1"/>
+        <Label x:Name="lblWarning" Content="Warning:" HorizontalAlignment="Left" Margin="191,362,0,0" VerticalAlignment="Top" Width="585" FontSize="16" Visibility="Hidden"/>
+        <Label Content="Product" HorizontalAlignment="Left" Margin="165,17,0,0" VerticalAlignment="Top"/>
+        <ComboBox x:Name="cmbProduct" HorizontalAlignment="Left" Margin="165,43,0,0" VerticalAlignment="Top" Width="120" SelectionChanged="cmbProduct_SelectionChanged"/>
+        <Button x:Name="btnSellAtNow" Content="Sell NOW" Margin="908,407,9.5,0" VerticalAlignment="Top" Click="btnSellAtNow_Click"/>
+        <Label x:Name="lblStatus" Content="Status" HorizontalAlignment="Left" Margin="10,112,0,0" VerticalAlignment="Top"/>
+        <Label Content="Next action:" HorizontalAlignment="Left" Margin="910,438,0,0" VerticalAlignment="Top"/>
+        <Label x:Name="lblNextAction" Content="NOT SET" HorizontalAlignment="Left" Margin="988,438,0,0" VerticalAlignment="Top"/>
+        <Label x:Name="lblSmaSmall" Content="(small sma)" HorizontalAlignment="Left" Margin="853,21,0,0" VerticalAlignment="Top"/>
+        <Button x:Name="btnUpdateSmallSma" Content="Update small SMA" HorizontalAlignment="Left" Margin="717,44,0,0" VerticalAlignment="Top" Width="136" Click="btnUpdateSmallSma_Click" Height="23"/>
+        <TextBox x:Name="txtSmallSmaInterval" HorizontalAlignment="Left" Height="23" Margin="717,21,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="64"/>
+        <TextBox x:Name="txtSmallSmaSlices" HorizontalAlignment="Left" Height="23" Margin="781,21,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="72"/>
+        <Label Content="Slices" HorizontalAlignment="Left" Margin="781,0,0,0" VerticalAlignment="Top" Width="72"/>
+        <Label x:Name="lblSmallSd" Content="(small sma sd)" HorizontalAlignment="Left" Margin="853,66,0,0" VerticalAlignment="Top" RenderTransformOrigin="0.228,-0.141"/>
+        <RichTextBox x:Name="txtMainLog" Margin="10,539,9.5,9.5" LostFocus="txtMainLog_LostFocus" GotFocus="txtMainLog_GotFocus" TextChanged="txtMainLog_TextChanged" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+            <FlowDocument/>
+        </RichTextBox>
+        <Label Content="Last Updated:" HorizontalAlignment="Left" Margin="343,89,0,0" VerticalAlignment="Top" Width="136"/>
+        <Label Content="standard deviation:" HorizontalAlignment="Left" Margin="717,67,0,0" VerticalAlignment="Top" Width="136"/>
+        <Label Content="Min" HorizontalAlignment="Left" Margin="717,0,0,0" VerticalAlignment="Top"/>
+        <TextBox x:Name="txtSmaSlices" HorizontalAlignment="Left" Height="23" Margin="407,20,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="72"/>
+        <Label Content="Slices" HorizontalAlignment="Left" Margin="407,0,0,0" VerticalAlignment="Top"/>
 
     </Grid>
 </Window>

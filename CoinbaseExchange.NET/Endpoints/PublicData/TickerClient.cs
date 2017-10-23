@@ -186,7 +186,18 @@ namespace CoinbaseExchange.NET.Endpoints.PublicData
 
                         var jsonResponse = Encoding.UTF8.GetString(receiveBuffer.Array, 0, webSocketReceiveResult.Count);
                         //var jToken = JToken.Parse(jsonResponse);
-                        var jToken = JObject.Parse(jsonResponse);
+
+
+                        JObject jToken = null;
+                        try
+                        {
+                            jToken = JObject.Parse(jsonResponse);
+                        }
+                        catch (Exception)
+                        {
+                            Logger.WriteLog("Json parse error occured in websocket data");
+                            continue;
+                        }
 
                         var typeToken = jToken["type"];
                         if (typeToken == null) continue;
@@ -218,14 +229,9 @@ namespace CoinbaseExchange.NET.Endpoints.PublicData
             catch (Exception ex)
             {
                 Logger.WriteLog("Error in ticker websocket: " + ex.Message);
-                //webSocketClient.Abort();
-                webSocketClient = null;
 
                 TickerClientConnected = false;
-
                 
-                Reconnect(product, onMessageReceived);
-
                 tickerConnectedNotified = false;
                 if (!tickerDisconnectNotified)
                 {
@@ -239,7 +245,7 @@ namespace CoinbaseExchange.NET.Endpoints.PublicData
 
         }
 
-        private  void Reconnect(string prodName, Action<RealtimeMessage> onMessageReceived)
+        private void Reconnect(string prodName, Action<RealtimeMessage> onMessageReceived)
         {
 
             if (isTryingToReconnect)
@@ -249,13 +255,24 @@ namespace CoinbaseExchange.NET.Endpoints.PublicData
 
             isTryingToReconnect = true;
 
+
+            try
+            {
+                webSocketClient.CloseAsync(WebSocketCloseStatus.NormalClosure, string.Empty, CancellationToken.None);
+            }
+            catch (Exception)
+            {
+                Logger.WriteLog("Error sending websocket close command, retrying to subscribe");
+            }
+            webSocketClient = null;
+
+
             Logger.WriteLog(string.Format("websocket ticker feed closed or cannot connect, retrying in 5 sec"));
 
-            System.Threading.Thread.Sleep(5 * 1000);
-            //Task.Delay(10 * 1000);
+            Thread.Sleep(5 * 1000);
 
             Subscribe(prodName, onMessageReceived);
-            //CloseAndReconnect();
+
 
             isTryingToReconnect = false;
 

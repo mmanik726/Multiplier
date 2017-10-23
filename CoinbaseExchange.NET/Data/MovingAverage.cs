@@ -48,7 +48,7 @@ namespace CoinbaseExchange.NET.Data
         //private bool ForceRedownloadData;
 
 
-        private static bool isBusyCalculatingSMA; 
+        private bool isBusyCalculatingSMA; 
 
         public MovingAverage(ref TickerClient tickerClient, string ProductName, int timeInterValInMin = 3, int smaSlices = 40)
         {

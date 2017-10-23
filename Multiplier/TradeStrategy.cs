@@ -6,6 +6,8 @@ using System.Threading.Tasks;
 
 using CoinbaseExchange.NET.Utilities;
 
+using CoinbaseExchange.NET.Data;
+
 namespace Multiplier
 {
     public abstract class TradeStrategyBase
@@ -13,6 +15,12 @@ namespace Multiplier
         internal ContextValues CurrentValues;
 
         public EventHandler CurrentActionChangedEvent;
+
+
+
+        //temporary
+        public virtual void updateSmallestSma(int interval, int slices) { }
+
 
         public TradeStrategyBase(ref ContextValues inputContextValues)
         {
@@ -127,7 +135,7 @@ namespace Multiplier
 
             CurrentValues.StartAutoTrading = false;
 
-            await Task.Run(() => 
+            await Task.Run(() =>
             {
                 for (int i = 0; i < CurrentValues.MyOrderBook.MyChaseOrderList.Count; i++)
                 {
@@ -271,7 +279,7 @@ namespace Multiplier
         public override async void Trade()
         {
 
-                decimal curPriceDiff = CurrentValues.CurrentBufferedPrice - CurrentValues.CurrentLargeSmaPrice;
+            decimal curPriceDiff = CurrentValues.CurrentBufferedPrice - CurrentValues.CurrentLargeSmaPrice;
 
             //if (curPriceDiff <= priceBuffer) //below average: sell
             if (CurrentValues.CurrentBufferedPrice <= (CurrentValues.CurrentLargeSmaPrice - CurrentValues.PriceBuffer))
@@ -314,11 +322,63 @@ namespace Multiplier
     }
 
 
+    class TradeStrategyC : TradeStrategyBase
+    {
+        public TradeStrategyC(ref ContextValues inputContextValues) : base(ref inputContextValues)
+        {
+            SetCurrentAction("NOT_SET");
+        }
+
+        public override async void Trade()
+        {
+            var sSma = CurrentValues.CurrentSmallSmaPrice;
+            var lSma = CurrentValues.CurrentLargeSmaPrice;
+            var curPrice = CurrentValues.CurrentBufferedPrice;
+            var priceBufferSmall = CurrentValues.PriceBuffer;
+            var priceBufferLarge = CurrentValues.PriceBuffer;
+
+
+            //sell  
+            if (sSma < (lSma - priceBufferLarge)) //if small sma < large sma
+            {
+                if (!CurrentValues.SellOrderFilled) //if not already sold
+                {
+                    if (!CurrentValues.WaitingBuyOrSell)
+                    {
+                        CurrentValues.WaitingBuyOrSell = true;
+                        Sell();
+                    }
+                }
+            }
+
+
+
+            //buy  
+            if (sSma > (lSma + priceBufferLarge)) //if small sma > large sma 
+            {
+                if (!CurrentValues.BuyOrderFilled) //if not already bought
+                {
+                    if (!CurrentValues.WaitingBuyOrSell)
+                    {
+                        CurrentValues.WaitingBuyOrSell = true;
+                        Buy();
+                    }
+                }
+            }
+
+        }
+
+    }
+
+
     class TradeStrategyB : TradeStrategyBase
     {
+        private bool secondBuyAllowed; 
+
         public TradeStrategyB(ref ContextValues inputContextValues) : base(ref inputContextValues)
         {
             SetCurrentAction("NOT_SET");
+            secondBuyAllowed = false;
         }
 
 
@@ -336,26 +396,10 @@ namespace Multiplier
             var priceBufferLarge = CurrentValues.PriceBuffer;
 
 
-            //sell  
-            if (curPrice <= (sSma - priceBufferSmall) || curPrice <= (lSma - priceBufferLarge)) //if price <= small sma or large sma
+
+            if (curPrice > lSma)
             {
-                if (!CurrentValues.SellOrderFilled) //if not already sold
-                {
-                    if (!CurrentValues.WaitingBuyOrSell)
-                    {
-                        CurrentValues.WaitingBuyOrSell = true;
-                        Sell();
-                    }
-
-                }
-
-            }
-
-
-
-            if (sSma <= (lSma + priceBufferSmall)) //if small sma higher than the large sma value
-            {
-                if (curPrice > (lSma + priceBufferLarge)) // and if the current price is higher than the 
+                if ((sSma < lSma)) //buy only when the small sma is below the large sma: indicates price going up
                 {
 
                     if (!CurrentValues.BuyOrderFilled) //if not already bought
@@ -366,32 +410,251 @@ namespace Multiplier
                             Buy();
                         }
                     }
+
+                }
+
+                secondBuyAllowed = true; //allow for buying second time after initial sale if price keeps going up
+            }
+            else
+            {
+                secondBuyAllowed = false; //if price is below the large sma second buy is not allowed
+            }
+
+
+            if (curPrice > sSma && secondBuyAllowed == true) //buying the second time after the first sale based onn small sma
+            {
+                if (!CurrentValues.BuyOrderFilled) //if not already bought
+                {
+                    if (!CurrentValues.WaitingBuyOrSell)
+                    {
+                        CurrentValues.WaitingBuyOrSell = true;
+                        Buy();
+                    }
+                }
+
+            }
+
+
+            if (curPrice < sSma) //if price is < the small sma
+            {
+
+                if (!CurrentValues.SellOrderFilled) //if not already sold
+                {
+                    if (!CurrentValues.WaitingBuyOrSell)
+                    {
+                        CurrentValues.WaitingBuyOrSell = true;
+                        Sell();
+                    }
                 }
             }
-            else //small sma is above large sma 
-            {
-                if (curPrice > (sSma + priceBufferSmall)) // and if current price is > small sma
-                {
 
-                    if (!CurrentValues.BuyOrderFilled && (sSma > lSma)) //and buyorder not filled and small sma is greater than large sma
+
+        }
+
+
+    }
+
+
+    //a derivate of strategy B
+    class TradeStrategyD : TradeStrategyBase
+    {
+        private bool secondLevelBuyAllowed;
+        private bool thirdLevelBuyAllowed; 
+        private MovingAverage smallestSmaMa;
+        //private 
+        private decimal smallestSmaPrice;
+
+        public TradeStrategyD(ref ContextValues inputContextValues) : base(ref inputContextValues)
+        {
+            SetCurrentAction("NOT_SET");
+            secondLevelBuyAllowed = true; //assume time to buy, will get set to false 
+            thirdLevelBuyAllowed = false;
+
+            var smallestSmaInterval = inputContextValues.CurrentSmallSmaTimeInterval;
+            var smallestSmaSlices = Math.Round((inputContextValues.CurrentSmallSmaSlices / 2.0m), 0);
+
+            smallestSmaPrice = 0;
+
+            smallestSmaMa = new MovingAverage(ref inputContextValues.CurrentTicker, inputContextValues.ProductName,
+                smallestSmaInterval, Convert.ToInt32(smallestSmaSlices));
+
+            smallestSmaMa.MovingAverageUpdated += SmallestSmaUpdateHandler;
+
+
+        }
+
+
+        public override async void Trade()
+        {
+
+            // smallSma -> sSma, lSma
+            //if bufferedPrice <= (sSma - priceBUffer)
+
+
+            var mediumSmaPrice = CurrentValues.CurrentSmallSmaPrice;
+            var largestSmaPrice = CurrentValues.CurrentLargeSmaPrice;
+            var curPrice = CurrentValues.CurrentBufferedPrice;
+            var priceBufferSmall = CurrentValues.PriceBuffer;
+            var priceBufferLarge = CurrentValues.PriceBuffer;
+
+
+
+            ////set var
+            //if (curPrice > smallestSmaPrice)
+            //    thirdLevelBuyAllowed = true;
+            //else
+            //    thirdLevelBuyAllowed = false;
+
+
+            ////set vars
+            //if (curPrice > largestSmaPrice)
+            //    secondLevelBuyAllowed = true; //allow for buying second time after initial sale if price keeps going up
+            //else
+            //    secondLevelBuyAllowed = false; //if price is below the large sma second buy is not allowed
+
+
+
+            //if (curPrice >= largestSmaPrice)
+            //{
+            //    if ((mediumSmaPrice <= largestSmaPrice)) //buy only when the small sma is below the large sma: indicates price going up
+            //    {
+            //        if (!CurrentValues.BuyOrderFilled) //if not already bought
+            //        {
+            //            if (!CurrentValues.WaitingBuyOrSell)
+            //            {
+            //                CurrentValues.WaitingBuyOrSell = true;
+
+            //                Logger.WriteLog("Buying based on:\nCurPrice > Largest Sma\n\t Medium sma <= Largest Sma");
+
+            //                Buy();
+            //                //secondLevelBuyAllowed = true;
+            //            }
+            //        }
+
+            //    }
+            //}
+
+
+
+            //if (curPrice >= largestSmaPrice)
+            //{
+            //    if (curPrice >= mediumSmaPrice) //buying the second time after the first sale based on small sma
+            //    {
+            //        if (smallestSmaPrice <= mediumSmaPrice) //buy if the smallest sma is less than the 'medium' sma
+            //        {
+            //            if (!CurrentValues.BuyOrderFilled) //if not already bought
+            //            {
+            //                if (!CurrentValues.WaitingBuyOrSell)
+            //                {
+            //                    CurrentValues.WaitingBuyOrSell = true;
+
+            //                    Logger.WriteLog("Buying based on:\nCurPrice > Largest Sma\n\tCur Price >= Medimum sma \n\t\tSmalles sma <= medium Sma");
+
+            //                    Buy();
+            //                }
+            //            }
+            //        }
+            //    }
+            //}
+
+
+
+
+            if (curPrice >= largestSmaPrice)
+            {
+                if (smallestSmaPrice <= largestSmaPrice || mediumSmaPrice <= largestSmaPrice) //buying the second time after the first sale based on small sma
+                {
+                    if (!CurrentValues.BuyOrderFilled) //if not already bought
                     {
                         if (!CurrentValues.WaitingBuyOrSell)
                         {
                             CurrentValues.WaitingBuyOrSell = true;
+
+                            Logger.WriteLog("Buying based on:\nCurPrice >= Largest Sma\n\tsmallestSmaPrice <= largestSmaPrice || mediumSmaPrice <= largestSmaPrice");
+
                             Buy();
                         }
                     }
                 }
             }
 
+
+            //special case occurs only when price is going up up and away :)
+            if (smallestSmaPrice > mediumSmaPrice)
+            {
+                if (mediumSmaPrice > largestSmaPrice) //buying the second time after the first sale based on small sma
+                {
+                    if (curPrice >= smallestSmaPrice) //buy if the smallest sma is less than the 'medium' sma
+                    {
+                        if (!CurrentValues.BuyOrderFilled) //if not already bought
+                        {
+                            if (!CurrentValues.WaitingBuyOrSell)
+                            {
+                                CurrentValues.WaitingBuyOrSell = true;
+
+                                Logger.WriteLog("Buying based on:\nSmallest Sma > Medium Sma\n\tMedium Sma > Largest Sma\n\t\t Cur Price > smallest sma");
+                                Buy();
+                            }
+                        }
+                    }
+                }
+            }
+
+
+
+            var smallestToMedGap = Math.Abs(smallestSmaPrice - mediumSmaPrice);
+            var threshold = smallestSmaPrice - (smallestToMedGap / 3);
+            if (curPrice <= mediumSmaPrice || curPrice <= threshold)  //if price is < the smallest sma or medium sma
+            {
+                if (!CurrentValues.SellOrderFilled) //if not already sold
+                {
+                    if (!CurrentValues.WaitingBuyOrSell)
+                    {
+                        CurrentValues.WaitingBuyOrSell = true;
+
+                        Logger.WriteLog("Selling based on:\nCur price <= Medium Sma OR threshold (less than smalles sma)\n\tMedium Sma > Largest Sma");
+                        Sell();
+                    }
+                }
+            }
+
+
         }
 
 
-        public void StopAll()
+        private void SmallestSmaUpdateHandler(object sender, EventArgs args)
         {
-            throw new NotImplementedException();
+            var currentSmaData = (MAUpdateEventArgs)args;
+            decimal newSmaPrice = currentSmaData.CurrentMAPrice;
+
+            smallestSmaPrice = newSmaPrice;
+
+            Int32 curSmallesSmaSlices = currentSmaData.CurrentSlices;// InputSlices;
+            Int32 curSmallestSmaInterval = currentSmaData.CurrentTimeInterval; // InputTimerInterval;
+            //CurContextValues.WaitTimeAfterLargeSmaCrossInMin = CurContextValues.CurrentLargeSmaTimeInterval;
+            
+            var msg = string.Format("Smallest SMA updated: {0} (Time interval: {1} Slices: {2})", newSmaPrice,
+                curSmallestSmaInterval, curSmallesSmaSlices);
+            Logger.WriteLog(msg);
+
+
+            //SmaLargeUpdateEvent?.Invoke(this, currentSmaData);
         }
+
+        private void MediumSmaUpdatedHandler(object sender, EventArgs args)
+        {
+
+        }
+
+
+        //temporary solution
+        public override async void updateSmallestSma(int interval, int slices)
+        {
+            await smallestSmaMa.updateValues(interval, slices);
+        }
+
     }
+
 
 }
 

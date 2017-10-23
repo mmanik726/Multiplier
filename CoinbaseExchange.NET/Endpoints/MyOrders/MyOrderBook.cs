@@ -549,12 +549,30 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
                     if (ex.InnerException.Message == "OrderAlreadyDone")
                     {
                         Logger.WriteLog("Order already done " + myCurrentOrder.OrderId);
+
+                        var doneOrder = GetSingleOrder(myCurrentOrder.OrderId);
+                        doneOrder.Wait();
+
+                        if(doneOrder != null)
+                        {
+                            Fill fakeFill = new Fill(doneOrder.Result);
+                            List<Fill> fakeFilList = (new List<Fill>());
+                            fakeFilList.Add(fakeFill);
+
+                            //this will remove the order from watch list 
+                            //also if order is partially filled this will be taken care of 
+                            //in the follwoing functino
+                            Logger.WriteLog("Assuming the order has been filled either partially or fully");
+                            fillsClient.OrderFilledEvent(fakeFilList); // notify order filled
+                        }
+
                     }
 
                     continue; //continue and try again to cancel and reorder
                     //throw;
                 }
 
+                //remove the order from the watch list if cancelled above
                 if (cancelledOrder.Count() > 0)
                 {
                     RemoveFromOrderList(cancelledOrder.FirstOrDefault());
@@ -674,7 +692,6 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
 
             return true;
         }
-
 
         public void RemoveFromOrderList(string orderId)
         {
@@ -988,9 +1005,15 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
             return allorders;
         }
 
-        public Order GetSingleOrder(string order)
+        public async Task<Order> GetSingleOrder(string order)
         {
-            return null;
+            var requestEndPoint = string.Format(@"/orders/{0}", order);
+            var singleOrder = await GetAllOpenOrders();
+
+            if (singleOrder.Count > 0)
+                return singleOrder.FirstOrDefault();
+            else
+                return null;
         }
 
     }

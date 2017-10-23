@@ -25,6 +25,24 @@ namespace CoinbaseExchange.NET.Endpoints.Fills
         public bool Settled { get; set; }
         public string Side { get; set; }
         public string Liquidity { get; set; }
+
+        public Fill() { }
+
+        public Fill(Order order)
+        {
+            TradeId = order.Id;
+            ProductId = order.Product_id;
+            Price = order.Price;
+            Size = order.Filled_size;
+            OrderId = order.Id;
+            Time = DateTime.UtcNow.ToLocalTime();
+            Fee = order.Fill_fees; //unknonw fee since order doesnt contain fee info
+            Settled = true;
+            Side = order.Side;
+            Liquidity = "UNKNOWN";
+
+        } //empty ocn
+
         public Fill(JToken jToken)
         {
             this.TradeId = jToken["trade_id"].Value<string>();
@@ -142,10 +160,19 @@ namespace CoinbaseExchange.NET.Endpoints.Fills
             return orderStats;
         }
 
-        private void orderFilledEvent(List<Fill> FillList)
+        public void OrderFilledEvent(List<Fill> FillList)
         {
             var fillDetails = FillList.FirstOrDefault();
-            var orderIndex = FillWatchList.FindIndex((o) => o.OrderId == fillDetails.OrderId);
+            Int32 orderIndex = -1;
+            try
+            {
+                orderIndex = FillWatchList.FindIndex((o) => o.OrderId == fillDetails.OrderId);
+            }
+            catch (Exception)
+            {
+                Logger.WriteLog(string.Format("Order {0} not found in watch list!",fillDetails.OrderId));
+                return;
+            }
 
             decimal totalFilled = 0;
 
@@ -316,7 +343,7 @@ namespace CoinbaseExchange.NET.Endpoints.Fills
                     if (orderStat?.Fills.Count > 0)
                     {
                         //BusyCheckingOrder = false;
-                        orderFilledEvent(orderStat.Fills);
+                        OrderFilledEvent(orderStat.Fills);
                     }
 
                     Thread.Sleep(300);
