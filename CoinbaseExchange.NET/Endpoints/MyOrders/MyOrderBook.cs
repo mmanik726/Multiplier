@@ -553,7 +553,7 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
                         var doneOrder = GetSingleOrder(myCurrentOrder.OrderId);
                         doneOrder.Wait();
 
-                        if(doneOrder != null)
+                        if(doneOrder.Result != null)
                         {
                             Fill fakeFill = new Fill(doneOrder.Result);
                             List<Fill> fakeFilList = (new List<Fill>());
@@ -1008,7 +1008,7 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
         public async Task<Order> GetSingleOrder(string order)
         {
             var requestEndPoint = string.Format(@"/orders/{0}", order);
-            var singleOrder = await GetAllOpenOrders();
+            var singleOrder = await orderList.GetAllOpenOrders(requestEndPoint);
 
             if (singleOrder.Count > 0)
                 return singleOrder.FirstOrDefault();

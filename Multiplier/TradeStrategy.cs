@@ -562,7 +562,7 @@ namespace Multiplier
 
             if (curPrice >= largestSmaPrice)
             {
-                if (smallestSmaPrice <= largestSmaPrice || mediumSmaPrice <= largestSmaPrice) //buying the second time after the first sale based on small sma
+                if (smallestSmaPrice <= largestSmaPrice && mediumSmaPrice <= largestSmaPrice) //buying the second time after the first sale based on small sma
                 {
                     if (!CurrentValues.BuyOrderFilled) //if not already bought
                     {
@@ -570,7 +570,7 @@ namespace Multiplier
                         {
                             CurrentValues.WaitingBuyOrSell = true;
 
-                            Logger.WriteLog("Buying based on:\nCurPrice >= Largest Sma\n\tsmallestSmaPrice <= largestSmaPrice || mediumSmaPrice <= largestSmaPrice");
+                            Logger.WriteLog("Buying based on OPTION1:\nCurPrice >= Largest Sma\n\tsmallestSmaPrice <= largestSmaPrice AND mediumSmaPrice <= largestSmaPrice");
 
                             Buy();
                         }
@@ -592,7 +592,7 @@ namespace Multiplier
                             {
                                 CurrentValues.WaitingBuyOrSell = true;
 
-                                Logger.WriteLog("Buying based on:\nSmallest Sma > Medium Sma\n\tMedium Sma > Largest Sma\n\t\t Cur Price > smallest sma");
+                                Logger.WriteLog("Buying based on OPTION2:\nSmallest Sma > Medium Sma\n\tMedium Sma > Largest Sma\n\t\t Cur Price > smallest sma");
                                 Buy();
                             }
                         }
