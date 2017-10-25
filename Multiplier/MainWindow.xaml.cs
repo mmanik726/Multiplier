@@ -389,6 +389,10 @@ namespace Multiplier
                 lblStatus.FontSize = 16;
                 lblStatus.Foreground = Brushes.Black;
                 lblStatus.Content = "Auto Trading OFF";
+
+                btnStartByBuying.IsEnabled = true;
+                btnStartBySelling.IsEnabled = true;
+                
             });
         }
 
@@ -817,7 +821,13 @@ namespace Multiplier
             ProductManager.ForceSellAtNow();
         }
 
+        private async void btnStopAndCancel_Click(object sender, RoutedEventArgs e)
+        {
 
+            Dispatcher.Invoke(() => btnStopAndCancel.IsEnabled = false);
+            await ProductManager.StopAndCancel().ContinueWith((t) => t.Wait());
+            Dispatcher.Invoke(() => btnStopAndCancel.IsEnabled = true);
+        }
     }
 
 

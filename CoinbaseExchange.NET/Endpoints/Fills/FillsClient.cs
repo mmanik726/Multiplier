@@ -160,6 +160,27 @@ namespace CoinbaseExchange.NET.Endpoints.Fills
             return orderStats;
         }
 
+
+        public async Task<Fill> GetOrderStatus(string orderId)
+        {
+
+
+            //myActiveOrderBook.GetSingleOrder
+
+            var doneOrder = myActiveOrderBook.GetSingleOrder(orderId);
+            doneOrder.Wait();
+
+            Fill fakeFilList = null;
+            if (doneOrder.Result != null)
+            {
+                Fill fakeFill = new Fill(doneOrder.Result);
+                //fakeFilList.Add(fakeFill);
+            }
+
+            return fakeFilList;
+        }
+
+
         public void OrderFilledEvent(List<Fill> FillList)
         {
             var fillDetails = FillList.FirstOrDefault();
@@ -329,6 +350,8 @@ namespace CoinbaseExchange.NET.Endpoints.Fills
                     //var orderStat = await GetFillStatus(FillWatchList.ElementAt(i)?.OrderId);
                     var currentOrder = FillWatchList.ElementAt(i);
 
+
+                    //order checking method 1
                     FillResponse orderStat = null;
                     try
                     {
@@ -338,13 +361,36 @@ namespace CoinbaseExchange.NET.Endpoints.Fills
                     {
                         Logger.WriteLog("Error getting fill response");
                     }
-                    
 
                     if (orderStat?.Fills.Count > 0)
                     {
                         //BusyCheckingOrder = false;
                         OrderFilledEvent(orderStat.Fills);
                     }
+
+
+
+                    //order checking method 2
+                    //Fill orderStat = null;
+                    //try
+                    //{
+                    //    orderStat = GetOrderStatus(currentOrder?.OrderId).Result;
+                    //}
+                    //catch (Exception ex)
+                    //{
+                    //    Logger.WriteLog("Error getting fill response");
+                    //}
+
+                    //if (orderStat != null)
+                    //{
+                    //    if (Convert.ToDecimal(orderStat.Size) > 0)
+                    //    {
+                    //        var tempList = new List<Fill>();
+                    //        tempList.Add(orderStat);
+                    //        OrderFilledEvent(tempList);
+                    //    }
+                    //}
+
 
                     Thread.Sleep(300);
 

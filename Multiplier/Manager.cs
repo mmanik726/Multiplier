@@ -75,18 +75,23 @@ namespace Multiplier
         }
 
 
+        public void autoTradeStartEventHandler(object sender, EventArgs args)
+        {
+            AutoTradingStartedEvent?.Invoke(this, EventArgs.Empty);
+        }
+
+        public void autoTradeStopEventHandler(object sender, EventArgs args)
+        {
+            AutoTradingStoppedEvent?.Invoke(this, EventArgs.Empty);
+        }
+
         public void StartTrading_BySelling()
         {
             currentTradeStrategy.StartTrading_BySelling();
-
-            AutoTradingStartedEvent?.Invoke(this, EventArgs.Empty);
-
         }
         public void StartTrading_ByBuying()
         {
             currentTradeStrategy.StartTrading_ByBuying();
-
-            AutoTradingStartedEvent?.Invoke(this, EventArgs.Empty);
         }
 
 
@@ -123,6 +128,9 @@ namespace Multiplier
             CurContextValues = new ContextValues(ref MyProductOrderBook, ref ProductTickerClient);
             CurContextValues.ProductName = ProductName;
 
+            CurContextValues.AutoTradingStartEvent += autoTradeStartEventHandler;
+            CurContextValues.AutoTradingStopEvent += autoTradeStopEventHandler; 
+
             ////update ui with initial prices
             ProductTickerClient_UpdateHandler(this, new TickerMessage(ProductTickerClient.CurrentPrice));
 
@@ -157,7 +165,7 @@ namespace Multiplier
             if (userStartedTrading)
             {
                 CurContextValues.StartAutoTrading = false;
-                AutoTradingStoppedEvent?.Invoke(this, EventArgs.Empty);
+                //AutoTradingStoppedEvent?.Invoke(this, EventArgs.Empty);
             }
 
             TickerDisConnectedEvent?.Invoke(this, EventArgs.Empty);
@@ -239,7 +247,14 @@ namespace Multiplier
                 CurContextValues.WaitingBuyFill = true;
             }
 
-            CurContextValues.WaitingBuyOrSell = false;
+
+
+
+            //CurContextValues.WaitingBuyOrSell = false;
+
+            //set buy sell waiting flag to off only when there are no order in the orderbook 
+            if (CurContextValues.MyOrderBook.MyChaseOrderList.Count == 0) 
+                CurContextValues.WaitingBuyOrSell = false;
 
 
             if (CurContextValues.ForceSold) 
@@ -266,6 +281,25 @@ namespace Multiplier
 
 
             //this.Dispatcher.Invoke(() => updateListView(filledOrder));
+        }
+
+        public async Task<bool> StopAndCancel()
+        {
+            await currentTradeStrategy.CancelCurrentTradeAction();
+            //test.Wait();
+
+            if (CurContextValues.StartAutoTrading == false)
+            {
+                Logger.WriteLog("Auto trading stopped");
+            }
+
+            if (CurContextValues.MyOrderBook.MyChaseOrderList.Count() == 0)
+            {
+                CurContextValues.WaitingBuyOrSell = false;
+            }
+
+            return true;
+
         }
 
 
@@ -614,7 +648,7 @@ namespace Multiplier
         //common 
         public List<String> TradeActionList { get; set; }
 
-        public TickerClient CurrentTicker; 
+        public TickerClient CurrentTicker;
 
         public string ProductName { get; set; }
         public string CurrentAction { get; set; }
@@ -634,17 +668,41 @@ namespace Multiplier
         public bool WaitingBuyFill { get; set; }
         public bool WaitingBuyOrSell { get; set; }
 
-        
+
         public DateTime LastTickerUpdateTime { get; set; }
         public DateTime LastBuySellTime { get; set; }
         public DateTime LastLargeSmaCrossTime { get; set; }
         public DateTime LastSmallSmaCrossTime { get; set; }
 
+        public EventHandler AutoTradingStartEvent;
+        public EventHandler AutoTradingStopEvent;
 
         public MyOrderBook MyOrderBook { get; set; }
 
         public bool UserStartedTrading { get; set; }
-        public bool StartAutoTrading { get; set; }
+
+
+        private bool _startAutoTrading; 
+        public bool StartAutoTrading
+        {
+            get { return _startAutoTrading; }
+            set
+            {
+                _startAutoTrading = value;
+                if (value == true)
+                {
+                    AutoTradingStartEvent?.Invoke(this, EventArgs.Empty);
+                    //Logger.WriteLog("Setting autotrasing to ON");
+                }
+                else
+                {
+                    AutoTradingStopEvent?.Invoke(this, EventArgs.Empty);
+                    //Logger.WriteLog("Setting autotrasing to OFF");
+                }
+            }
+        }
+
+
         public bool ForceSold { get; set; }
         
 
@@ -674,11 +732,11 @@ namespace Multiplier
 
             BuySellAmount = 0.01m;//default
 
-            CurrentLargeSmaTimeInterval = 5; //default
+            CurrentLargeSmaTimeInterval = 1; //default
             CurrentLargeSmaSlices = 40; //default
 
 
-            CurrentSmallSmaTimeInterval = 5; //default
+            CurrentSmallSmaTimeInterval = 1; //default
             CurrentSmallSmaSlices = 20; //default
 
             PriceBuffer = 0.05m; //default
@@ -707,6 +765,9 @@ namespace Multiplier
             LastSmallSmaCrossTime = DateTime.UtcNow.ToLocalTime();
 
         }
+
+        
+
 
     }
 

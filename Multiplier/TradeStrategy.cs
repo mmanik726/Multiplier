@@ -129,7 +129,7 @@ namespace Multiplier
         }
 
 
-        public async void CancelCurrentTradeAction(string action = "ALL")
+        public async Task<bool> CancelCurrentTradeAction(string action = "ALL")
         {
             //for each of the items in active order list cancel order
 
@@ -137,38 +137,65 @@ namespace Multiplier
 
             await Task.Run(() =>
             {
-                for (int i = 0; i < CurrentValues.MyOrderBook.MyChaseOrderList.Count; i++)
-                {
-                    //cancel each item
+                cancelActiveOrders(action);
+            }).ContinueWith((t) => t.Wait());
 
-                    if (action == "BUY" || CurrentValues.MyOrderBook.MyChaseOrderList.ElementAt(i).Side != "buy")
-                        continue;
+            
+            //var a = cancelActiveOrders(action);
+            //a.Wait();
+            
 
-                    if (action == "SELL" || CurrentValues.MyOrderBook.MyChaseOrderList.ElementAt(i).Side != "sell")
-                        continue;
 
-                    var curOrder = CurrentValues.MyOrderBook.MyChaseOrderList.ElementAt(i).OrderId;
-
-                    try
-                    {
-                        var cancelledOrder = CurrentValues.MyOrderBook.CancelSingleOrder(curOrder).Result;
-                    }
-                    catch (Exception ex)
-                    {
-                        Logger.WriteLog("Error cancelling order id " + curOrder + ex.InnerException.Message);
-                    }
-
-                    CurrentValues.MyOrderBook.RemoveFromOrderList(curOrder);
-
-                }
-            });
-
-            CurrentValues.StartAutoTrading = true;
-
+            //CurrentValues.StartAutoTrading = true;
+            return true;
         }
 
 
+        private async Task<bool> cancelActiveOrders(string action = "ALL")
+        {
+            for (int i = 0; i < CurrentValues.MyOrderBook.MyChaseOrderList.Count; i++)
+            {
+                //cancel each item
 
+                if (action == "BUY" && CurrentValues.MyOrderBook.MyChaseOrderList.ElementAt(i).Side != "buy")
+                    continue;
+
+                if (action == "SELL" && CurrentValues.MyOrderBook.MyChaseOrderList.ElementAt(i).Side != "sell")
+                    continue;
+
+                
+                var curOrderId = CurrentValues.MyOrderBook.MyChaseOrderList.ElementAt(i).OrderId;
+                var curOrder = CurrentValues.MyOrderBook.MyChaseOrderList.ElementAt(i);
+
+                try
+                {
+                    Logger.WriteLog(string.Format("trying to cancel {0} order ({1}) of {2} {3} @{4} ",
+                        curOrder.Side, curOrder.OrderId, curOrder.ProductSize, curOrder.Productname, curOrder.UsdPrice));
+                    var cancelledOrder = CurrentValues.MyOrderBook.CancelSingleOrder(curOrderId).Result;
+                    if (cancelledOrder.Count() > 0)
+                    {
+                        Logger.WriteLog(string.Format("order {0} has been manually cancelled", curOrderId));
+                        CurrentValues.MyOrderBook.RemoveFromOrderList(curOrderId);
+                    }
+                    else
+                    {
+                        Logger.WriteLog(string.Format("Order {0} could not be cancelled ", curOrderId));
+                    }
+
+                }
+                catch (Exception ex)
+                {
+
+                    Logger.WriteLog("Error cancelling order id " + curOrderId + " " + ex.InnerException?.Message);
+                }
+
+                Logger.WriteLog(string.Format("removing order {0} from watch list", curOrderId)); 
+
+                //CurrentValues.MyOrderBook.RemoveFromOrderList(curOrderId); 
+            }
+
+            return true;
+        }
 
 
 

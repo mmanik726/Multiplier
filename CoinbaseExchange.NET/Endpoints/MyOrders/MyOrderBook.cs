@@ -349,25 +349,48 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
 
         private void UpdateOrderListWithServer(List<Order> orders)
         {
+            if (orders == null)
+                return; 
+            
             //busy waiting
             while (isUpdatingOrderList)
                 Logger.WriteLog("waiting for order list update lock release");
 
             var openServerOderList = orders.Select((x) => x.Id).ToList();
 
-            isUpdatingOrderList = true;
 
-            //remove all the items from the watch list that does not exists in the servers open oders list
-            try
+            //var otherWiseFilledOrders = MyChaseOrderList.Select((o) => !openServerOderList.Contains(o.OrderId));
+            var otherWiseFilledOrders = from o in MyChaseOrderList
+                                        where !openServerOderList.Contains(o.OrderId)
+                                        select o;
+
+            var tmepList = MyChaseOrderList.Where((o) => !openServerOderList.Contains(o.OrderId)).Select((o) => o);
+
+
+            //order ids should not be removed here since the notify method will determine if should be rmeoved
+            //////isUpdatingOrderList = true;
+            ////////remove all the items from the watch list that does not exists in the servers open oders list
+            //////try
+            //////{
+            //////    MyChaseOrderList.RemoveAll((item) => !openServerOderList.Contains(item.OrderId));
+            //////}
+            //////catch (Exception)
+            //////{
+            //////    Logger.WriteLog("Error removing orders from active orderlist that are already filled in server after ticker reconnect");
+            //////    //throw;
+            //////}
+            //////isUpdatingOrderList = false;
+
+
+            if (otherWiseFilledOrders.Count() > 0)
+                Logger.WriteLog(string.Format("Notifying {0} otherwise filled orders, removing if filled", otherWiseFilledOrders.Count().ToString()));
+
+            foreach (var filledOrder in otherWiseFilledOrders)
             {
-                MyChaseOrderList.RemoveAll((item) => !openServerOderList.Contains(item.OrderId));
+                NotifyFilledOtherWise(filledOrder.OrderId);
             }
-            catch (Exception)
-            {
-                Logger.WriteLog("Error removing orders from active orderlist that are already filled in server after ticker reconnect");
-                //throw;
-            }
-            isUpdatingOrderList = false;
+
+
         }
 
 
@@ -550,22 +573,7 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
                     {
                         Logger.WriteLog("Order already done " + myCurrentOrder.OrderId);
 
-                        var doneOrder = GetSingleOrder(myCurrentOrder.OrderId);
-                        doneOrder.Wait();
-
-                        if(doneOrder.Result != null)
-                        {
-                            Fill fakeFill = new Fill(doneOrder.Result);
-                            List<Fill> fakeFilList = (new List<Fill>());
-                            fakeFilList.Add(fakeFill);
-
-                            //this will remove the order from watch list 
-                            //also if order is partially filled this will be taken care of 
-                            //in the follwoing functino
-                            Logger.WriteLog("Assuming the order has been filled either partially or fully");
-                            fillsClient.OrderFilledEvent(fakeFilList); // notify order filled
-                        }
-
+                        NotifyFilledOtherWise(myCurrentOrder.OrderId);
                     }
 
                     continue; //continue and try again to cancel and reorder
@@ -573,9 +581,10 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
                 }
 
                 //remove the order from the watch list if cancelled above
+                //cancelledOrder only indicates if cancelled or not. does not contain any data
                 if (cancelledOrder.Count() > 0)
                 {
-                    RemoveFromOrderList(cancelledOrder.FirstOrDefault());
+                    RemoveFromOrderList(myCurrentOrder.OrderId); //notice how myCurrentOrder.OrderId is used instead of cancelledOrder.first()
                 }
 
 
@@ -693,6 +702,26 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
             return true;
         }
 
+
+        private void NotifyFilledOtherWise(string orderId)
+        {
+            var doneOrder = GetSingleOrder(orderId);
+            doneOrder.Wait();
+
+            if (doneOrder.Result != null)
+            {
+                Fill fakeFill = new Fill(doneOrder.Result);
+                List<Fill> fakeFilList = (new List<Fill>());
+                fakeFilList.Add(fakeFill);
+
+                //this will remove the order from watch list 
+                //also if order is partially filled this will be taken care of 
+                //in the follwoing functino
+                Logger.WriteLog(string.Format("Assuming order {0} has been filled either partially or fully"), orderId);
+                fillsClient.OrderFilledEvent(fakeFilList); // notify order filled
+            }
+        }
+
         public void RemoveFromOrderList(string orderId)
         {
             //busy waiting
@@ -746,7 +775,7 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
             orderBodyObj.Add(new JProperty("price", oPrice));
             orderBodyObj.Add(new JProperty("size", oSize));
 
-            //if(orderType == "limit")
+            //if (orderType == "limit")
             //    orderBodyObj.Add(new JProperty("post_only", "T"));
 
             if (OrderStartingPrice == 0) //not yet set
