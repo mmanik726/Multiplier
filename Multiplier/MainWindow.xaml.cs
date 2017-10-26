@@ -823,6 +823,11 @@ namespace Multiplier
 
         private async void btnStopAndCancel_Click(object sender, RoutedEventArgs e)
         {
+            if (!AutoTradingOn)
+            {
+                MessageBox.Show("Auto trading has not been started yet");
+                return;
+            }
 
             Dispatcher.Invoke(() => btnStopAndCancel.IsEnabled = false);
             await ProductManager.StopAndCancel().ContinueWith((t) => t.Wait());

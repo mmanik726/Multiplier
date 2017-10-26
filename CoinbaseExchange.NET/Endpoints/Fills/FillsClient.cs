@@ -173,8 +173,7 @@ namespace CoinbaseExchange.NET.Endpoints.Fills
             Fill fakeFilList = null;
             if (doneOrder.Result != null)
             {
-                Fill fakeFill = new Fill(doneOrder.Result);
-                //fakeFilList.Add(fakeFill);
+                fakeFilList = new Fill(doneOrder.Result);
             }
 
             return fakeFilList;
@@ -255,7 +254,7 @@ namespace CoinbaseExchange.NET.Endpoints.Fills
                 var myCurrentOrder = FillWatchList[orderIndex];
 
                 //when checking the same order after the first time
-                if (FillWatchList[orderIndex].Status == "PARTIALLY_FILLED")
+                if (FillWatchList[orderIndex].Status != "PARTIALLY_FILLED")
                 {
 
                     Logger.WriteLog(string.Format("{0} order({1}) of {2} {3} filled partially with following sizes:",
@@ -278,6 +277,10 @@ namespace CoinbaseExchange.NET.Endpoints.Fills
 
 
                 }
+
+                //set the current order in the list to partially filled
+                //FillWatchList[orderIndex].Status = "PARTIALLY_FILLED";
+
             }
 
 
@@ -351,45 +354,45 @@ namespace CoinbaseExchange.NET.Endpoints.Fills
                     var currentOrder = FillWatchList.ElementAt(i);
 
 
-                    //order checking method 1
-                    FillResponse orderStat = null;
+                    ////////order checking method 1
+                    //////FillResponse orderStat = null;
+                    //////try
+                    //////{
+                    //////    orderStat = GetFillStatus(currentOrder?.OrderId).Result;
+                    //////}
+                    //////catch (Exception)
+                    //////{
+                    //////    Logger.WriteLog("Error getting fill response");
+                    //////}
+
+                    //////if (orderStat?.Fills.Count > 0)
+                    //////{
+                    //////    //BusyCheckingOrder = false;
+                    //////    OrderFilledEvent(orderStat.Fills);
+                    //////}
+
+
+
+                    ////order checking method 2
+                    Fill orderStat = null;
                     try
                     {
-                        orderStat = GetFillStatus(currentOrder?.OrderId).Result;
+                        orderStat = GetOrderStatus(currentOrder?.OrderId).Result;
                     }
-                    catch (Exception)
+                    catch (Exception ex)
                     {
-                        Logger.WriteLog("Error getting fill response");
+                        Logger.WriteLog("Error getting order status response");
                     }
 
-                    if (orderStat?.Fills.Count > 0)
+                    if (orderStat != null)
                     {
-                        //BusyCheckingOrder = false;
-                        OrderFilledEvent(orderStat.Fills);
+                        if (Convert.ToDecimal(orderStat.Size) > 0)
+                        {
+                            var tempList = new List<Fill>();
+                            tempList.Add(orderStat);
+                            OrderFilledEvent(tempList);
+                        }
                     }
-
-
-
-                    //order checking method 2
-                    //Fill orderStat = null;
-                    //try
-                    //{
-                    //    orderStat = GetOrderStatus(currentOrder?.OrderId).Result;
-                    //}
-                    //catch (Exception ex)
-                    //{
-                    //    Logger.WriteLog("Error getting fill response");
-                    //}
-
-                    //if (orderStat != null)
-                    //{
-                    //    if (Convert.ToDecimal(orderStat.Size) > 0)
-                    //    {
-                    //        var tempList = new List<Fill>();
-                    //        tempList.Add(orderStat);
-                    //        OrderFilledEvent(tempList);
-                    //    }
-                    //}
 
 
                     Thread.Sleep(300);

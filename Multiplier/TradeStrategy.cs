@@ -210,7 +210,11 @@ namespace Multiplier
 
             try
             {
+                //limit order
                 var buyResult = await CurrentValues.MyOrderBook.PlaceNewOrder("buy", CurrentValues.ProductName, CurrentValues.BuySellAmount.ToString(), CurrentValues.CurrentBufferedPrice.ToString(), true);
+
+                //market order
+                //var buyResult = await CurrentValues.MyOrderBook.PlaceNewOrder("buy", CurrentValues.ProductName, CurrentValues.BuySellAmount.ToString(), CurrentValues.CurrentBufferedPrice.ToString(), true, "market");
 
                 //wait for the buy operation
                 if (buyResult == null)
@@ -252,7 +256,11 @@ namespace Multiplier
 
             try
             {
+                //limit order
                 var sellResult = await CurrentValues.MyOrderBook.PlaceNewOrder("sell", CurrentValues.ProductName, CurrentValues.BuySellAmount.ToString(), CurrentValues.CurrentBufferedPrice.ToString(), true);
+                
+                //market order 
+                //var sellResult = await CurrentValues.MyOrderBook.PlaceNewOrder("sell", CurrentValues.ProductName, CurrentValues.BuySellAmount.ToString(), CurrentValues.CurrentBufferedPrice.ToString(), true, "market");
 
                 //wait for the sell result
                 if (sellResult == null)

@@ -175,21 +175,43 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
         private static List<Order> GetOrderListFromJson(string jsonString)
         {
 
-            //JObject jsonObj = new JObject(jsonString);
-
-            var jsonArray = JArray.Parse(jsonString);
-
+            JToken JsonToken = null;
             List<Order> orders = new List<Order>();
+            try
+            {
+                JsonToken = JToken.Parse(jsonString);
+            }
+            catch (Exception)
+            {
+                Logger.WriteLog("Json parse error");
+                return orders;
+            }
 
-            foreach (var obj in jsonArray)
+
+            //var jList = jsonArray.Select((item) => item);
+
+            if (JsonToken is JArray)
+            {
+                foreach (var obj in JsonToken)
+                {
+                    try
+                    {
+                        orders.Add(JsonConvert.DeserializeObject<Order>(obj.ToString()));
+                    }
+                    catch (Exception)
+                    {
+                        throw new Exception("JsonParseError");
+                    }
+                }
+            }
+            else if (JsonToken is JObject)
             {
                 try
                 {
-                    orders.Add(JsonConvert.DeserializeObject<Order>(obj.ToString()));
+                    orders.Add(JsonConvert.DeserializeObject<Order>(JsonToken.ToString()));
                 }
                 catch (Exception)
                 {
-
                     throw new Exception("JsonParseError");
                 }
             }
@@ -521,7 +543,7 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
                 {
                     //change the order size to the remaining of unfilled 
                     var UnfilledAmount = myCurrentOrder.ProductSize - myCurrentOrder.FilledSize;
-                    if (UnfilledAmount <= 0)
+                    if (UnfilledAmount < 0.01m) //smallest size possible to trade 
                         UnfilledAmount = 0.01m;
                     myCurrentOrder.ProductSize = UnfilledAmount; //myCurrentOrder.ProductSize - myCurrentOrder.FilledSize;
                     //myCurrentOrder.Status = "OPEN";
@@ -540,10 +562,23 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
                 try
                 {
                     //pratially filled order already cancelled in FillCLients filled event
-                    if (myCurrentOrder.Status != "PARTIALLY_FILLED")
-                        cancelledOrder = CancelSingleOrder(myCurrentOrder.OrderId).Result;
-                    else
+                    if (myCurrentOrder.Status == "PARTIALLY_FILLED")
+                    {
                         myCurrentOrder.Status = "OPEN";
+                        //remove the partially filled order id from watch list 
+                        //new id will be added to watch list when a new order is placed
+                        RemoveFromOrderList(myCurrentOrder.OrderId);
+                    }
+                    else
+                    {
+                        cancelledOrder = CancelSingleOrder(myCurrentOrder.OrderId).Result;
+                        //remove the order from the watch list if cancelled
+                        //cancelledOrder only indicates if cancelled or not. does not contain any data
+                        if (cancelledOrder.Count() > 0)
+                        {
+                            RemoveFromOrderList(myCurrentOrder.OrderId); //notice how myCurrentOrder.OrderId is used instead of cancelledOrder.first()
+                        }
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -580,14 +615,6 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
                     //throw;
                 }
 
-                //remove the order from the watch list if cancelled above
-                //cancelledOrder only indicates if cancelled or not. does not contain any data
-                if (cancelledOrder.Count() > 0)
-                {
-                    RemoveFromOrderList(myCurrentOrder.OrderId); //notice how myCurrentOrder.OrderId is used instead of cancelledOrder.first()
-                }
-
-
 
                 Logger.WriteLog(string.Format("\tCancelled {0} order ({1}): {2} {3} @{4}", 
                     myCurrentOrder.Side, myCurrentOrder.OrderId, myCurrentOrder.ProductSize, myCurrentOrder.Productname, 
@@ -608,7 +635,7 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
                 //OrderStartingPrice = adjustedPrice;
 
                 //var priceChangePercent = PriceTicker.CurrentPrice * 10.00m;//0.0025m; //for testing
-                var priceChangePercent = PriceTicker.CurrentPrice * 0.0025m;
+                var priceChangePercent = PriceTicker.CurrentPrice * 0.0010m; // 0.0025m
 
                 if (OrderRetriedCount <= 13 && curPriceDifference <= priceChangePercent) // retry a total of 15 times or while less than a "big jump"
                 {
@@ -717,7 +744,7 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
                 //this will remove the order from watch list 
                 //also if order is partially filled this will be taken care of 
                 //in the follwoing functino
-                Logger.WriteLog(string.Format("Assuming order {0} has been filled either partially or fully"), orderId);
+                Logger.WriteLog(string.Format("Assuming order {0} has been filled either partially or fully", orderId));
                 fillsClient.OrderFilledEvent(fakeFilList); // notify order filled
             }
         }

@@ -732,12 +732,12 @@ namespace Multiplier
 
             BuySellAmount = 0.01m;//default
 
-            CurrentLargeSmaTimeInterval = 1; //default
-            CurrentLargeSmaSlices = 40; //default
+            CurrentLargeSmaTimeInterval = 3; //default
+            CurrentLargeSmaSlices = 60; //default
 
 
-            CurrentSmallSmaTimeInterval = 1; //default
-            CurrentSmallSmaSlices = 20; //default
+            CurrentSmallSmaTimeInterval = 3; //default
+            CurrentSmallSmaSlices = 55; //default
 
             PriceBuffer = 0.05m; //default
 
