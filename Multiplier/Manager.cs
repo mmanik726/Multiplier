@@ -147,7 +147,8 @@ namespace Multiplier
             //currentTradeStrategy = new TradeStrategyB(ref CurContextValues);
             //currentTradeStrategy = new TradeStrategyC(ref CurContextValues);
             //currentTradeStrategy = new TradeStrategyB(ref CurContextValues);
-            currentTradeStrategy = new TradeStrategyD(ref CurContextValues);
+            //currentTradeStrategy = new TradeStrategyD(ref CurContextValues);
+            currentTradeStrategy = new TradeStrategyE(ref CurContextValues);
 
             currentTradeStrategy.CurrentActionChangedEvent += CUrrentActionChangeEventHandler;
 
