@@ -29,7 +29,7 @@ namespace Multiplier
 
         private MovingAverage SmaLarge { get; set; }
 
-        private MovingAverage SmaSmall { get; set; }
+        //private MovingAverage SmaSmall { get; set; }
 
         private CBAuthenticationContainer MyAuth { get; set; }
         private MyOrderBook MyProductOrderBook;
@@ -43,7 +43,7 @@ namespace Multiplier
         public EventHandler TickerPriceUpdateEvent;
         public EventHandler OrderFilledEvent;
         public EventHandler SmaLargeUpdateEvent;
-        public EventHandler SmaSmallUpdateEvent;
+        //public EventHandler SmaSmallUpdateEvent;
         public EventHandler BuySellBufferChangedEvent;
         public EventHandler BuySellAmountChangedEvent;
 
@@ -137,8 +137,8 @@ namespace Multiplier
             SmaLarge = new MovingAverage(ref ProductTickerClient, ProductName, CurContextValues.CurrentLargeSmaTimeInterval, CurContextValues.CurrentLargeSmaSlices);
             SmaLarge.MovingAverageUpdated += SmaLargeChangedEventHandler;
 
-            SmaSmall = new MovingAverage(ref ProductTickerClient, ProductName, CurContextValues.CurrentSmallSmaTimeInterval, CurContextValues.CurrentSmallSmaSlices);
-            SmaSmall.MovingAverageUpdated += SmaSmallChangedEventHandler;
+            //SmaSmall = new MovingAverage(ref ProductTickerClient, ProductName, CurContextValues.CurrentSmallSmaTimeInterval, CurContextValues.CurrentSmallSmaSlices);
+            //SmaSmall.MovingAverageUpdated += SmaSmallChangedEventHandler;
 
             Logger.WriteLog(string.Format("{0} manager started", ProductName));
 
@@ -482,33 +482,33 @@ namespace Multiplier
 
         }
 
-        public async Task<bool> UpdateSmallSmaParameters(int InputTimerInterval, int InputSlices, bool forceRedownload = false)
-        {
+        //public async Task<bool> UpdateSmallSmaParameters(int InputTimerInterval, int InputSlices, bool forceRedownload = false)
+        //{
 
-            try
-            {
-                var x = await Task.Run(() => SmaSmall.updateValues(InputTimerInterval, InputSlices, forceRedownload));
-                if (x == true) //wait for task to complete above
-                {
-                    //Logger.WriteLog(x.ToString()); //done;
-                }
+        //    try
+        //    {
+        //        var x = await Task.Run(() => SmaSmall.updateValues(InputTimerInterval, InputSlices, forceRedownload));
+        //        if (x == true) //wait for task to complete above
+        //        {
+        //            //Logger.WriteLog(x.ToString()); //done;
+        //        }
 
 
-                //temporary solution
-                var smallestSmaInterval = InputTimerInterval;
-                var smallestSmaSlices = Math.Round(InputSlices / 2.0m, 0);
-                await Task.Run(()=> currentTradeStrategy.updateSmallestSma(smallestSmaInterval, Convert.ToInt32(smallestSmaSlices)));
+        //        //temporary solution
+        //        var smallestSmaInterval = InputTimerInterval;
+        //        var smallestSmaSlices = Math.Round(InputSlices / 2.0m, 0);
+        //        await Task.Run(()=> currentTradeStrategy.updateSmallestSma(smallestSmaInterval, Convert.ToInt32(smallestSmaSlices)));
                 
 
-                return true;
-            }
-            catch (Exception ex)
-            {
-                Logger.WriteLog("Error occured while updating SMA parameters: " + ex.Message);
-                return false;
-            }
+        //        return true;
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        Logger.WriteLog("Error occured while updating SMA parameters: " + ex.Message);
+        //        return false;
+        //    }
 
-        }
+        //}
 
 
         private void SmaLargeChangedEventHandler(object sender, EventArgs args)
@@ -535,26 +535,26 @@ namespace Multiplier
             SmaLargeUpdateEvent?.Invoke(this, currentSmaData);
         }
 
-        private void SmaSmallChangedEventHandler(object sender, EventArgs args)
-        {
+        //private void SmaSmallChangedEventHandler(object sender, EventArgs args)
+        //{
 
-            var currentSmaData = (MAUpdateEventArgs)args;
-            decimal newSmaPrice = currentSmaData.CurrentMAPrice;
+        //    var currentSmaData = (MAUpdateEventArgs)args;
+        //    decimal newSmaPrice = currentSmaData.CurrentMAPrice;
 
-            CurContextValues.CurrentSmallSmaPrice = newSmaPrice;
+        //    CurContextValues.CurrentSmallSmaPrice = newSmaPrice;
 
-            CurContextValues.CurrentSmallSmaSlices = currentSmaData.CurrentSlices;// InputSlices;
-            CurContextValues.CurrentSmallSmaTimeInterval = currentSmaData.CurrentTimeInterval; // InputTimerInterval;
-            CurContextValues.WaitTimeAfterSmallSmaCrossInMin = CurContextValues.CurrentSmallSmaTimeInterval;
-
-
-            var msg = string.Format("Small SMA updated: {0} (Time interval: {1} Slices: {2})", newSmaPrice, 
-                CurContextValues.CurrentSmallSmaTimeInterval, CurContextValues.CurrentSmallSmaSlices);
-            Logger.WriteLog(msg);
+        //    CurContextValues.CurrentSmallSmaSlices = currentSmaData.CurrentSlices;// InputSlices;
+        //    CurContextValues.CurrentSmallSmaTimeInterval = currentSmaData.CurrentTimeInterval; // InputTimerInterval;
+        //    CurContextValues.WaitTimeAfterSmallSmaCrossInMin = CurContextValues.CurrentSmallSmaTimeInterval;
 
 
-            SmaSmallUpdateEvent?.Invoke(this, currentSmaData);
-        }
+        //    var msg = string.Format("Small SMA updated: {0} (Time interval: {1} Slices: {2})", newSmaPrice, 
+        //        CurContextValues.CurrentSmallSmaTimeInterval, CurContextValues.CurrentSmallSmaSlices);
+        //    Logger.WriteLog(msg);
+
+
+        //    SmaSmallUpdateEvent?.Invoke(this, currentSmaData);
+        //}
 
         public void UpdateBuySellBuffer(decimal newPriceBuffer, bool useInverse = false)
         {
@@ -673,7 +673,7 @@ namespace Multiplier
         public DateTime LastTickerUpdateTime { get; set; }
         public DateTime LastBuySellTime { get; set; }
         public DateTime LastLargeSmaCrossTime { get; set; }
-        public DateTime LastSmallSmaCrossTime { get; set; }
+        //public DateTime LastSmallSmaCrossTime { get; set; }
 
         public EventHandler AutoTradingStartEvent;
         public EventHandler AutoTradingStopEvent;
@@ -714,11 +714,11 @@ namespace Multiplier
         public double WaitTimeAfterLargeSmaCrossInMin { get; set; }
 
 
-        //small sma
-        public decimal CurrentSmallSmaPrice { get; set; }
-        public int CurrentSmallSmaSlices { get; set; }
-        public int CurrentSmallSmaTimeInterval { get; set; }
-        public double WaitTimeAfterSmallSmaCrossInMin { get; set; }
+        ////small sma
+        //public decimal CurrentSmallSmaPrice { get; set; }
+        //public int CurrentSmallSmaSlices { get; set; }
+        //public int CurrentSmallSmaTimeInterval { get; set; }
+        //public double WaitTimeAfterSmallSmaCrossInMin { get; set; }
 
 
         public ContextValues(ref MyOrderBook orderBook, ref TickerClient inputTicker)
@@ -737,8 +737,8 @@ namespace Multiplier
             CurrentLargeSmaSlices = 60; //default
 
 
-            CurrentSmallSmaTimeInterval = 3; //default
-            CurrentSmallSmaSlices = 55; //default
+            //CurrentSmallSmaTimeInterval = 3; //default
+            //CurrentSmallSmaSlices = 55; //default
 
             PriceBuffer = 0.05m; //default
 
@@ -763,7 +763,7 @@ namespace Multiplier
 
 
             LastLargeSmaCrossTime = DateTime.UtcNow.ToLocalTime();
-            LastSmallSmaCrossTime = DateTime.UtcNow.ToLocalTime();
+            //LastSmallSmaCrossTime = DateTime.UtcNow.ToLocalTime();
 
         }
 

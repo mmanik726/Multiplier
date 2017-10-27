@@ -304,38 +304,40 @@ namespace Multiplier
 
 
         }
-        public void SmaSmallUpdateEventHandler(object sender, EventArgs args)
-        {
-            var currentSmaData = (MAUpdateEventArgs)args;
-            decimal newSmaPrice = currentSmaData.CurrentMAPrice;
 
-            //MessageBox.Show("handling sma update");
+        //public void SmaSmallUpdateEventHandler(object sender, EventArgs args)
+        //{
+        //    //var currentSmaData = (MAUpdateEventArgs)args;
+        //    //decimal newSmaPrice = currentSmaData.CurrentMAPrice;
+
+        //    ////MessageBox.Show("handling sma update");
             
 
-            sharedCurrentLargeSmaPrice = currentSmaData.CurrentMAPrice; 
+        //    //sharedCurrentLargeSmaPrice = currentSmaData.CurrentMAPrice; 
 
-            //var x = this.Dispatcher.Invoke(() => chkUseSd.IsChecked);
-            //if (x == true)
-            //{
-            //    //LTCManager.UpdateBuySellBuffer(currentSmaData.CurrentSd);
+        //    ////var x = this.Dispatcher.Invoke(() => chkUseSd.IsChecked);
+        //    ////if (x == true)
+        //    ////{
+        //    ////    //LTCManager.UpdateBuySellBuffer(currentSmaData.CurrentSd);
 
-            //    bool isUseInvers = (bool)Dispatcher.Invoke(() => chkUseInverse.IsChecked);
+        //    ////    bool isUseInvers = (bool)Dispatcher.Invoke(() => chkUseInverse.IsChecked);
 
-            //    LTCManager.UpdateBuySellBuffer(currentSmaData.CiBuffer, isUseInvers); //use the 95% confidence interval buffer
-            //}
+        //    ////    LTCManager.UpdateBuySellBuffer(currentSmaData.CiBuffer, isUseInvers); //use the 95% confidence interval buffer
+        //    ////}
 
-            this.Dispatcher.Invoke(() =>
-            {
-                lblSmaSmall.Content = Math.Round(newSmaPrice, 4);
-            //lblUpdatedTime.Content = DateTime.UtcNow.ToLocalTime().ToLongTimeString();
-            //lblSmaValue.Content = "SMA-" + currentSmaData.CurrentSlices.ToString() + " (" + currentSmaData.CurrentTimeInterval.ToString() + " min)";
-                lblSmallSd.Content = Math.Round(currentSmaData.CurrentSd, 4);
-                btnUpdateSmallSma.IsEnabled = true;
-                //txtPriceBuffer.Text = currentSmaData.CurrentSd.ToString();
-            });
+        //    //this.Dispatcher.Invoke(() =>
+        //    //{
+        //    //    lblSmaSmall.Content = Math.Round(newSmaPrice, 4);
+        //    ////lblUpdatedTime.Content = DateTime.UtcNow.ToLocalTime().ToLongTimeString();
+        //    ////lblSmaValue.Content = "SMA-" + currentSmaData.CurrentSlices.ToString() + " (" + currentSmaData.CurrentTimeInterval.ToString() + " min)";
+        //    //    lblSmallSd.Content = Math.Round(currentSmaData.CurrentSd, 4);
+        //    //    btnUpdateSmallSma.IsEnabled = true;
+        //    //    //txtPriceBuffer.Text = currentSmaData.CurrentSd.ToString();
+        //    //});
 
 
-        }
+        //}
+
         public void TickerPriceUpdateEventHandler(object sender, EventArgs args)
         {
             var tickerData = (TickerMessage)args;
@@ -622,46 +624,46 @@ namespace Multiplier
         private async void btnUpdateSmallSma_Click(object sender, RoutedEventArgs e)
         {
 
-            int timeInt = 3;
-            int slices = 20;
+            //int timeInt = 3;
+            //int slices = 20;
 
-            try
-            {
-                timeInt = Convert.ToInt16(txtSmallSmaInterval.Text);
-                slices = Convert.ToInt16(txtSmallSmaSlices.Text);
+            //try
+            //{
+            //    timeInt = Convert.ToInt16(txtSmallSmaInterval.Text);
+            //    slices = Convert.ToInt16(txtSmallSmaSlices.Text);
 
-                if (timeInt < 1)
-                {
-                    MessageBox.Show("time interval cannot be less than 1 min");
-                    return;
-                }
+            //    if (timeInt < 1)
+            //    {
+            //        MessageBox.Show("time interval cannot be less than 1 min");
+            //        return;
+            //    }
 
-                if (slices <= 1)
-                {
-                    MessageBox.Show("slices cannot be 1 min or less than 1 min");
-                    return;
-                }
+            //    if (slices <= 1)
+            //    {
+            //        MessageBox.Show("slices cannot be 1 min or less than 1 min");
+            //        return;
+            //    }
 
-                btnUpdateSmallSma.IsEnabled = false;
+            //    btnUpdateSmallSma.IsEnabled = false;
 
-                try
-                {
-                    await ProductManager.UpdateSmallSmaParameters(timeInt, slices, true);
-                }
-                catch (Exception)
-                {
-                    var msg = "Error occured  in sma calculations. Please check the numbers. default values used";
-                    MessageBox.Show(msg);
-                    Logger.WriteLog(msg);
-                    //throw;
-                }
+            //    try
+            //    {
+            //        await ProductManager.UpdateSmallSmaParameters(timeInt, slices, true);
+            //    }
+            //    catch (Exception)
+            //    {
+            //        var msg = "Error occured  in sma calculations. Please check the numbers. default values used";
+            //        MessageBox.Show(msg);
+            //        Logger.WriteLog(msg);
+            //        //throw;
+            //    }
 
 
-            }
-            catch (Exception)
-            {
-                MessageBox.Show("invalid sma values");
-            }
+            //}
+            //catch (Exception)
+            //{
+            //    MessageBox.Show("invalid sma values");
+            //}
 
         }
 
@@ -790,7 +792,7 @@ namespace Multiplier
             ProductManager.OrderFilledEvent += OrderFilledEventHandler;
             //LTCManager.SmaParametersUpdatedEvent += SmaParametersUpdatedEventHandler;
             ProductManager.SmaLargeUpdateEvent += SmaLargeUpdateEventHandler;
-            ProductManager.SmaSmallUpdateEvent += SmaSmallUpdateEventHandler;
+            //ProductManager.SmaSmallUpdateEvent += SmaSmallUpdateEventHandler;
 
             ProductManager.TickerPriceUpdateEvent += TickerPriceUpdateEventHandler;
             ProductManager.AutoTradingStartedEvent += AutoTradingStartedEventHandler;
