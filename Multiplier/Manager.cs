@@ -68,9 +68,9 @@ namespace Multiplier
 
         }
 
-        public async void InitializeManager(string productName)
+        public async void InitializeManager(string productName, IntervalValues intervalValues = null)
         {
-            await Task.Factory.StartNew(() => InitManager(productName));
+            await Task.Factory.StartNew(() => InitManager(productName, intervalValues));
             await Task.Factory.StartNew(() => CheckTicker());
         }
 
@@ -95,7 +95,7 @@ namespace Multiplier
         }
 
 
-        private void InitManager(string ProductName)
+        private void InitManager(string ProductName, IntervalValues intervalValues)
         {
 
 
@@ -148,7 +148,11 @@ namespace Multiplier
             //currentTradeStrategy = new TradeStrategyC(ref CurContextValues);
             //currentTradeStrategy = new TradeStrategyB(ref CurContextValues);
             //currentTradeStrategy = new TradeStrategyD(ref CurContextValues);
-            currentTradeStrategy = new TradeStrategyE(ref CurContextValues);
+
+            if (intervalValues == null)
+                intervalValues = new IntervalValues(5, 3, 1);
+
+            currentTradeStrategy = new TradeStrategyE(ref CurContextValues, intervalValues);
 
             currentTradeStrategy.CurrentActionChangedEvent += CUrrentActionChangeEventHandler;
 
@@ -158,6 +162,26 @@ namespace Multiplier
             
 
         }
+
+
+        public async void UpdateIntervals(IntervalValues intervalValues)
+        {
+            currentTradeStrategy.Dispose();
+            currentTradeStrategy = null;
+
+            if (CurContextValues.UserStartedTrading)
+                CurContextValues.StartAutoTrading = false;
+
+            await Task.Run(() => currentTradeStrategy = new TradeStrategyE(ref CurContextValues, intervalValues)).ContinueWith((t)=>t.Wait());
+
+            if (CurContextValues.UserStartedTrading)
+                CurContextValues.StartAutoTrading = true;
+
+
+        }
+
+
+
 
         private void TickerDisconnectedHandler(object sender, EventArgs e)
         {
@@ -427,7 +451,7 @@ namespace Multiplier
                     CurContextValues.LastBuySellTime = DateTime.UtcNow.ToLocalTime();
 
                     //buysell();
-                    currentTradeStrategy.Trade();
+                    currentTradeStrategy?.Trade();
 
                 }
                 else
@@ -642,6 +666,22 @@ namespace Multiplier
         public int NewTimeinterval { get; set; }
         public decimal NewSlices { get; set; }
     }
+
+
+    public class IntervalValues
+    {
+        public int LargeIntervalInMin { get; set; }
+        public int MediumIntervalInMin { get; set; }
+        public int SmallIntervalInMin { get; set; }
+
+        public IntervalValues(int largeInterval, int mediumInterval, int smallInterval)
+        {
+            LargeIntervalInMin = largeInterval;
+            MediumIntervalInMin = mediumInterval;
+            SmallIntervalInMin = smallInterval;
+        }
+    }
+
 
     public class ContextValues
     {

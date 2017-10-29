@@ -10,7 +10,7 @@ using CoinbaseExchange.NET.Data;
 
 namespace Multiplier
 {
-    public abstract class TradeStrategyBase
+    public abstract class TradeStrategyBase : IDisposable
     {
         internal ContextValues CurrentValues;
 
@@ -293,8 +293,12 @@ namespace Multiplier
             }
         }
 
+        public virtual void Dispose()
+        {
 
-
+            Logger.WriteLog("dipose method in base class TradeStrategyBase");
+            //throw new NotImplementedException();
+        }
     }
 
 
@@ -701,17 +705,38 @@ namespace Multiplier
 
         SmaValues SmallIntervalSmaValues;
 
-        public TradeStrategyE(ref ContextValues inputContextValues) : base(ref inputContextValues)
+        SmaValues TinyIntervalSmaValues;
+
+        //SmaGroup LargeSmaGroup;
+        //SmaGroup SmallSmaGroup;
+
+
+        public TradeStrategyE(ref ContextValues inputContextValues, IntervalValues intervalValues) : base(ref inputContextValues)
         {
             SetCurrentAction("NOT_SET");
             LastBuyAtPrice = 0;
             LastSellAtPrice = 0;
 
-            BigIntervalSmaValues = new SmaValues(ref inputContextValues, 3, 60, 55, 28);
-            SmallIntervalSmaValues = new SmaValues(ref inputContextValues, 1, 60, 55, 28);
+            BigIntervalSmaValues = new SmaValues("BigInterval", ref inputContextValues, intervalValues.LargeIntervalInMin, 60, 55, 28);
+            SmallIntervalSmaValues = new SmaValues("SmallInterval", ref inputContextValues, intervalValues.MediumIntervalInMin, 60, 55, 28);
+            TinyIntervalSmaValues = new SmaValues("TinyInterval", ref inputContextValues, intervalValues.SmallIntervalInMin, 60, 55, 28);
+
+
+            //LargeSmaGroup = new SmaGroup();
+            //LargeSmaGroup.SetGroup(SmallIntervalSmaValues, BigIntervalSmaValues);
+
+            //SmallSmaGroup = new SmaGroup();
+            //SmallSmaGroup.SetGroup(TinyIntervalSmaValues, SmallIntervalSmaValues); 
 
         }
 
+        public override void Dispose()
+        {
+            base.Dispose();
+            BigIntervalSmaValues.Dispose();
+            SmallIntervalSmaValues.Dispose();
+            TinyIntervalSmaValues.Dispose();
+        }
 
 
         public override async void Trade()
@@ -724,12 +749,16 @@ namespace Multiplier
 
             SmallIntervalSmaValues.DetermineBuySell();
 
+            TinyIntervalSmaValues.DetermineBuySell();
+
+
 
             var curPrice = CurrentValues.CurrentBufferedPrice;
 
             if (!CurrentValues.BuyOrderFilled) // not bought yet
             {
-                if (SmallIntervalSmaValues.Buy && BigIntervalSmaValues.Buy)
+                //if (SmallIntervalSmaValues.Buy && BigIntervalSmaValues.Buy)
+                if (TinyIntervalSmaValues.Buy && SmallIntervalSmaValues.Buy && BigIntervalSmaValues.Buy)
                 {
                     TradeUsing(BigIntervalSmaValues);
                 }
@@ -740,19 +769,30 @@ namespace Multiplier
 
             if (!CurrentValues.SellOrderFilled) // not sold yet
             {
-                
-                var priceDiffFromBuyTime = Math.Abs(curPrice - LastBuyAtPrice);
-                if (priceDiffFromBuyTime == curPrice)
+             
+                var priceDiffFromBuyTime = (curPrice - LastBuyAtPrice);
+                if (Math.Abs(priceDiffFromBuyTime) == curPrice)
                     priceDiffFromBuyTime = 0;
                 var priceDiffPercent = Math.Round((priceDiffFromBuyTime / curPrice) * 100, 4);
+                //Logger.WriteLog(string.Format("price change {0} {1}%", priceDiffFromBuyTime, priceDiffPercent));
 
-                if (priceDiffPercent > 20)
+                if (priceDiffPercent > 1.50m)
                 {
-                    TradeUsing(SmallIntervalSmaValues);
+                    var intervalReason = string.Format("price changed {0} {1}% using tiny sma", priceDiffFromBuyTime, priceDiffPercent);
+                    Logger.WriteLog(intervalReason);
+                    TradeUsing(TinyIntervalSmaValues, intervalReason);
+                }
+                else if (priceDiffPercent > 0.50m)
+                {
+                    var intervalReason = string.Format("price changed {0} {1}% using small sma", priceDiffFromBuyTime, priceDiffPercent);
+                    Logger.WriteLog(intervalReason);
+                    TradeUsing(SmallIntervalSmaValues, intervalReason);
                 }
                 else
                 {
-                    TradeUsing(BigIntervalSmaValues);
+                    var intervalReason = string.Format("price changed {0} {1}% using big sma", priceDiffFromBuyTime, priceDiffPercent);
+
+                    TradeUsing(BigIntervalSmaValues, intervalReason);
                 }
 
             }
@@ -760,8 +800,44 @@ namespace Multiplier
 
         }
 
+        //private void TradeUsing(SmaGroup inputSmaGroup, string intervalUseReason = "")
+        //{
 
-        private void TradeUsing(SmaValues inputSmaValues)
+        //    var curPrice = CurrentValues.CurrentBufferedPrice;
+
+        //    if (inputSmaGroup.LargeGroupValues.Buy == true)
+        //    {
+        //        if (!CurrentValues.BuyOrderFilled) //if not already bought
+        //        {
+        //            if (!CurrentValues.WaitingBuyOrSell)
+        //            {
+        //                CurrentValues.WaitingBuyOrSell = true;
+        //                Logger.WriteLog(intervalUseReason);
+        //                Logger.WriteLog(inputSmaGroup.LargeGroupValues.BuyReason);
+        //                LastBuyAtPrice = curPrice;
+        //                Buy();
+        //            }
+        //        }
+        //    }
+
+
+        //    if (inputSmaGroup.SmallGroupValues.Sell == true)
+        //    {
+        //        if (!CurrentValues.SellOrderFilled) //if not already sold
+        //        {
+        //            if (!CurrentValues.WaitingBuyOrSell)
+        //            {
+        //                CurrentValues.WaitingBuyOrSell = true;
+        //                Logger.WriteLog(intervalUseReason);
+        //                Logger.WriteLog(inputSmaGroup.SmallGroupValues.SellReason);
+        //                LastSellAtPrice = curPrice;
+        //                Sell();
+        //            }
+        //        }
+        //    }
+        //}
+
+        private void TradeUsing(SmaValues inputSmaValues, string intervalUseReason = "")
         {
 
             var curPrice = CurrentValues.CurrentBufferedPrice;
@@ -773,6 +849,7 @@ namespace Multiplier
                     if (!CurrentValues.WaitingBuyOrSell)
                     {
                         CurrentValues.WaitingBuyOrSell = true;
+                        Logger.WriteLog(intervalUseReason);
                         Logger.WriteLog(inputSmaValues.BuyReason);
                         LastBuyAtPrice = curPrice;
                         Buy();
@@ -788,7 +865,7 @@ namespace Multiplier
                     if (!CurrentValues.WaitingBuyOrSell)
                     {
                         CurrentValues.WaitingBuyOrSell = true;
-
+                        Logger.WriteLog(intervalUseReason);
                         Logger.WriteLog(inputSmaValues.SellReason);
                         LastSellAtPrice = curPrice;
                         Sell();
@@ -799,8 +876,22 @@ namespace Multiplier
         }
 
 
-        class SmaValues
+        //class SmaGroup
+        //{
+        //    public SmaValues SmallGroupValues;
+        //    public SmaValues LargeGroupValues;
+
+        //    public void SetGroup(SmaValues smallGroup, SmaValues largeGroup)
+        //    {
+        //        SmallGroupValues = smallGroup;
+        //        LargeGroupValues = largeGroup;
+        //    }
+        //}
+
+
+        class SmaValues : IDisposable
         {
+            private string smaGroupName; 
             public decimal smallestSmaPrice;
             public decimal mediumSmaPrice;
             public decimal largestSmaPrice;
@@ -818,7 +909,7 @@ namespace Multiplier
 
             ContextValues myContextValues;
 
-            public SmaValues(ref ContextValues inputContextValues, 
+            public SmaValues(string groupName, ref ContextValues inputContextValues, 
                 int CommonIntervalMin = 5, 
                 int LargestSmaSlice = 60, 
                 int MediumSmaSlice = 55, 
@@ -826,6 +917,8 @@ namespace Multiplier
             {
 
                 myContextValues = inputContextValues;
+
+                smaGroupName = groupName;
 
                 //int commonLargeIntervalMin = 5;
                 smallestSmaPrice = 0;
@@ -862,8 +955,8 @@ namespace Multiplier
 
                 smallestSmaPrice = newSmaPrice;
 
-                Logger.WriteLog(string.Format("Smallest SMA updated: {0} (Time interval: {1} Slices: {2})",
-                    newSmaPrice, currentSmaData.CurrentTimeInterval, currentSmaData.CurrentSlices));
+                Logger.WriteLog(string.Format("{0} Smallest SMA updated: {1} (Time interval: {2} Slices: {3})",
+                    smaGroupName, newSmaPrice, currentSmaData.CurrentTimeInterval, currentSmaData.CurrentSlices));
             }
 
 
@@ -874,8 +967,8 @@ namespace Multiplier
 
                 mediumSmaPrice = newSmaPrice;
 
-                Logger.WriteLog(string.Format("Medium SMA updated: {0} (Time interval: {1} Slices: {2})",
-                    newSmaPrice, currentSmaData.CurrentTimeInterval, currentSmaData.CurrentSlices));
+                Logger.WriteLog(string.Format("{0} Medium SMA updated: {1} (Time interval: {2} Slices: {3})",
+                    smaGroupName, newSmaPrice, currentSmaData.CurrentTimeInterval, currentSmaData.CurrentSlices));
             }
 
 
@@ -886,8 +979,8 @@ namespace Multiplier
 
                 largestSmaPrice = newSmaPrice;
 
-                Logger.WriteLog(string.Format("Largest SMA updated: {0} (Time interval: {1} Slices: {2})",
-                    newSmaPrice, currentSmaData.CurrentTimeInterval, currentSmaData.CurrentSlices));
+                Logger.WriteLog(string.Format("{0} Largest SMA updated: {1} (Time interval: {2} Slices: {3})",
+                    smaGroupName, newSmaPrice, currentSmaData.CurrentTimeInterval, currentSmaData.CurrentSlices));
             }
 
             internal void DetermineBuySell()
@@ -932,8 +1025,8 @@ namespace Multiplier
 
 
                 var smallestToMedGap = Math.Abs(smallestSmaPrice - mediumSmaPrice);
-                var threshold = smallestSmaPrice - (smallestToMedGap / 10);
-                if (curPrice <= mediumSmaPrice || curPrice <= threshold)  //if price is < the smallest sma or medium sma
+                var threshold = smallestSmaPrice - (smallestToMedGap / 50);
+                if ((curPrice <= mediumSmaPrice) || (curPrice <= threshold))  //if price is < the smallest sma or medium sma
                 {
                     if (!myContextValues.SellOrderFilled)//if not already bought
                     {
@@ -964,6 +1057,24 @@ namespace Multiplier
                 Sell = false;
             }
 
+            public void Dispose()
+            {
+                //throw new NotImplementedException();
+                Logger.WriteLog("Disposing current sma values");
+
+
+                LargestMa.MovingAverageUpdated -= LargestSmaUpdatedHandler;
+                MediumMa.MovingAverageUpdated -= MediumSmaUpdatedHandler;
+                SmallestMa.MovingAverageUpdated -= SmallestSmaUpdateHandler;
+
+                LargestMa.aTimer.Stop();
+                MediumMa.aTimer.Stop();
+                SmallestMa.aTimer.Stop();
+
+                LargestMa = null;
+                MediumMa = null;
+                SmallestMa = null;
+            }
         }
 
     }

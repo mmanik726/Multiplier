@@ -806,7 +806,7 @@ namespace Multiplier
 
             ProductManager.CurrentActionChangedEvent += CurrentActionChangedEventHandler;
 
-            ProductManager.InitializeManager(inputProduct);
+            ProductManager.InitializeManager(inputProduct, GetIntervals());
 
             sharedCurrentLargeSmaPrice = 0;
 
@@ -816,6 +816,35 @@ namespace Multiplier
 
             return null;
         }
+
+        public IntervalValues GetIntervals()
+        {
+            //IntervalValues intervals;
+
+            var checkedButton = stkPannel.Children.OfType<RadioButton>().FirstOrDefault(r => (bool)r.IsChecked);
+
+            if (checkedButton.Name == "rdoBtn_5_3_1")
+            {
+                return new IntervalValues(5, 3, 1);
+            }
+            else if (checkedButton.Name == "rdoBtn_15_5_3")
+            {
+                return new IntervalValues(15, 5, 3);
+            }
+            else if (checkedButton.Name == "rdoBtn_30_15_5")
+            {
+                return new IntervalValues(30, 15, 5);
+            }
+            else
+            {
+                return new IntervalValues(5, 3, 1); ;
+            }
+
+        }
+
+
+
+
 
         private void btnSellAtNow_Click(object sender, RoutedEventArgs e)
         {
@@ -834,6 +863,17 @@ namespace Multiplier
             Dispatcher.Invoke(() => btnStopAndCancel.IsEnabled = false);
             await ProductManager.StopAndCancel().ContinueWith((t) => t.Wait());
             Dispatcher.Invoke(() => btnStopAndCancel.IsEnabled = true);
+        }
+
+        private void rdoBtn_Clicked(object sender, RoutedEventArgs e)
+        {
+            var response = MessageBox.Show("Sure to change intervals?", "Change Intervals?", MessageBoxButton.YesNo);
+
+            if (response == MessageBoxResult.Yes)
+            {
+                if (ProductManager != null)
+                    ProductManager.UpdateIntervals(GetIntervals());
+            }
         }
     }
 
