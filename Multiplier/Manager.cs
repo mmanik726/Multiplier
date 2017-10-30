@@ -27,7 +27,7 @@ namespace Multiplier
         private string MySecret { get; set; }
 
 
-        private MovingAverage SmaLarge { get; set; }
+        private MovingAverage DisplaySma { get; set; }
 
         //private MovingAverage SmaSmall { get; set; }
 
@@ -42,7 +42,7 @@ namespace Multiplier
 
         public EventHandler TickerPriceUpdateEvent;
         public EventHandler OrderFilledEvent;
-        public EventHandler SmaLargeUpdateEvent;
+        public EventHandler DisplaySmaUpdateEvent;
         //public EventHandler SmaSmallUpdateEvent;
         public EventHandler BuySellBufferChangedEvent;
         public EventHandler BuySellAmountChangedEvent;
@@ -55,6 +55,16 @@ namespace Multiplier
 
         public EventHandler PriceBelowAverageEvent;
         public EventHandler PriceAboveAverageEvent;
+
+
+
+        //large sma
+        public decimal CurrentDisplaySmaPrice { get; set; }
+        public int CurrentDisplaySmaSlices { get; set; }
+        public int CurrentDisplaySmaTimeInterval { get; set; }
+        //public double WaitTimeAfterLargeSmaCrossInMin { get; set; }
+
+
 
         public Manager(string inputProductName, string PassPhrase, string Key, string Secret)
         {
@@ -134,8 +144,13 @@ namespace Multiplier
             ////update ui with initial prices
             ProductTickerClient_UpdateHandler(this, new TickerMessage(ProductTickerClient.CurrentPrice));
 
-            SmaLarge = new MovingAverage(ref ProductTickerClient, ProductName, CurContextValues.CurrentLargeSmaTimeInterval, CurContextValues.CurrentLargeSmaSlices);
-            SmaLarge.MovingAverageUpdated += SmaLargeChangedEventHandler;
+
+            CurrentDisplaySmaTimeInterval = intervalValues.LargeIntervalInMin;
+            CurrentDisplaySmaSlices = 60; //default large sma slice value 
+
+
+            DisplaySma = new MovingAverage(ref ProductTickerClient, ProductName, CurrentDisplaySmaTimeInterval, CurrentDisplaySmaSlices);
+            DisplaySma.MovingAverageUpdatedEvent += DisplaySmaChangedEventHandler;
 
             //SmaSmall = new MovingAverage(ref ProductTickerClient, ProductName, CurContextValues.CurrentSmallSmaTimeInterval, CurContextValues.CurrentSmallSmaSlices);
             //SmaSmall.MovingAverageUpdated += SmaSmallChangedEventHandler;
@@ -156,6 +171,10 @@ namespace Multiplier
 
             currentTradeStrategy.CurrentActionChangedEvent += CUrrentActionChangeEventHandler;
 
+            //save the interval values for later use
+            CurContextValues.CurrentIntervalValues = intervalValues; 
+
+
             UpdateBuySellAmount(0.01m); //default
             UpdateBuySellBuffer(0.03m); //default 
 
@@ -172,14 +191,23 @@ namespace Multiplier
             if (CurContextValues.UserStartedTrading)
                 CurContextValues.StartAutoTrading = false;
 
-            await Task.Run(() => currentTradeStrategy = new TradeStrategyE(ref CurContextValues, intervalValues)).ContinueWith((t)=>t.Wait());
+            await Task.Run(() => 
+            {
+                currentTradeStrategy = new TradeStrategyE(ref CurContextValues, intervalValues);
+                Logger.WriteLog("Waiting 20 sec for data download to complete ");
+                Thread.Sleep(20 * 1000);
+            }).ContinueWith((t)=>t.Wait());
 
+            //await createNewTradeInstance(intervalValues);
+
+            //temp solutino 
             if (CurContextValues.UserStartedTrading)
+            {
+                //Thread.Sleep(10 * 1000);
+                //Logger.WriteLog("Waiting 10 sec before resuming auto trading");
                 CurContextValues.StartAutoTrading = true;
-
-
+            }
         }
-
 
 
 
@@ -203,19 +231,27 @@ namespace Multiplier
 
             //Logger.WriteLog("SMA updating starts here");
             //Task.Run(()=> UpdateSmaParameters(SmaTimeInterval, SmaSlices, true)).Wait();
-            var x = UpdateLargeSmaParameters(CurContextValues.CurrentLargeSmaTimeInterval, CurContextValues.CurrentLargeSmaSlices, true);
+            var x = UpdateDisplaySmaParameters(CurrentDisplaySmaTimeInterval, CurrentDisplaySmaSlices, true);
 
             x.Wait();
+
+
+
+            UpdateIntervals(CurContextValues.CurrentIntervalValues);
+
+
 
             Logger.WriteLog("SMA updating ends here");
             //System.Threading.Thread.Sleep(2 * 1000);
 
-            Logger.WriteLog("waiting 8 sec for sma to update");
-            Thread.Sleep(8 * 1000);
-            Logger.WriteLog("buy sell resumed here");
+
 
             if (userStartedTrading)
             {
+                Logger.WriteLog("waiting 10 sec for data refresh");
+                Thread.Sleep(10 * 1000);
+                Logger.WriteLog("buy sell resumed here");
+
                 CurContextValues.StartAutoTrading = true;
                 AutoTradingStartedEvent?.Invoke(this, EventArgs.Empty);
             }
@@ -331,13 +367,11 @@ namespace Multiplier
         public async void ForceSellAtNow()
         {
 
-            
-
             try
             {
                 Logger.WriteLog(string.Format("Placing Sell at NOW order "));
                 CurContextValues.StartAutoTrading = false; //pause auto trading
-                AutoTradingStoppedEvent?.Invoke(this, EventArgs.Empty);
+                //AutoTradingStoppedEvent?.Invoke(this, EventArgs.Empty);
 
                 CurContextValues.WaitingBuyOrSell = true;
 
@@ -345,9 +379,6 @@ namespace Multiplier
                     CurContextValues.BuySellAmount.ToString(), CurContextValues.CurrentBufferedPrice.ToString(), true);
                 CurContextValues.ForceSold = true;
                 //ForceOrderResult.Wait();
-
-                
-
 
             }
             catch (Exception ex)
@@ -358,25 +389,43 @@ namespace Multiplier
                     ex = ex.InnerException;
                     msg = msg + ex.Message;
                 }
-
-                //Logger.WriteLog("Error Selling: \n" + msg);
-
-
-
-                //setNextActionTo_Sell();
-
-
-                //WaitingBuyFill = false;
-                //WaitingBuyOrSell = false; //set wait flag to false to place new order
-
-                ////simulate last cross time so sells immidiately instead of waiting. since error occured
-                //LastCrossTime = DateTime.UtcNow.ToLocalTime().AddMinutes((-1 * WaitTimeAfterCrossInMin) - 1);
             }
 
+        }
 
+        public async void ForceBuyAtNow()
+        {
 
+            try
+            {
+                Logger.WriteLog(string.Format("Placing Buy at NOW order "));
+                CurContextValues.StartAutoTrading = false; //pause auto trading
+                //AutoTradingStoppedEvent?.Invoke(this, EventArgs.Empty);
 
+                CurContextValues.WaitingBuyOrSell = true;
 
+                while (CurContextValues.CurrentBufferedPrice == 0)
+                {
+                    Logger.WriteLog("waiting for currrent buffered price ");
+                    await Task.Run(()=> Thread.Sleep(500)).ContinueWith((t)=>t.Wait());
+                }
+
+                var ForceOrderResult = await MyProductOrderBook.PlaceNewOrder("buy", CurContextValues.ProductName,
+                    CurContextValues.BuySellAmount.ToString(), CurContextValues.CurrentBufferedPrice.ToString(), true);
+                
+                //CurContextValues.ForceSold = true;
+                //ForceOrderResult.Wait();
+
+            }
+            catch (Exception ex)
+            {
+                var msg = ex.Message + "\n";
+                while (ex.InnerException != null)
+                {
+                    ex = ex.InnerException;
+                    msg = msg + ex.Message;
+                }
+            }
 
         }
 
@@ -411,7 +460,7 @@ namespace Multiplier
 
             if (CurContextValues.ForceSold)
             {
-                if (CurContextValues.CurrentBufferedPrice <= (CurContextValues.CurrentLargeSmaPrice - CurContextValues.PriceBuffer)) // price below average 
+                if (CurContextValues.CurrentBufferedPrice <= (CurrentDisplaySmaPrice - CurContextValues.PriceBuffer)) // price below average 
                 {
 
                     PriceBelowAverageEvent?.Invoke(this, EventArgs.Empty);
@@ -427,23 +476,25 @@ namespace Multiplier
             }
 
 
+            if ((CurContextValues.LastTickerUpdateTime - CurContextValues.LastBuySellTime).TotalMilliseconds < 1000)
+            {
+                //Logger.WriteLog("price skipped: " + CurrentRealtimePrice);
+                return;
+            }
+
+            CurContextValues.CurrentBufferedPrice = CurContextValues.CurrentRealtimePrice;
+
+
+
             if (CurContextValues.StartAutoTrading)
             {
-                if ((CurContextValues.LastTickerUpdateTime - CurContextValues.LastBuySellTime).TotalMilliseconds < 1000)
-                {
-                    //Logger.WriteLog("price skipped: " + CurrentRealtimePrice);
-                    return;
-                }
-
-                CurContextValues.CurrentBufferedPrice = CurContextValues.CurrentRealtimePrice;
-
-                var secSinceLastCrosss = (DateTime.UtcNow.ToLocalTime() - CurContextValues.LastLargeSmaCrossTime).TotalSeconds;
-                if (secSinceLastCrosss < (CurContextValues.WaitTimeAfterLargeSmaCrossInMin * 60))
-                {
-                    //if the last time prices crossed is < 2 min do nothing
-                    //Logger.WriteLog(string.Format("Waiting {0} sec before placing any new order", Math.Round((sharedWaitTimeAfterCrossInMin * 60) - secSinceLastCrosss)));
-                    return;
-                }
+                ////////var secSinceLastCrosss = (DateTime.UtcNow.ToLocalTime() - CurContextValues.LastLargeSmaCrossTime).TotalSeconds;
+                ////////if (secSinceLastCrosss < (WaitTimeAfterLargeSmaCrossInMin * 60))
+                ////////{
+                ////////    //if the last time prices crossed is < 2 min do nothing
+                ////////    //Logger.WriteLog(string.Format("Waiting {0} sec before placing any new order", Math.Round((sharedWaitTimeAfterCrossInMin * 60) - secSinceLastCrosss)));
+                ////////    return;
+                ////////}
 
 
                 if (!CurContextValues.WaitingBuyOrSell)
@@ -485,12 +536,12 @@ namespace Multiplier
             CurrentActionChangedEvent?.Invoke(this, args);
         }
 
-        public async Task<bool> UpdateLargeSmaParameters(int InputTimerInterval, int InputSlices, bool forceRedownload = false)
+        public async Task<bool> UpdateDisplaySmaParameters(int InputTimerInterval, int InputSlices, bool forceRedownload = false)
         {
 
             try
             {
-                var x = await Task.Run(() => SmaLarge.updateValues(InputTimerInterval, InputSlices, forceRedownload));
+                var x = await Task.Run(() => DisplaySma.updateValues(InputTimerInterval, InputSlices, forceRedownload));
                 if (x == true) //wait for task to complete above
                 {
                     //done;
@@ -535,28 +586,28 @@ namespace Multiplier
         //}
 
 
-        private void SmaLargeChangedEventHandler(object sender, EventArgs args)
+        private void DisplaySmaChangedEventHandler(object sender, EventArgs args)
         {
 
             var currentSmaData = (MAUpdateEventArgs)args;
             decimal newSmaPrice = currentSmaData.CurrentMAPrice;
 
-            CurContextValues.CurrentLargeSmaPrice = newSmaPrice;
+            CurrentDisplaySmaPrice = newSmaPrice;
 
 
 
 
-            CurContextValues.CurrentLargeSmaSlices = currentSmaData.CurrentSlices;// InputSlices;
-            CurContextValues.CurrentLargeSmaTimeInterval = currentSmaData.CurrentTimeInterval; // InputTimerInterval;
-            CurContextValues.WaitTimeAfterLargeSmaCrossInMin = CurContextValues.CurrentLargeSmaTimeInterval;
+            CurrentDisplaySmaSlices = currentSmaData.CurrentSlices;// InputSlices;
+            CurrentDisplaySmaTimeInterval = currentSmaData.CurrentTimeInterval; // InputTimerInterval;
+            //WaitTimeAfterLargeSmaCrossInMin = CurrentDisplaySmaTimeInterval;
 
 
-            var msg = string.Format("Large SMA updated: {0} (Time interval: {1} Slices: {2})", newSmaPrice, 
-                CurContextValues.CurrentLargeSmaTimeInterval, CurContextValues.CurrentLargeSmaSlices);
+            var msg = string.Format("Display SMA updated: {0} (Time interval: {1} Slices: {2})", newSmaPrice, 
+                CurrentDisplaySmaTimeInterval, CurrentDisplaySmaSlices);
             Logger.WriteLog(msg);
 
 
-            SmaLargeUpdateEvent?.Invoke(this, currentSmaData);
+            DisplaySmaUpdateEvent?.Invoke(this, currentSmaData);
         }
 
         //private void SmaSmallChangedEventHandler(object sender, EventArgs args)
@@ -722,6 +773,8 @@ namespace Multiplier
 
         public bool UserStartedTrading { get; set; }
 
+        public IntervalValues CurrentIntervalValues;
+
 
         private bool _startAutoTrading; 
         public bool StartAutoTrading
@@ -748,10 +801,10 @@ namespace Multiplier
         
 
         //large sma
-        public decimal CurrentLargeSmaPrice { get; set; }
-        public int CurrentLargeSmaSlices { get; set; }
-        public int CurrentLargeSmaTimeInterval { get; set; }
-        public double WaitTimeAfterLargeSmaCrossInMin { get; set; }
+        //public decimal CurrentLargeSmaPrice { get; set; }
+        //public int CurrentLargeSmaSlices { get; set; }
+        //public int CurrentLargeSmaTimeInterval { get; set; }
+        public double WaitTimeAfterBigSmaCrossInMin { get; set; }
 
 
         ////small sma
@@ -773,8 +826,8 @@ namespace Multiplier
 
             BuySellAmount = 0.01m;//default
 
-            CurrentLargeSmaTimeInterval = 3; //default
-            CurrentLargeSmaSlices = 60; //default
+            //CurrentLargeSmaTimeInterval = 3; //default
+            //CurrentLargeSmaSlices = 60; //default
 
 
             //CurrentSmallSmaTimeInterval = 3; //default
@@ -784,7 +837,7 @@ namespace Multiplier
 
             CurrentRealtimePrice = 0;
             CurrentBufferedPrice = 0;
-            CurrentLargeSmaPrice = 0;
+            //CurrentLargeSmaPrice = 0;
 
             BuyOrderFilled = false;
             SellOrderFilled = false;
@@ -793,7 +846,7 @@ namespace Multiplier
             WaitingBuyFill = false;
             WaitingBuyOrSell = false;
 
-            WaitTimeAfterLargeSmaCrossInMin = CurrentLargeSmaTimeInterval; //buy sell every time interval
+            WaitTimeAfterBigSmaCrossInMin = 5; //buy sell every time interval
 
             MaxBuy = 5;
             MaxSell = 5;

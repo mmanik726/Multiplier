@@ -50,6 +50,8 @@ namespace Multiplier
 
         private bool LogAutoScrolling;
 
+        private RadioButton rdBtnCurrentSelection; 
+
         public MainWindow()
         {
             InitializeComponent();
@@ -60,7 +62,7 @@ namespace Multiplier
             txtMainLog.HorizontalScrollBarVisibility = ScrollBarVisibility.Visible;
             txtMainLog.Document.PageWidth = 1000;
 
-
+            rdBtnCurrentSelection = getCurrentRdoBtnSelection();
 
             var appVersion = Assembly.GetExecutingAssembly().GetName().Version;
             Dispatcher.Invoke(()=> 
@@ -600,7 +602,7 @@ namespace Multiplier
 
                 try
                 {
-                    await ProductManager.UpdateLargeSmaParameters(timeInt, slices, true); 
+                    await ProductManager.UpdateDisplaySmaParameters(timeInt, slices, true); 
                 }
                 catch (Exception)
                 {
@@ -791,7 +793,7 @@ namespace Multiplier
             ProductManager.BuySellBufferChangedEvent += BuySellBufferChangedEventHandler;
             ProductManager.OrderFilledEvent += OrderFilledEventHandler;
             //LTCManager.SmaParametersUpdatedEvent += SmaParametersUpdatedEventHandler;
-            ProductManager.SmaLargeUpdateEvent += SmaLargeUpdateEventHandler;
+            ProductManager.DisplaySmaUpdateEvent += SmaLargeUpdateEventHandler;
             //ProductManager.SmaSmallUpdateEvent += SmaSmallUpdateEventHandler;
 
             ProductManager.TickerPriceUpdateEvent += TickerPriceUpdateEventHandler;
@@ -821,7 +823,7 @@ namespace Multiplier
         {
             //IntervalValues intervals;
 
-            var checkedButton = stkPannel.Children.OfType<RadioButton>().FirstOrDefault(r => (bool)r.IsChecked);
+            var checkedButton = getCurrentRdoBtnSelection();
 
             if (checkedButton.Name == "rdoBtn_5_3_1")
             {
@@ -842,7 +844,11 @@ namespace Multiplier
 
         }
 
-
+        public RadioButton getCurrentRdoBtnSelection()
+        {
+            var checkedButton = stkPannel.Children.OfType<RadioButton>().FirstOrDefault(r => (bool)r.IsChecked);
+            return checkedButton;
+        }
 
 
 
@@ -850,6 +856,28 @@ namespace Multiplier
         {
             btnSellAtNow.IsEnabled = false;
             ProductManager.ForceSellAtNow();
+        }
+
+        private void btnBuyAtNow_Click(object sender, RoutedEventArgs e)
+        {
+            //btnSellAtNow.IsEnabled = false;
+            var response = MessageBox.Show(string.Format("confirm buy?"), "Confirm buy", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No);
+
+            if (response == MessageBoxResult.No)
+                return;
+
+            if (ProductManager == null)
+            {
+                MessageBox.Show("Please select a product first");
+                return;
+            }
+
+            ProductManager.ForceBuyAtNow();
+            btnBuyAtNow.IsEnabled = false;
+
+            Task.Run(() => System.Threading.Thread.Sleep(1000)).ContinueWith((t)=>t.Wait());
+
+            btnBuyAtNow.IsEnabled = true;
         }
 
         private async void btnStopAndCancel_Click(object sender, RoutedEventArgs e)
@@ -873,8 +901,16 @@ namespace Multiplier
             {
                 if (ProductManager != null)
                     ProductManager.UpdateIntervals(GetIntervals());
+
+                rdBtnCurrentSelection = getCurrentRdoBtnSelection();
+            }
+            else
+            {
+                rdBtnCurrentSelection.IsChecked = true;
             }
         }
+
+
     }
 
 

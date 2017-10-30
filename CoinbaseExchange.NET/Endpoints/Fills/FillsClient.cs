@@ -242,6 +242,22 @@ namespace CoinbaseExchange.NET.Endpoints.Fills
                 Logger.WriteLog("Order filled with following sizes:");
                 FillList.ForEach((f) => Logger.WriteLog(f.Size));
 
+
+
+                if (fillDetails.Price == null) //indicates a market order
+                {
+                    try
+                    {
+                        var orderStat = GetFillStatus(fillDetails?.OrderId).Result;
+                        if (orderStat.Fills.Count > 0)
+                            fillDetails.Price = orderStat.Fills.FirstOrDefault().Price; 
+                    }
+                    catch (Exception)
+                    {
+                        Logger.WriteLog("Error getting fill response");
+                    }
+                }
+
                 fillDetails.Size = totalFilled.ToString();
                 FillUpdated?.Invoke(this, new FillEventArgs { filledOrder = fillDetails });
 
@@ -381,7 +397,7 @@ namespace CoinbaseExchange.NET.Endpoints.Fills
                     }
                     catch (Exception ex)
                     {
-                        Logger.WriteLog("Error getting order status response");
+                        Logger.WriteLog("Error getting order status response for current market order");
                     }
 
                     if (orderStat != null)

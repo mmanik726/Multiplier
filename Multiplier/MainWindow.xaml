@@ -18,7 +18,7 @@
         <Label x:Name="lblUpdatedTime" Content="(time)" HorizontalAlignment="Left" Margin="479,89,0,0" VerticalAlignment="Top" Width="160" Height="26"/>
         <Label x:Name="lblTickUpdate1" Content="(time)" HorizontalAlignment="Left" Margin="10,81,0,0" VerticalAlignment="Top" Width="108" Height="26"/>
         <Button x:Name="btnStartBySelling" Content="Start by selling" Margin="908,377,9,0" VerticalAlignment="Top" Click="btnStartBySelling_Click" Height="26"/>
-        <Button x:Name="btnStartByBuying" Content="Start by buying" Margin="908,416,9,0" VerticalAlignment="Top" Click="btnStartByBuying_Click" Height="26"/>
+        <Button x:Name="btnStartByBuying" Content="Start by buying" Margin="908,416,9.5,0" VerticalAlignment="Top" Click="btnStartByBuying_Click" Height="26"/>
         <ListView x:Name="lstView" Height="157" Margin="10,143,9,0" VerticalAlignment="Top" VerticalContentAlignment="Top">
             <ListView.View>
                 <GridView>
@@ -45,17 +45,17 @@
         <Label x:Name="lblWarning" Content="Warning:" HorizontalAlignment="Left" Margin="191,362,0,0" VerticalAlignment="Top" Width="585" FontSize="16" Visibility="Hidden"/>
         <Label Content="Product" HorizontalAlignment="Left" Margin="165,17,0,0" VerticalAlignment="Top"/>
         <ComboBox x:Name="cmbProduct" HorizontalAlignment="Left" Margin="165,43,0,0" VerticalAlignment="Top" Width="120" SelectionChanged="cmbProduct_SelectionChanged"/>
-        <Button x:Name="btnSellAtNow" Content="Sell NOW" Margin="908,315,9,0" VerticalAlignment="Top" Click="btnSellAtNow_Click"/>
+        <Button x:Name="btnSellAtNow" Content="Sell NOW" Margin="0,315,9.5,0" VerticalAlignment="Top" Click="btnSellAtNow_Click" HorizontalAlignment="Right" Width="136"/>
         <Label x:Name="lblStatus" Content="Status" HorizontalAlignment="Left" Margin="10,112,0,0" VerticalAlignment="Top"/>
-        <Label Content="Next action:" HorizontalAlignment="Left" Margin="910,346,0,0" VerticalAlignment="Top"/>
-        <Label x:Name="lblNextAction" Content="NOT SET" HorizontalAlignment="Left" Margin="988,346,0,0" VerticalAlignment="Top"/>
+        <Label Content="Next action:" Margin="0,346,70.5,0" VerticalAlignment="Top" HorizontalAlignment="Right" Width="73"/>
+        <Label x:Name="lblNextAction" Content="NOT SET" Margin="0,346,9.5,0" VerticalAlignment="Top" HorizontalAlignment="Right" Width="56"/>
         <RichTextBox x:Name="txtMainLog" Margin="10,447,9,10" LostFocus="txtMainLog_LostFocus" GotFocus="txtMainLog_GotFocus" TextChanged="txtMainLog_TextChanged" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
             <FlowDocument/>
         </RichTextBox>
         <Label Content="Last Updated:" HorizontalAlignment="Left" Margin="343,89,0,0" VerticalAlignment="Top" Width="136"/>
         <TextBox x:Name="txtSmaSlices" HorizontalAlignment="Left" Height="23" Margin="407,20,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="72"/>
         <Label Content="Slices" HorizontalAlignment="Left" Margin="407,0,0,0" VerticalAlignment="Top"/>
-        <Button x:Name="btnStopAndCancel" Content="Stop and Cancel Order" HorizontalAlignment="Left" Margin="681,366,0,0" VerticalAlignment="Top" Width="128" Click="btnStopAndCancel_Click"/>
+        <Button x:Name="btnStopAndCancel" Content="STOP and Cancel All" Margin="0,315,166.5,0" VerticalAlignment="Top" Click="btnStopAndCancel_Click" HorizontalAlignment="Right" Width="128"/>
         <GroupBox x:Name="grpIntervals" Header="Intervals" HorizontalAlignment="Left" Height="101" Margin="621,10,0,0" VerticalAlignment="Top" Width="308">
             <StackPanel x:Name="stkPannel">
                 <RadioButton x:Name="rdoBtn_5_3_1" Content="Use 5 min, 3 min and 1 min intervals" HorizontalAlignment="Left" Margin="41,0,0,13" VerticalAlignment="Top" IsChecked="True" Click="rdoBtn_Clicked"/>
@@ -63,6 +63,7 @@
                 <RadioButton x:Name="rdoBtn_30_15_5" Content="Use 30 min, 15 min and 5 min intervals" HorizontalAlignment="Left" Margin="41,0,0,13" VerticalAlignment="Top" Click="rdoBtn_Clicked"/>
             </StackPanel>
         </GroupBox>
+        <Button x:Name="btnBuyAtNow" Content="Buy NOW" Margin="0,315,323.5,0" VerticalAlignment="Top" Click="btnBuyAtNow_Click" HorizontalAlignment="Right" Width="134"/>
 
     </Grid>
 </Window>

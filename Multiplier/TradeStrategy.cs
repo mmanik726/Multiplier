@@ -17,7 +17,6 @@ namespace Multiplier
         public EventHandler CurrentActionChangedEvent;
 
 
-
         //temporary
         public virtual void updateSmallestSma(int interval, int slices) { }
 
@@ -26,6 +25,17 @@ namespace Multiplier
         {
             CurrentValues = inputContextValues;
         }
+
+
+        //internal virtual void tickerDisconnectedEventHandler(object sender, EventArgs args)
+        //{
+        //    tickerDisconnected = true;
+        //}
+
+        //internal virtual void tickerConnectedEventHandler(object sender, EventArgs args)
+        //{
+        //    tickerDisconnected = false;
+        //}
 
         public virtual void Trade() { }
         //void StopAll();
@@ -80,7 +90,7 @@ namespace Multiplier
 
             CurrentValues.LastBuySellTime = DateTime.UtcNow.ToLocalTime();
 
-            CurrentValues.LastLargeSmaCrossTime = DateTime.UtcNow.ToLocalTime().AddMinutes(-1 * CurrentValues.WaitTimeAfterLargeSmaCrossInMin);
+            CurrentValues.LastLargeSmaCrossTime = DateTime.UtcNow.ToLocalTime().AddMinutes(-1 * CurrentValues.WaitTimeAfterBigSmaCrossInMin);
             //CurrentValues.LastSmallSmaCrossTime = DateTime.UtcNow.ToLocalTime().AddMinutes(-1 * CurrentValues.WaitTimeAfterLargeSmaCrossInMin);
 
             CurrentValues.BuyOrderFilled = true;
@@ -107,7 +117,7 @@ namespace Multiplier
             //logic
 
             CurrentValues.LastBuySellTime = DateTime.UtcNow.ToLocalTime();
-            CurrentValues.LastLargeSmaCrossTime = DateTime.UtcNow.ToLocalTime().AddMinutes(-1 * CurrentValues.WaitTimeAfterLargeSmaCrossInMin);
+            CurrentValues.LastLargeSmaCrossTime = DateTime.UtcNow.ToLocalTime().AddMinutes(-1 * CurrentValues.WaitTimeAfterBigSmaCrossInMin);
             //CurrentValues.LastSmallSmaCrossTime = DateTime.UtcNow.ToLocalTime().AddMinutes(-1 * CurrentValues.WaitTimeAfterLargeSmaCrossInMin);
 
 
@@ -221,7 +231,7 @@ namespace Multiplier
                     Logger.WriteLog("buy result is null");
 
                 //test//await MyOrderBook.PlaceNewOrder("buy", ProductName, BuySellAmount.ToString(), (CurrentBufferedPrice - 10.00m).ToString(), true);
-                Logger.WriteLog(string.Format("Order placed, waiting {0} min before placing any new order", CurrentValues.WaitTimeAfterLargeSmaCrossInMin));
+                Logger.WriteLog(string.Format("Order placed, waiting {0} min before placing any new order", CurrentValues.WaitTimeAfterBigSmaCrossInMin));
             }
             catch (Exception ex)
             {
@@ -240,7 +250,7 @@ namespace Multiplier
                 CurrentValues.WaitingBuyOrSell = false; //set wait flag to false to place new order
 
                 //simulate last cross time so buys immididtely instead of waiting. since error occured
-                CurrentValues.LastLargeSmaCrossTime = DateTime.UtcNow.ToLocalTime().AddMinutes((-1 * CurrentValues.WaitTimeAfterLargeSmaCrossInMin) - 1);
+                CurrentValues.LastLargeSmaCrossTime = DateTime.UtcNow.ToLocalTime().AddMinutes((-1 * CurrentValues.WaitTimeAfterBigSmaCrossInMin) - 1);
                 //CurrentValues.LastSmallSmaCrossTime = DateTime.UtcNow.ToLocalTime().AddMinutes((-1 * CurrentValues.WaitTimeAfterSmallSmaCrossInMin) - 1);
             }
 
@@ -267,7 +277,7 @@ namespace Multiplier
                     Logger.WriteLog("Sell result is null");
 
                 //test//await MyOrderBook.PlaceNewOrder("sell", ProductName, BuySellAmount.ToString(), (CurrentBufferedPrice + 10.00m).ToString(), true);
-                Logger.WriteLog(string.Format("Order placed, Waiting {0} min before placing any new order", CurrentValues.WaitTimeAfterLargeSmaCrossInMin));
+                Logger.WriteLog(string.Format("Order placed, Waiting {0} min before placing any new order", CurrentValues.WaitTimeAfterBigSmaCrossInMin));
             }
             catch (Exception ex)
             {
@@ -287,7 +297,7 @@ namespace Multiplier
                 CurrentValues.WaitingBuyOrSell = false; //set wait flag to false to place new order
 
                 //simulate last cross time so sells immidiately instead of waiting. since error occured
-                CurrentValues.LastLargeSmaCrossTime = DateTime.UtcNow.ToLocalTime().AddMinutes((-1 * CurrentValues.WaitTimeAfterLargeSmaCrossInMin) - 1);
+                CurrentValues.LastLargeSmaCrossTime = DateTime.UtcNow.ToLocalTime().AddMinutes((-1 * CurrentValues.WaitTimeAfterBigSmaCrossInMin) - 1);
                 //CurrentValues.LastSmallSmaCrossTime = DateTime.UtcNow.ToLocalTime().AddMinutes((-1 * CurrentValues.WaitTimeAfterSmallSmaCrossInMin) - 1);
 
             }
@@ -721,13 +731,12 @@ namespace Multiplier
             SmallIntervalSmaValues = new SmaValues("SmallInterval", ref inputContextValues, intervalValues.MediumIntervalInMin, 60, 55, 28);
             TinyIntervalSmaValues = new SmaValues("TinyInterval", ref inputContextValues, intervalValues.SmallIntervalInMin, 60, 55, 28);
 
-
+            inputContextValues.WaitTimeAfterBigSmaCrossInMin = intervalValues.LargeIntervalInMin; 
             //LargeSmaGroup = new SmaGroup();
             //LargeSmaGroup.SetGroup(SmallIntervalSmaValues, BigIntervalSmaValues);
 
             //SmallSmaGroup = new SmaGroup();
             //SmallSmaGroup.SetGroup(TinyIntervalSmaValues, SmallIntervalSmaValues); 
-
         }
 
         public override void Dispose()
@@ -742,6 +751,12 @@ namespace Multiplier
         public override async void Trade()
         {
             if (CurrentValues.WaitingBuyOrSell)
+                return;
+
+
+            var secSinceLastCrosss = (DateTime.UtcNow.ToLocalTime() - CurrentValues.LastLargeSmaCrossTime).TotalSeconds;
+
+            if (secSinceLastCrosss < (CurrentValues.WaitTimeAfterBigSmaCrossInMin * 60))
                 return;
 
 
@@ -779,13 +794,13 @@ namespace Multiplier
                 if (priceDiffPercent > 1.50m)
                 {
                     var intervalReason = string.Format("price changed {0} {1}% using tiny sma", priceDiffFromBuyTime, priceDiffPercent);
-                    Logger.WriteLog(intervalReason);
+                    //Logger.WriteLog(intervalReason);
                     TradeUsing(TinyIntervalSmaValues, intervalReason);
                 }
                 else if (priceDiffPercent > 0.50m)
                 {
                     var intervalReason = string.Format("price changed {0} {1}% using small sma", priceDiffFromBuyTime, priceDiffPercent);
-                    Logger.WriteLog(intervalReason);
+                    //Logger.WriteLog(intervalReason);
                     TradeUsing(SmallIntervalSmaValues, intervalReason);
                 }
                 else
@@ -932,9 +947,9 @@ namespace Multiplier
                 MediumMa = new MovingAverage(ref inputContextValues.CurrentTicker, inputContextValues.ProductName, CommonIntervalMin, MediumSmaSlice);
                 SmallestMa = new MovingAverage(ref inputContextValues.CurrentTicker, inputContextValues.ProductName, CommonIntervalMin, SmallestSmaSlice);
 
-                LargestMa.MovingAverageUpdated += LargestSmaUpdatedHandler;
-                MediumMa.MovingAverageUpdated += MediumSmaUpdatedHandler;
-                SmallestMa.MovingAverageUpdated += SmallestSmaUpdateHandler;
+                LargestMa.MovingAverageUpdatedEvent += LargestSmaUpdatedHandler;
+                MediumMa.MovingAverageUpdatedEvent += MediumSmaUpdatedHandler;
+                SmallestMa.MovingAverageUpdatedEvent += SmallestSmaUpdateHandler;
 
 
                 largestSmaPrice = LargestMa.CurrentSMAPrice;
@@ -1062,14 +1077,15 @@ namespace Multiplier
                 //throw new NotImplementedException();
                 Logger.WriteLog("Disposing current sma values");
 
+                //LargestMa.
 
-                LargestMa.MovingAverageUpdated -= LargestSmaUpdatedHandler;
-                MediumMa.MovingAverageUpdated -= MediumSmaUpdatedHandler;
-                SmallestMa.MovingAverageUpdated -= SmallestSmaUpdateHandler;
+                LargestMa.MovingAverageUpdatedEvent -= LargestSmaUpdatedHandler;
+                MediumMa.MovingAverageUpdatedEvent -= MediumSmaUpdatedHandler;
+                SmallestMa.MovingAverageUpdatedEvent -= SmallestSmaUpdateHandler;
 
-                LargestMa.aTimer.Stop();
-                MediumMa.aTimer.Stop();
-                SmallestMa.aTimer.Stop();
+                LargestMa.Dispose();
+                MediumMa.Dispose();
+                SmallestMa.Dispose();
 
                 LargestMa = null;
                 MediumMa = null;

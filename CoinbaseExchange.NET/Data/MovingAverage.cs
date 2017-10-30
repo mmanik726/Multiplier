@@ -19,7 +19,7 @@ namespace CoinbaseExchange.NET.Data
     }
 
 
-    public class MovingAverage
+    public class MovingAverage : IDisposable
     {
         private int SLICES;
         private int TIME_INTERVAL;
@@ -30,13 +30,15 @@ namespace CoinbaseExchange.NET.Data
         private DateTime firstDataPointDateTime;
         private DateTime lastDataPointDateTime;
 
-        private List<CandleData> sharedRawExchangeData; 
+        private static List<CandleData> sharedRawExchangeData;
+        private static bool isBusyDownloadingData;
+
 
         public TickerClient TickerPriceClient { get; set; }
 
         private List<CandleData> MADataPoints;
 
-        public EventHandler<MAUpdateEventArgs> MovingAverageUpdated;
+        public EventHandler<MAUpdateEventArgs> MovingAverageUpdatedEvent;
 
         public decimal CurrentSMAPrice;
         public decimal currentSandardDeviation ;
@@ -46,6 +48,8 @@ namespace CoinbaseExchange.NET.Data
         public System.Timers.Timer aTimer;
 
         //private bool ForceRedownloadData;
+
+        
 
 
         private bool isBusyCalculatingSMA; 
@@ -63,7 +67,8 @@ namespace CoinbaseExchange.NET.Data
 
             //ForceRedownloadData = false;
 
-            sharedRawExchangeData = new List<CandleData>();
+            if (sharedRawExchangeData == null)
+                sharedRawExchangeData = new List<CandleData>();
 
             TIME_INTERVAL = timeInterValInMin;
 
@@ -323,10 +328,56 @@ namespace CoinbaseExchange.NET.Data
 
         private void NotifyListener(MAUpdateEventArgs args)
         {
-            if (MovingAverageUpdated != null)
-                MovingAverageUpdated(this, args);
+            if (MovingAverageUpdatedEvent != null)
+                MovingAverageUpdatedEvent(this, args);
 
         }
+
+
+        public async Task<bool> RefreshDataFromServer()
+        {
+            while (isBusyDownloadingData)
+            {
+                Logger.WriteLog("waiting for download to finish before refresh operation");
+                System.Threading.Thread.Sleep(100);
+            }
+
+            var result = downloadData();
+            result.Wait();
+
+            return true;
+        }
+
+        private async Task<bool> downloadData()
+        {
+            isBusyDownloadingData = true; 
+
+            HistoricPrices historicData = new HistoricPrices();
+            var temp = historicData.GetPrices(product: Product, granularity: "60");
+            temp.Wait();
+
+            sharedRawExchangeData.Clear(); //clear existing data
+            sharedRawExchangeData = temp.Result.ToList();
+
+
+            lastDataPointDateTime = sharedRawExchangeData.First().Time;
+            firstDataPointDateTime = sharedRawExchangeData.Last().Time;
+
+            //Logger.WriteLog("Before downloading additional data");
+
+            if (TIME_INTERVAL * SLICES > 10) //download extra data anyways 
+            {
+                var res = DownloadAdditionalData();
+                res.Wait();
+            }
+
+            sharedRawExchangeData = sharedRawExchangeData.OrderByDescending((x) => x.Time).ToList();
+
+            isBusyDownloadingData = false;
+
+            return true;
+        }
+
 
         private async Task<List<CandleData>> GetSmaData()
         {
@@ -352,38 +403,55 @@ namespace CoinbaseExchange.NET.Data
 
 
 
-            HistoricPrices historicData = new HistoricPrices();
-            var temp = historicData.GetPrices(product: Product, granularity: "60");
-            temp.Wait();
-                
-            sharedRawExchangeData.Clear(); //clear existing data
-            sharedRawExchangeData = temp.Result.ToList();
+            //////HistoricPrices historicData = new HistoricPrices();
+            //////var temp = historicData.GetPrices(product: Product, granularity: "60");
+            //////temp.Wait();
+
+            //////sharedRawExchangeData.Clear(); //clear existing data
+            //////sharedRawExchangeData = temp.Result.ToList();
 
 
-            lastDataPointDateTime = sharedRawExchangeData.First().Time;
-            firstDataPointDateTime = sharedRawExchangeData.Last().Time;
+            //////lastDataPointDateTime = sharedRawExchangeData.First().Time;
+            //////firstDataPointDateTime = sharedRawExchangeData.Last().Time;
 
-            //Logger.WriteLog("Before downloading additional data");
+            ////////Logger.WriteLog("Before downloading additional data");
 
-            if (TIME_INTERVAL * SLICES > 200)
+            //////if (TIME_INTERVAL * SLICES > 200)
+            //////{
+            //////    var res = await DownloadAdditionalData();
+            //////    if (res)
+            //////    {
+            //////    }
+
+            //////}
+
+            ////////Logger.WriteLog("after downloading additional data");
+
+
+
+
+            ////////exchangeData.ToList().ForEach((a) => Logger.WriteLog(a.Time + "\t" + a.Close));
+
+            //////sharedRawExchangeData = sharedRawExchangeData.OrderByDescending((x) => x.Time).ToList();
+
+
+            //wait while data is being donwloaded by any instance of MovingVerage 
+
+            while (isBusyDownloadingData)
             {
-                var res = await DownloadAdditionalData();
-                if (res)
-                {
-                }
-                
+                //Logger.WriteLog("Waiting for data download to finish");
+                System.Threading.Thread.Sleep(1000);
             }
 
-            //Logger.WriteLog("after downloading additional data");
-
-
-
-
-            //exchangeData.ToList().ForEach((a) => Logger.WriteLog(a.Time + "\t" + a.Close));
-
-            sharedRawExchangeData = sharedRawExchangeData.OrderByDescending((x) => x.Time).ToList();
-
-
+            if (sharedRawExchangeData.Count == 0) //no data in shared exchnage data points
+            {
+                isBusyDownloadingData = true;
+                Logger.WriteLog("Downloading historic data from server... please wait a few seconds");
+                var result = downloadData();
+                result.Wait(); //wait for down load to finish
+                Logger.WriteLog("Done downloading data");
+                isBusyDownloadingData = false ;
+            }
 
 
             //sharedRawExchangeData.ForEach((a) => System.Diagnostics.Debug.WriteLine(a.Time + "\t"+ a.Close));
@@ -443,6 +511,13 @@ namespace CoinbaseExchange.NET.Data
             return maDataList; 
         }
 
-
+        public void Dispose()
+        {
+            this.aTimer.Stop();
+            this.aTimer.Close();
+            //sharedRawExchangeData.Clear();
+            sharedRawExchangeData = null;
+            //throw new NotImplementedException();
+        }
     }
 }
