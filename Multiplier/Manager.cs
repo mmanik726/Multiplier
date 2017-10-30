@@ -36,7 +36,7 @@ namespace Multiplier
 
         TickerClient ProductTickerClient;
 
-        private bool userStartedTrading;
+        //private bool userStartedTrading;
 
         public EventHandler CurrentActionChangedEvent;
 
@@ -56,7 +56,7 @@ namespace Multiplier
         public EventHandler PriceBelowAverageEvent;
         public EventHandler PriceAboveAverageEvent;
 
-
+        private bool isBuysDisposingCurStrategy;
 
         //large sma
         public decimal CurrentDisplaySmaPrice { get; set; }
@@ -74,7 +74,7 @@ namespace Multiplier
             MyKey = Key;
             MySecret = Secret;
             //InitializeManager();
-
+            isBuysDisposingCurStrategy = false;
 
         }
 
@@ -183,9 +183,26 @@ namespace Multiplier
         }
 
 
-        public async void UpdateIntervals(IntervalValues intervalValues)
+        public async Task<bool> UpdateIntervals(IntervalValues intervalValues)
         {
-            currentTradeStrategy.Dispose();
+
+            if (isBuysDisposingCurStrategy)
+            {
+                Logger.WriteLog("Already busy updating interval, please wait for current operation to complete.");
+                return false;
+            }
+
+            isBuysDisposingCurStrategy = true;
+
+            try
+            {
+                currentTradeStrategy.Dispose();
+            }
+            catch (Exception ex)
+            {
+                Logger.WriteLog("Error disposing strategy," + ex.Message);
+                return false;
+            }
             currentTradeStrategy = null;
 
             if (CurContextValues.UserStartedTrading)
@@ -207,6 +224,11 @@ namespace Multiplier
                 //Logger.WriteLog("Waiting 10 sec before resuming auto trading");
                 CurContextValues.StartAutoTrading = true;
             }
+            
+            isBuysDisposingCurStrategy = false;
+            Logger.WriteLog("Done updating intervals");
+
+            return true;
         }
 
 
@@ -215,7 +237,7 @@ namespace Multiplier
         {
             Logger.WriteLog("Ticker disconnected... pausing all buy / sell");
 
-            if (userStartedTrading)
+            if (CurContextValues.UserStartedTrading)
             {
                 CurContextValues.StartAutoTrading = false;
                 //AutoTradingStoppedEvent?.Invoke(this, EventArgs.Empty);
@@ -237,8 +259,8 @@ namespace Multiplier
 
 
 
-            UpdateIntervals(CurContextValues.CurrentIntervalValues);
-
+            var updateIntervalResult = UpdateIntervals(CurContextValues.CurrentIntervalValues);
+            updateIntervalResult.Wait();
 
 
             Logger.WriteLog("SMA updating ends here");
@@ -246,7 +268,7 @@ namespace Multiplier
 
 
 
-            if (userStartedTrading)
+            if (CurContextValues.UserStartedTrading)
             {
                 Logger.WriteLog("waiting 10 sec for data refresh");
                 Thread.Sleep(10 * 1000);
@@ -467,7 +489,7 @@ namespace Multiplier
 
                     CurContextValues.ForceSold = false;
 
-                    if (userStartedTrading)
+                    if (CurContextValues.UserStartedTrading)
                     {
                         StartTrading_ByBuying();
                     }
