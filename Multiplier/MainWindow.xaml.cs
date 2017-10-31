@@ -825,15 +825,16 @@ namespace Multiplier
 
             var checkedButton = getCurrentRdoBtnSelection();
 
-            if (checkedButton.Name == "rdoBtn_5_3_1")
+            
+            if (Dispatcher.Invoke(()=>checkedButton.Name == "rdoBtn_5_3_1"))
             {
                 return new IntervalValues(5, 3, 1);
             }
-            else if (checkedButton.Name == "rdoBtn_15_5_3")
+            else if (Dispatcher.Invoke(() => checkedButton.Name == "rdoBtn_15_5_3"))
             {
                 return new IntervalValues(15, 5, 3);
             }
-            else if (checkedButton.Name == "rdoBtn_30_15_5")
+            else if (Dispatcher.Invoke(() => checkedButton.Name == "rdoBtn_30_15_5"))
             {
                 return new IntervalValues(30, 15, 5);
             }
@@ -846,7 +847,7 @@ namespace Multiplier
 
         public RadioButton getCurrentRdoBtnSelection()
         {
-            var checkedButton = stkPannel.Children.OfType<RadioButton>().FirstOrDefault(r => (bool)r.IsChecked);
+            var checkedButton = Dispatcher.Invoke(()=> stkPannel.Children.OfType<RadioButton>().FirstOrDefault(r => (bool)r.IsChecked));
             return checkedButton;
         }
 
@@ -899,8 +900,19 @@ namespace Multiplier
 
             if (response == MessageBoxResult.Yes)
             {
+
+                toggleRdoBtn(false);
                 if (ProductManager != null)
-                    ProductManager.UpdateIntervals(GetIntervals());
+                {
+                    Task.Run(() => 
+                    {
+                        var a = ProductManager.UpdateIntervals(GetIntervals());
+                        //result.Wait();
+                    }).ContinueWith((t)=>t.Wait());
+
+                    //res.Wait();
+                }
+                toggleRdoBtn(true);
 
                 rdBtnCurrentSelection = getCurrentRdoBtnSelection();
             }
@@ -910,7 +922,25 @@ namespace Multiplier
             }
         }
 
+        private void toggleRdoBtn(bool state)
+        {
+            Dispatcher.Invoke(() => 
+            {
+                rdoBtn_15_5_3.IsEnabled = state;
+                rdoBtn_30_15_5.IsEnabled = state;
+                rdoBtn_5_3_1.IsEnabled = state;
+            });
+        }
 
+        //private void btnDisconnect_Click(object sender, RoutedEventArgs e)
+        //{
+        //    Dispatcher.Invoke(() => ProductManager.TickerDisconnectedHandler(this, EventArgs.Empty));
+        //}
+
+        //private void btnConnect_Click(object sender, RoutedEventArgs e)
+        //{
+        //    Dispatcher.Invoke(() => ProductManager.TickerConnectedHandler(this, EventArgs.Empty));
+        //}
     }
 
 

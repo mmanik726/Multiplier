@@ -56,7 +56,7 @@ namespace Multiplier
         public EventHandler PriceBelowAverageEvent;
         public EventHandler PriceAboveAverageEvent;
 
-        private bool isBuysDisposingCurStrategy;
+        private bool isBuysyDisposingCurStrategy;
 
         //large sma
         public decimal CurrentDisplaySmaPrice { get; set; }
@@ -74,7 +74,7 @@ namespace Multiplier
             MyKey = Key;
             MySecret = Secret;
             //InitializeManager();
-            isBuysDisposingCurStrategy = false;
+            isBuysyDisposingCurStrategy = false;
 
         }
 
@@ -183,54 +183,6 @@ namespace Multiplier
         }
 
 
-        public async Task<bool> UpdateIntervals(IntervalValues intervalValues)
-        {
-
-            if (isBuysDisposingCurStrategy)
-            {
-                Logger.WriteLog("Already busy updating interval, please wait for current operation to complete.");
-                return false;
-            }
-
-            isBuysDisposingCurStrategy = true;
-
-            try
-            {
-                currentTradeStrategy.Dispose();
-            }
-            catch (Exception ex)
-            {
-                Logger.WriteLog("Error disposing strategy," + ex.Message);
-                return false;
-            }
-            currentTradeStrategy = null;
-
-            if (CurContextValues.UserStartedTrading)
-                CurContextValues.StartAutoTrading = false;
-
-            await Task.Run(() => 
-            {
-                currentTradeStrategy = new TradeStrategyE(ref CurContextValues, intervalValues);
-                Logger.WriteLog("Waiting 20 sec for data download to complete ");
-                Thread.Sleep(20 * 1000);
-            }).ContinueWith((t)=>t.Wait());
-
-            //await createNewTradeInstance(intervalValues);
-
-            //temp solutino 
-            if (CurContextValues.UserStartedTrading)
-            {
-                //Thread.Sleep(10 * 1000);
-                //Logger.WriteLog("Waiting 10 sec before resuming auto trading");
-                CurContextValues.StartAutoTrading = true;
-            }
-            
-            isBuysDisposingCurStrategy = false;
-            Logger.WriteLog("Done updating intervals");
-
-            return true;
-        }
-
 
 
         private void TickerDisconnectedHandler(object sender, EventArgs e)
@@ -249,19 +201,22 @@ namespace Multiplier
 
         private void TickerConnectedHandler(object sender, EventArgs args)
         {
+
+            while (isBuysyDisposingCurStrategy)
+            {
+                Logger.WriteLog("Already busy updating intervals after reconnect, waiting for current operation to complete...");
+                return;
+            }
+
+
             Logger.WriteLog("Ticker connected... resuming buy sell");
 
             //Logger.WriteLog("SMA updating starts here");
             //Task.Run(()=> UpdateSmaParameters(SmaTimeInterval, SmaSlices, true)).Wait();
-            var x = UpdateDisplaySmaParameters(CurrentDisplaySmaTimeInterval, CurrentDisplaySmaSlices, true);
-
-            x.Wait();
-
 
 
             var updateIntervalResult = UpdateIntervals(CurContextValues.CurrentIntervalValues);
             updateIntervalResult.Wait();
-
 
             Logger.WriteLog("SMA updating ends here");
             //System.Threading.Thread.Sleep(2 * 1000);
@@ -270,8 +225,8 @@ namespace Multiplier
 
             if (CurContextValues.UserStartedTrading)
             {
-                Logger.WriteLog("waiting 10 sec for data refresh");
-                Thread.Sleep(10 * 1000);
+                Logger.WriteLog("waiting 5 sec for data refresh");
+                Thread.Sleep(5 * 1000);
                 Logger.WriteLog("buy sell resumed here");
 
                 CurContextValues.StartAutoTrading = true;
@@ -281,6 +236,72 @@ namespace Multiplier
             TickerConnectedEvent?.Invoke(this, EventArgs.Empty);
         }
 
+        public async Task<bool> UpdateIntervals(IntervalValues intervalValues)
+        {
+
+            if (isBuysyDisposingCurStrategy)
+            {
+                Logger.WriteLog("Already busy updating interval, please wait for current operation to complete.");
+                return false;
+            }
+
+            isBuysyDisposingCurStrategy = true;
+
+            try
+            {
+                currentTradeStrategy.Dispose();
+            }
+            catch (Exception ex)
+            {
+                Logger.WriteLog("Error disposing strategy," + ex.Message);
+                return false;
+            }
+            currentTradeStrategy = null;
+
+            if (CurContextValues.UserStartedTrading)
+                CurContextValues.StartAutoTrading = false;
+
+            await Task.Run(() =>
+            {
+                currentTradeStrategy = new TradeStrategyE(ref CurContextValues, intervalValues);
+                Logger.WriteLog("Waiting 20 sec for data download to complete ");
+                Thread.Sleep(20 * 1000);
+            }).ContinueWith((t) => t.Wait());
+
+            //await createNewTradeInstance(intervalValues);
+
+
+            var x = UpdateDisplaySmaParameters(CurrentDisplaySmaTimeInterval, CurrentDisplaySmaSlices, true);
+            x.Wait();
+
+            isBuysyDisposingCurStrategy = false;
+            Logger.WriteLog("Done updating intervals");
+
+            return true;
+        }
+
+
+
+        public async Task<bool> UpdateDisplaySmaParameters(int InputTimerInterval, int InputSlices, bool forceRedownload = false)
+        {
+
+            try
+            {
+                var x = await Task.Run(() => DisplaySma.updateValues(InputTimerInterval, InputSlices, forceRedownload));
+                if (x == true) //wait for task to complete above
+                {
+                    //done;
+                }
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Logger.WriteLog("Error occured while updating SMA parameters: " + ex.Message);
+                return false;
+            }
+
+        }
 
         private void FillUpdateEventHandler(object sender, EventArgs args)
         {
@@ -558,54 +579,7 @@ namespace Multiplier
             CurrentActionChangedEvent?.Invoke(this, args);
         }
 
-        public async Task<bool> UpdateDisplaySmaParameters(int InputTimerInterval, int InputSlices, bool forceRedownload = false)
-        {
 
-            try
-            {
-                var x = await Task.Run(() => DisplaySma.updateValues(InputTimerInterval, InputSlices, forceRedownload));
-                if (x == true) //wait for task to complete above
-                {
-                    //done;
-                }
-
-                return true;
-            }
-            catch (Exception ex)
-            {
-                Logger.WriteLog("Error occured while updating SMA parameters: " + ex.Message);
-                return false;
-            }
-
-        }
-
-        //public async Task<bool> UpdateSmallSmaParameters(int InputTimerInterval, int InputSlices, bool forceRedownload = false)
-        //{
-
-        //    try
-        //    {
-        //        var x = await Task.Run(() => SmaSmall.updateValues(InputTimerInterval, InputSlices, forceRedownload));
-        //        if (x == true) //wait for task to complete above
-        //        {
-        //            //Logger.WriteLog(x.ToString()); //done;
-        //        }
-
-
-        //        //temporary solution
-        //        var smallestSmaInterval = InputTimerInterval;
-        //        var smallestSmaSlices = Math.Round(InputSlices / 2.0m, 0);
-        //        await Task.Run(()=> currentTradeStrategy.updateSmallestSma(smallestSmaInterval, Convert.ToInt32(smallestSmaSlices)));
-                
-
-        //        return true;
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        Logger.WriteLog("Error occured while updating SMA parameters: " + ex.Message);
-        //        return false;
-        //    }
-
-        //}
 
 
         private void DisplaySmaChangedEventHandler(object sender, EventArgs args)
@@ -632,26 +606,7 @@ namespace Multiplier
             DisplaySmaUpdateEvent?.Invoke(this, currentSmaData);
         }
 
-        //private void SmaSmallChangedEventHandler(object sender, EventArgs args)
-        //{
 
-        //    var currentSmaData = (MAUpdateEventArgs)args;
-        //    decimal newSmaPrice = currentSmaData.CurrentMAPrice;
-
-        //    CurContextValues.CurrentSmallSmaPrice = newSmaPrice;
-
-        //    CurContextValues.CurrentSmallSmaSlices = currentSmaData.CurrentSlices;// InputSlices;
-        //    CurContextValues.CurrentSmallSmaTimeInterval = currentSmaData.CurrentTimeInterval; // InputTimerInterval;
-        //    CurContextValues.WaitTimeAfterSmallSmaCrossInMin = CurContextValues.CurrentSmallSmaTimeInterval;
-
-
-        //    var msg = string.Format("Small SMA updated: {0} (Time interval: {1} Slices: {2})", newSmaPrice, 
-        //        CurContextValues.CurrentSmallSmaTimeInterval, CurContextValues.CurrentSmallSmaSlices);
-        //    Logger.WriteLog(msg);
-
-
-        //    SmaSmallUpdateEvent?.Invoke(this, currentSmaData);
-        //}
 
         public void UpdateBuySellBuffer(decimal newPriceBuffer, bool useInverse = false)
         {
@@ -822,18 +777,9 @@ namespace Multiplier
         public bool ForceSold { get; set; }
         
 
-        //large sma
-        //public decimal CurrentLargeSmaPrice { get; set; }
-        //public int CurrentLargeSmaSlices { get; set; }
-        //public int CurrentLargeSmaTimeInterval { get; set; }
         public double WaitTimeAfterBigSmaCrossInMin { get; set; }
 
 
-        ////small sma
-        //public decimal CurrentSmallSmaPrice { get; set; }
-        //public int CurrentSmallSmaSlices { get; set; }
-        //public int CurrentSmallSmaTimeInterval { get; set; }
-        //public double WaitTimeAfterSmallSmaCrossInMin { get; set; }
 
 
         public ContextValues(ref MyOrderBook orderBook, ref TickerClient inputTicker)

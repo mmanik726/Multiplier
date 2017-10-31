@@ -446,7 +446,7 @@ namespace CoinbaseExchange.NET.Data
             if (sharedRawExchangeData.Count == 0) //no data in shared exchnage data points
             {
                 isBusyDownloadingData = true;
-                Logger.WriteLog("Downloading historic data from server... please wait a few seconds");
+                Logger.WriteLog("Downloading data from server... please wait...");
                 var result = downloadData();
                 result.Wait(); //wait for down load to finish
                 Logger.WriteLog("Done downloading data");
