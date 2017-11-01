@@ -1078,18 +1078,50 @@ namespace Multiplier
                 Logger.WriteLog("Disposing current sma values");
 
                 //LargestMa.
+                try
+                {
+                    Logger.WriteLog("Deregistering sma events ");
 
-                LargestMa.MovingAverageUpdatedEvent -= LargestSmaUpdatedHandler;
-                MediumMa.MovingAverageUpdatedEvent -= MediumSmaUpdatedHandler;
-                SmallestMa.MovingAverageUpdatedEvent -= SmallestSmaUpdateHandler;
+                    if (LargestMa != null)
+                        LargestMa.MovingAverageUpdatedEvent -= LargestSmaUpdatedHandler;
+                    if (MediumMa != null)
+                        MediumMa.MovingAverageUpdatedEvent -= MediumSmaUpdatedHandler;
+                    if (SmallestMa != null)
+                        SmallestMa.MovingAverageUpdatedEvent -= SmallestSmaUpdateHandler;
 
-                LargestMa.Dispose();
-                MediumMa.Dispose();
-                SmallestMa.Dispose();
+                }
+                catch (Exception ex)
+                {
+                    Logger.WriteLog("Error deregistering event " + ex.Message);
+                    //throw;
+                }
 
-                LargestMa = null;
-                MediumMa = null;
-                SmallestMa = null;
+
+                try
+                {
+                    Logger.WriteLog("diposing all sma data");
+
+                    if (LargestMa != null)
+                        LargestMa.Dispose();
+                    if (MediumMa != null)
+                        MediumMa.Dispose();
+                    if (SmallestMa != null)
+                        SmallestMa.Dispose();
+                }
+                catch (Exception ex)
+                {
+                    Logger.WriteLog("Error disposing sma, continuing " + ex.Message);
+                    //throw;
+                }
+                finally
+                {
+                    LargestMa = null;
+                    MediumMa = null;
+                    SmallestMa = null;
+                }
+
+
+
             }
         }
 

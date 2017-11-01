@@ -513,11 +513,25 @@ namespace CoinbaseExchange.NET.Data
 
         public void Dispose()
         {
-            this.aTimer.Stop();
-            this.aTimer.Close();
-            //sharedRawExchangeData.Clear();
-            sharedRawExchangeData = null;
-            //throw new NotImplementedException();
+            try
+            {
+                Logger.WriteLog(string.Format("disposing the {0} min sma timer ", this.aTimer.Interval / (60000)));
+                this.aTimer.Stop();
+                this.aTimer.Close();
+                this.aTimer = null;
+            }
+            catch (Exception)
+            {
+                Logger.WriteLog("error disposing the timer, continuing");
+                //throw;
+            }
+            finally
+            {
+                this.aTimer = null;
+                sharedRawExchangeData = null;
+
+            }
+
         }
     }
 }

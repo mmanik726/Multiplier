@@ -83,14 +83,15 @@ namespace CoinbaseExchange.NET.Core
 
                                 Logger.WriteLog("Exception occured in GET: " + ex.InnerException.Message);
                                 //
-                                if (innerExMsg.Contains("could not be resolved") || 
-                                    innerExMsg.Contains("unable to connect"))
+                                if (innerExMsg.Contains("could not be resolved") ||
+                                    innerExMsg.Contains("unable to connect") ||
+                                    innerExMsg.Contains("could not create ssl/tls secure channel"))
                                 {
 
                                     while (response == null)
                                     {
                                         Thread.Sleep(5 * 1000);
-                                        Logger.WriteLog("Cant connect to server, retryin in 5 sec");
+                                        Logger.WriteLog("Cant connect to server (in GET), retryin in 5 sec");
 
                                         try
                                         {
@@ -125,13 +126,14 @@ namespace CoinbaseExchange.NET.Core
                                 Logger.WriteLog("Exception occured in POST: " + innerExMsg);
                                 //
                                 if (innerExMsg.Contains("could not be resolved") ||
-                                    innerExMsg.Contains("unable to connect"))
+                                    innerExMsg.Contains("unable to connect") ||
+                                    innerExMsg.Contains("could not create ssl/tls secure channel"))
                                 {
 
                                     while (response == null)
                                     {
                                         Thread.Sleep(5 * 1000);
-                                        Logger.WriteLog("Cant connect to server, retryin in 5 sec");
+                                        Logger.WriteLog("Cant connect to server (in POST), retryin in 5 sec");
 
                                         try
                                         {
@@ -162,13 +164,14 @@ namespace CoinbaseExchange.NET.Core
                                 Logger.WriteLog("Exception occured in DELETE: " + ex.InnerException.Message);
                                 //
                                 if (innerExMsg.Contains("could not be resolved") ||
-                                    innerExMsg.Contains("unable to connect"))
+                                    innerExMsg.Contains("unable to connect") ||
+                                    innerExMsg.Contains("could not create ssl/tls secure channel"))
                                 {
 
                                     while (response == null)
                                     {
                                         Thread.Sleep(5 * 1000);
-                                        Logger.WriteLog("Cant connect to server, retryin in 5 sec");
+                                        Logger.WriteLog("Cant connect to server (in DELETE), retryin in 5 sec");
 
                                         try
                                         {

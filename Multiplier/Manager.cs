@@ -253,10 +253,16 @@ namespace Multiplier
             }
             catch (Exception ex)
             {
-                Logger.WriteLog("Error disposing strategy," + ex.Message);
-                return false;
+                Logger.WriteLog("Error disposing strategy, continuing to create new instance" + ex.Message);
+                
+                ////dont stop creating new isntace even if erro occurs
+                //remnants of previous sma may be active eg an un disposed sma 
+                //return false;
             }
-            currentTradeStrategy = null;
+            finally
+            {
+                currentTradeStrategy = null;
+            }
 
             if (CurContextValues.UserStartedTrading)
                 CurContextValues.StartAutoTrading = false;
