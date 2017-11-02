@@ -59,6 +59,8 @@ namespace Multiplier
 
         internal virtual void SetCurrentAction(string curAction)
         {
+            if (curAction == "")
+                curAction = "NOT_SET";
             CurrentValues.CurrentAction = curAction;
 
             CurrentActionChangedEvent?.Invoke(this, new ActionChangedArgs(curAction));
@@ -723,8 +725,8 @@ namespace Multiplier
 
         public TradeStrategyE(ref ContextValues inputContextValues, IntervalValues intervalValues) : base(ref inputContextValues)
         {
-            SetCurrentAction("NOT_SET");
-            LastBuyAtPrice = 0;
+            SetCurrentAction(inputContextValues.CurrentAction);
+            LastBuyAtPrice = inputContextValues.CurrentBufferedPrice ;
             LastSellAtPrice = 0;
 
             BigIntervalSmaValues = new SmaValues("BigInterval", ref inputContextValues, intervalValues.LargeIntervalInMin, 60, 55, 28);
@@ -785,19 +787,22 @@ namespace Multiplier
             if (!CurrentValues.SellOrderFilled) // not sold yet
             {
              
-                var priceDiffFromBuyTime = (curPrice - LastBuyAtPrice);
+                var priceDiffFromBuyTime = Math.Abs((curPrice - LastBuyAtPrice));
                 if (Math.Abs(priceDiffFromBuyTime) == curPrice)
                     priceDiffFromBuyTime = 0;
-                var priceDiffPercent = Math.Round((priceDiffFromBuyTime / curPrice) * 100, 4);
+                decimal priceDiffPercent = 0.0m;
+
+                if (curPrice > 0)
+                    priceDiffPercent = Math.Round((priceDiffFromBuyTime / curPrice) * 100, 4);
                 //Logger.WriteLog(string.Format("price change {0} {1}%", priceDiffFromBuyTime, priceDiffPercent));
 
-                if (priceDiffPercent > 1.50m)
+                if (priceDiffPercent > 1.75m)
                 {
                     var intervalReason = string.Format("price changed {0} {1}% using tiny sma", priceDiffFromBuyTime, priceDiffPercent);
                     //Logger.WriteLog(intervalReason);
                     TradeUsing(TinyIntervalSmaValues, intervalReason);
                 }
-                else if (priceDiffPercent > 0.50m)
+                else if (priceDiffPercent > 0.75m)
                 {
                     var intervalReason = string.Format("price changed {0} {1}% using small sma", priceDiffFromBuyTime, priceDiffPercent);
                     //Logger.WriteLog(intervalReason);

@@ -77,11 +77,13 @@ namespace CoinbaseExchange.NET.Core
                                 {
                                     await GetResponse(request);
                                     return null; 
-                                } 
+                                }
 
-                                var innerExMsg = ex.InnerException.Message.ToLower();
+                                var innerExMsg = "";
+                                if (ex.InnerException != null)
+                                    innerExMsg = ex.InnerException.Message.ToLower();
 
-                                Logger.WriteLog("Exception occured in GET: " + ex.InnerException.Message);
+                                Logger.WriteLog("Exception occured in GET: " + innerExMsg);
                                 //
                                 if (innerExMsg.Contains("could not be resolved") ||
                                     innerExMsg.Contains("unable to connect") ||
@@ -121,7 +123,7 @@ namespace CoinbaseExchange.NET.Core
                                 var innerExMsg = "";
 
                                 if(ex.InnerException !=null)
-                                    ex.InnerException.Message.ToLower();
+                                    innerExMsg = ex.InnerException.Message.ToLower();
 
                                 Logger.WriteLog("Exception occured in POST: " + innerExMsg);
                                 //
@@ -129,18 +131,24 @@ namespace CoinbaseExchange.NET.Core
                                     innerExMsg.Contains("unable to connect") ||
                                     innerExMsg.Contains("could not create ssl/tls secure channel"))
                                 {
-
+                                    var warningCounter = 0;
                                     while (response == null)
                                     {
                                         Thread.Sleep(5 * 1000);
                                         Logger.WriteLog("Cant connect to server (in POST), retryin in 5 sec");
-
+                                        warningCounter += 1;
                                         try
                                         {
                                             //SharedTimeStamp = DateTime.UtcNow.ToUnixTimestamp().ToString(System.Globalization.CultureInfo.InvariantCulture);
                                             response = await CorePostRequest(request); // await httpClient.GetAsync(absoluteUri);
                                         }
                                         catch { };
+
+                                        if (warningCounter >= 10)
+                                        {
+                                            Logger.WriteLog(string.Format("tried to complete POST request more than {0} times", warningCounter));
+                                            //break;
+                                        }
 
                                     }
                                 }
@@ -159,9 +167,12 @@ namespace CoinbaseExchange.NET.Core
                             }
                             catch (Exception ex)
                             {
-                                var innerExMsg = ex.InnerException.Message.ToLower();
+                                var innerExMsg = "";
 
-                                Logger.WriteLog("Exception occured in DELETE: " + ex.InnerException.Message);
+                                if (ex.InnerException != null)
+                                    innerExMsg = ex.InnerException.Message.ToLower();
+
+                                Logger.WriteLog("Exception occured in DELETE: " + innerExMsg);
                                 //
                                 if (innerExMsg.Contains("could not be resolved") ||
                                     innerExMsg.Contains("unable to connect") ||

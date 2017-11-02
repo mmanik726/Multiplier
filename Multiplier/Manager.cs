@@ -176,7 +176,7 @@ namespace Multiplier
 
 
             UpdateBuySellAmount(0.01m); //default
-            UpdateBuySellBuffer(0.03m); //default 
+            //UpdateBuySellBuffer(0.03m); //default 
 
             
 
@@ -407,6 +407,8 @@ namespace Multiplier
             {
                 CurContextValues.WaitingBuyOrSell = false;
             }
+
+            currentTradeStrategy.SetCurrentAction("NOT_SET");
 
             return true;
 
@@ -803,6 +805,7 @@ namespace Multiplier
             //CurrentLargeSmaTimeInterval = 3; //default
             //CurrentLargeSmaSlices = 60; //default
 
+            CurrentAction = "NOT_SET";
 
             //CurrentSmallSmaTimeInterval = 3; //default
             //CurrentSmallSmaSlices = 55; //default
