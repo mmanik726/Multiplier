@@ -77,6 +77,7 @@ namespace CoinbaseExchange.NET.Data
             TickerPriceClient = tickerClient;
 
             Init(timeInterValInMin);
+            //Task.Run(() => Init(timeInterValInMin)).Wait();
 
 
         }
@@ -94,7 +95,8 @@ namespace CoinbaseExchange.NET.Data
             
             try
             {
-                MADataPoints = await getMaData();
+                //MADataPoints = await getMaData();
+                MADataPoints = getMaData().Result;
             }
             catch (Exception ex)
             {
@@ -265,7 +267,7 @@ namespace CoinbaseExchange.NET.Data
 
             var doneDownloadingExtraData = false;
 
-            Int32 delayTime = 300;
+            Int32 delayTime = 400;
 
             while (!doneDownloadingExtraData)
             {

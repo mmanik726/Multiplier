@@ -17,9 +17,6 @@ namespace Multiplier
         public EventHandler CurrentActionChangedEvent;
 
 
-        //temporary
-        public virtual void updateSmallestSma(int interval, int slices) { }
-
 
         public TradeStrategyBase(ref ContextValues inputContextValues)
         {
@@ -39,6 +36,12 @@ namespace Multiplier
 
         public virtual void Trade() { }
         //void StopAll();
+
+
+        public virtual List<SmaValues> GetSmaList()
+        {
+            return null;
+        }
 
         internal virtual void SetNextActionTo_Sell()
         {
@@ -729,9 +732,19 @@ namespace Multiplier
             LastBuyAtPrice = inputContextValues.CurrentBufferedPrice ;
             LastSellAtPrice = 0;
 
+
+
             BigIntervalSmaValues = new SmaValues("BigInterval", ref inputContextValues, intervalValues.LargeIntervalInMin, 60, 55, 28);
             SmallIntervalSmaValues = new SmaValues("SmallInterval", ref inputContextValues, intervalValues.MediumIntervalInMin, 60, 55, 28);
             TinyIntervalSmaValues = new SmaValues("TinyInterval", ref inputContextValues, intervalValues.SmallIntervalInMin, 60, 55, 28);
+
+            //Task.Run(() => 
+            //{
+            //    BigIntervalSmaValues = new SmaValues("BigInterval", ref inputContextValues, intervalValues.LargeIntervalInMin, 60, 55, 28);
+            //    SmallIntervalSmaValues = new SmaValues("SmallInterval", ref inputContextValues, intervalValues.MediumIntervalInMin, 60, 55, 28);
+            //    TinyIntervalSmaValues = new SmaValues("TinyInterval", ref inputContextValues, intervalValues.SmallIntervalInMin, 60, 55, 28);
+            //}).Wait();
+
 
             inputContextValues.WaitTimeAfterBigSmaCrossInMin = intervalValues.LargeIntervalInMin; 
             //LargeSmaGroup = new SmaGroup();
@@ -741,6 +754,14 @@ namespace Multiplier
             //SmallSmaGroup.SetGroup(TinyIntervalSmaValues, SmallIntervalSmaValues); 
         }
 
+        private void createSmaInstances(ref ContextValues inputContextValues, IntervalValues intervalValues)
+        {
+            BigIntervalSmaValues = new SmaValues("BigInterval", ref inputContextValues, intervalValues.LargeIntervalInMin, 60, 55, 28);
+            SmallIntervalSmaValues = new SmaValues("SmallInterval", ref inputContextValues, intervalValues.MediumIntervalInMin, 60, 55, 28);
+            TinyIntervalSmaValues = new SmaValues("TinyInterval", ref inputContextValues, intervalValues.SmallIntervalInMin, 60, 55, 28);
+        }
+
+
         public override void Dispose()
         {
             base.Dispose();
@@ -749,6 +770,16 @@ namespace Multiplier
             TinyIntervalSmaValues.Dispose();
         }
 
+
+        public override List<SmaValues> GetSmaList()
+        {
+            List<SmaValues> smaList = new List<SmaValues>();
+            smaList.Add(BigIntervalSmaValues);
+            smaList.Add(SmallIntervalSmaValues);
+            smaList.Add(TinyIntervalSmaValues);
+
+            return smaList;
+        }
 
         public override async void Trade()
         {
@@ -796,13 +827,13 @@ namespace Multiplier
                     priceDiffPercent = Math.Round((priceDiffFromBuyTime / curPrice) * 100, 4);
                 //Logger.WriteLog(string.Format("price change {0} {1}%", priceDiffFromBuyTime, priceDiffPercent));
 
-                if (priceDiffPercent > 1.75m)
+                if (priceDiffPercent > 3.0m)
                 {
                     var intervalReason = string.Format("price changed {0} {1}% using tiny sma", priceDiffFromBuyTime, priceDiffPercent);
                     //Logger.WriteLog(intervalReason);
                     TradeUsing(TinyIntervalSmaValues, intervalReason);
                 }
-                else if (priceDiffPercent > 0.75m)
+                else if (priceDiffPercent > 1.75m)
                 {
                     var intervalReason = string.Format("price changed {0} {1}% using small sma", priceDiffFromBuyTime, priceDiffPercent);
                     //Logger.WriteLog(intervalReason);
@@ -909,227 +940,241 @@ namespace Multiplier
         //}
 
 
-        class SmaValues : IDisposable
+    }
+
+
+    public class SmaValues : IDisposable
+    {
+        private string smaGroupName;
+        public decimal smallestSmaPrice;
+        public decimal mediumSmaPrice;
+        public decimal largestSmaPrice;
+
+        public bool Sell;
+        public bool Buy;
+
+        public string BuyReason;
+        public string SellReason;
+
+
+        MovingAverage LargestMa;
+        MovingAverage MediumMa;
+        MovingAverage SmallestMa;
+
+        ContextValues myContextValues;
+
+        public int CommonSmaInterval { get; set; }
+        public int LargeSmaSlice { get; set; }
+        public int MedSmaSlice { get; set; }
+        public int SmallSmaSlice { get; set; }
+
+
+
+        public SmaValues(string groupName, ref ContextValues inputContextValues,
+            int CommonIntervalMin = 5,
+            int LargestSmaSlice = 60,
+            int MediumSmaSlice = 55,
+            int SmallestSmaSlice = 28)
         {
-            private string smaGroupName; 
-            public decimal smallestSmaPrice;
-            public decimal mediumSmaPrice;
-            public decimal largestSmaPrice;
 
-            public bool Sell;
-            public bool Buy;
+            myContextValues = inputContextValues;
 
-            public string BuyReason;
-            public string SellReason;
+            smaGroupName = groupName;
+
+            //int commonLargeIntervalMin = 5;
+            smallestSmaPrice = 0;
+            mediumSmaPrice = 0;
+            largestSmaPrice = 0;
+
+            BuyReason = "";
+            SellReason = "";
+
+            LargestMa = new MovingAverage(ref inputContextValues.CurrentTicker, inputContextValues.ProductName, CommonIntervalMin, LargestSmaSlice);
+            MediumMa = new MovingAverage(ref inputContextValues.CurrentTicker, inputContextValues.ProductName, CommonIntervalMin, MediumSmaSlice);
+            SmallestMa = new MovingAverage(ref inputContextValues.CurrentTicker, inputContextValues.ProductName, CommonIntervalMin, SmallestSmaSlice);
+
+            CommonSmaInterval = CommonIntervalMin;
+            LargeSmaSlice = LargestSmaSlice;
+            MedSmaSlice = MediumSmaSlice;
+            SmallSmaSlice = SmallestSmaSlice; 
 
 
-            MovingAverage LargestMa;
-            MovingAverage MediumMa;
-            MovingAverage SmallestMa;
+            LargestMa.MovingAverageUpdatedEvent += LargestSmaUpdatedHandler;
+            MediumMa.MovingAverageUpdatedEvent += MediumSmaUpdatedHandler;
+            SmallestMa.MovingAverageUpdatedEvent += SmallestSmaUpdateHandler;
 
-            ContextValues myContextValues;
 
-            public SmaValues(string groupName, ref ContextValues inputContextValues, 
-                int CommonIntervalMin = 5, 
-                int LargestSmaSlice = 60, 
-                int MediumSmaSlice = 55, 
-                int SmallestSmaSlice = 28)
+            largestSmaPrice = LargestMa.CurrentSMAPrice;
+            mediumSmaPrice = MediumMa.CurrentSMAPrice;
+            smallestSmaPrice = SmallestMa.CurrentSMAPrice;
+
+            Buy = false;
+            Sell = false;
+
+
+            //DetermineBuySell();
+        }
+
+        private void SmallestSmaUpdateHandler(object sender, EventArgs args)
+        {
+            var currentSmaData = (MAUpdateEventArgs)args;
+            decimal newSmaPrice = currentSmaData.CurrentMAPrice;
+
+            smallestSmaPrice = newSmaPrice;
+
+            Logger.WriteLog(string.Format("{0} Smallest SMA updated: {1} (Time interval: {2} Slices: {3})",
+                smaGroupName, newSmaPrice, currentSmaData.CurrentTimeInterval, currentSmaData.CurrentSlices));
+        }
+
+
+        private void MediumSmaUpdatedHandler(object sender, EventArgs args)
+        {
+            var currentSmaData = (MAUpdateEventArgs)args;
+            decimal newSmaPrice = currentSmaData.CurrentMAPrice;
+
+            mediumSmaPrice = newSmaPrice;
+
+            Logger.WriteLog(string.Format("{0} Medium SMA updated: {1} (Time interval: {2} Slices: {3})",
+                smaGroupName, newSmaPrice, currentSmaData.CurrentTimeInterval, currentSmaData.CurrentSlices));
+        }
+
+
+        private void LargestSmaUpdatedHandler(object sender, EventArgs args)
+        {
+            var currentSmaData = (MAUpdateEventArgs)args;
+            decimal newSmaPrice = currentSmaData.CurrentMAPrice;
+
+            largestSmaPrice = newSmaPrice;
+
+            Logger.WriteLog(string.Format("{0} Largest SMA updated: {1} (Time interval: {2} Slices: {3})",
+                smaGroupName, newSmaPrice, currentSmaData.CurrentTimeInterval, currentSmaData.CurrentSlices));
+        }
+
+        internal void DetermineBuySell()
+        {
+
+            ResetBuySellFlags();
+
+            var curPrice = myContextValues.CurrentBufferedPrice;
+
+
+            if (curPrice >= largestSmaPrice)
             {
-
-                myContextValues = inputContextValues;
-
-                smaGroupName = groupName;
-
-                //int commonLargeIntervalMin = 5;
-                smallestSmaPrice = 0;
-                mediumSmaPrice = 0;
-                largestSmaPrice = 0;
-
-                BuyReason = "";
-                SellReason = "";
-
-                LargestMa = new MovingAverage(ref inputContextValues.CurrentTicker, inputContextValues.ProductName, CommonIntervalMin, LargestSmaSlice);
-                MediumMa = new MovingAverage(ref inputContextValues.CurrentTicker, inputContextValues.ProductName, CommonIntervalMin, MediumSmaSlice);
-                SmallestMa = new MovingAverage(ref inputContextValues.CurrentTicker, inputContextValues.ProductName, CommonIntervalMin, SmallestSmaSlice);
-
-                LargestMa.MovingAverageUpdatedEvent += LargestSmaUpdatedHandler;
-                MediumMa.MovingAverageUpdatedEvent += MediumSmaUpdatedHandler;
-                SmallestMa.MovingAverageUpdatedEvent += SmallestSmaUpdateHandler;
-
-
-                largestSmaPrice = LargestMa.CurrentSMAPrice;
-                mediumSmaPrice = MediumMa.CurrentSMAPrice;
-                smallestSmaPrice = SmallestMa.CurrentSMAPrice;
-
-                Buy = false;
-                Sell = false;
-
-
-                //DetermineBuySell();
-            }
-
-            private void SmallestSmaUpdateHandler(object sender, EventArgs args)
-            {
-                var currentSmaData = (MAUpdateEventArgs)args;
-                decimal newSmaPrice = currentSmaData.CurrentMAPrice;
-
-                smallestSmaPrice = newSmaPrice;
-
-                Logger.WriteLog(string.Format("{0} Smallest SMA updated: {1} (Time interval: {2} Slices: {3})",
-                    smaGroupName, newSmaPrice, currentSmaData.CurrentTimeInterval, currentSmaData.CurrentSlices));
-            }
-
-
-            private void MediumSmaUpdatedHandler(object sender, EventArgs args)
-            {
-                var currentSmaData = (MAUpdateEventArgs)args;
-                decimal newSmaPrice = currentSmaData.CurrentMAPrice;
-
-                mediumSmaPrice = newSmaPrice;
-
-                Logger.WriteLog(string.Format("{0} Medium SMA updated: {1} (Time interval: {2} Slices: {3})",
-                    smaGroupName, newSmaPrice, currentSmaData.CurrentTimeInterval, currentSmaData.CurrentSlices));
-            }
-
-
-            private void LargestSmaUpdatedHandler(object sender, EventArgs args)
-            {
-                var currentSmaData = (MAUpdateEventArgs)args;
-                decimal newSmaPrice = currentSmaData.CurrentMAPrice;
-
-                largestSmaPrice = newSmaPrice;
-
-                Logger.WriteLog(string.Format("{0} Largest SMA updated: {1} (Time interval: {2} Slices: {3})",
-                    smaGroupName, newSmaPrice, currentSmaData.CurrentTimeInterval, currentSmaData.CurrentSlices));
-            }
-
-            internal void DetermineBuySell()
-            {
-
-                ResetBuySellFlags();
-
-                var curPrice = myContextValues.CurrentBufferedPrice;
-
-
-                if (curPrice >= largestSmaPrice)
+                if (smallestSmaPrice <= largestSmaPrice && mediumSmaPrice <= largestSmaPrice) //buying the second time after the first sale based on small sma
                 {
-                    if (smallestSmaPrice <= largestSmaPrice && mediumSmaPrice <= largestSmaPrice) //buying the second time after the first sale based on small sma
+                    if (!myContextValues.BuyOrderFilled) //if not already bought
+                    {
+                        BuyReason = "Buying based on OPTION1:\nCurPrice >= Largest Sma\n\tsmallestSmaPrice <= largestSmaPrice AND mediumSmaPrice <= largestSmaPrice";
+                        SellReason = "";
+                        SetBuyTrue();
+                    }
+                }
+            }
+
+
+            //special case occurs only when price is going up up and away :)
+            if (smallestSmaPrice > mediumSmaPrice)
+            {
+                if (mediumSmaPrice > largestSmaPrice) //buying the second time after the first sale based on small sma
+                {
+                    if (curPrice >= smallestSmaPrice) //buy if the smallest sma is less than the 'medium' sma
                     {
                         if (!myContextValues.BuyOrderFilled) //if not already bought
                         {
-                            BuyReason = "Buying based on OPTION1:\nCurPrice >= Largest Sma\n\tsmallestSmaPrice <= largestSmaPrice AND mediumSmaPrice <= largestSmaPrice";
+                            BuyReason = "Buying based on OPTION2:\nSmallest Sma > Medium Sma\n\tMedium Sma > Largest Sma\n\t\t Cur Price > smallest sma";
                             SellReason = "";
                             SetBuyTrue();
                         }
                     }
                 }
-
-
-                //special case occurs only when price is going up up and away :)
-                if (smallestSmaPrice > mediumSmaPrice)
-                {
-                    if (mediumSmaPrice > largestSmaPrice) //buying the second time after the first sale based on small sma
-                    {
-                        if (curPrice >= smallestSmaPrice) //buy if the smallest sma is less than the 'medium' sma
-                        {
-                            if (!myContextValues.BuyOrderFilled) //if not already bought
-                            {
-                                BuyReason = "Buying based on OPTION2:\nSmallest Sma > Medium Sma\n\tMedium Sma > Largest Sma\n\t\t Cur Price > smallest sma";
-                                SellReason = "";
-                                SetBuyTrue();
-                            }
-                        }
-                    }
-                }
-
-
-
-                var smallestToMedGap = Math.Abs(smallestSmaPrice - mediumSmaPrice);
-                var threshold = smallestSmaPrice - (smallestToMedGap / 50);
-                if ((curPrice <= mediumSmaPrice) || (curPrice <= threshold))  //if price is < the smallest sma or medium sma
-                {
-                    if (!myContextValues.SellOrderFilled)//if not already bought
-                    {
-                        SellReason = "Selling based on:\nCur price <= Medium Sma OR threshold (less than smalles sma)\n\tMedium Sma > Largest Sma";
-                        BuyReason = "";
-                        SetSellTrue();
-                    }
-                }
-
             }
 
-            private void SetBuyTrue()
+
+
+            var smallestToMedGap = Math.Abs(smallestSmaPrice - mediumSmaPrice);
+            var threshold = smallestSmaPrice - (smallestToMedGap / 50);
+            if ((curPrice <= mediumSmaPrice) || (curPrice <= threshold))  //if price is < the smallest sma or medium sma
             {
-                Buy = true;
-                Sell = false;
+                if (!myContextValues.SellOrderFilled)//if not already bought
+                {
+                    SellReason = "Selling based on:\nCur price <= Medium Sma OR threshold (less than smalles sma)\n\tMedium Sma > Largest Sma";
+                    BuyReason = "";
+                    SetSellTrue();
+                }
             }
 
-
-            private void SetSellTrue()
-            {
-                Buy = false;
-                Sell = true;
-            }
-
-            private void ResetBuySellFlags()
-            {
-                Buy = false;
-                Sell = false;
-            }
-
-            public void Dispose()
-            {
-                //throw new NotImplementedException();
-                Logger.WriteLog("Disposing current sma values");
-
-                //LargestMa.
-                try
-                {
-                    Logger.WriteLog("Deregistering sma events ");
-
-                    if (LargestMa != null)
-                        LargestMa.MovingAverageUpdatedEvent -= LargestSmaUpdatedHandler;
-                    if (MediumMa != null)
-                        MediumMa.MovingAverageUpdatedEvent -= MediumSmaUpdatedHandler;
-                    if (SmallestMa != null)
-                        SmallestMa.MovingAverageUpdatedEvent -= SmallestSmaUpdateHandler;
-
-                }
-                catch (Exception ex)
-                {
-                    Logger.WriteLog("Error deregistering event " + ex.Message);
-                    //throw;
-                }
-
-
-                try
-                {
-                    Logger.WriteLog("diposing all sma data");
-
-                    if (LargestMa != null)
-                        LargestMa.Dispose();
-                    if (MediumMa != null)
-                        MediumMa.Dispose();
-                    if (SmallestMa != null)
-                        SmallestMa.Dispose();
-                }
-                catch (Exception ex)
-                {
-                    Logger.WriteLog("Error disposing sma, continuing " + ex.Message);
-                    //throw;
-                }
-                finally
-                {
-                    LargestMa = null;
-                    MediumMa = null;
-                    SmallestMa = null;
-                }
-
-
-
-            }
         }
 
+        private void SetBuyTrue()
+        {
+            Buy = true;
+            Sell = false;
+        }
+
+
+        private void SetSellTrue()
+        {
+            Buy = false;
+            Sell = true;
+        }
+
+        private void ResetBuySellFlags()
+        {
+            Buy = false;
+            Sell = false;
+        }
+
+        public void Dispose()
+        {
+            //throw new NotImplementedException();
+            Logger.WriteLog("Disposing current sma values");
+
+            //LargestMa.
+            try
+            {
+                Logger.WriteLog("Deregistering sma events ");
+
+                if (LargestMa != null)
+                    LargestMa.MovingAverageUpdatedEvent -= LargestSmaUpdatedHandler;
+                if (MediumMa != null)
+                    MediumMa.MovingAverageUpdatedEvent -= MediumSmaUpdatedHandler;
+                if (SmallestMa != null)
+                    SmallestMa.MovingAverageUpdatedEvent -= SmallestSmaUpdateHandler;
+
+            }
+            catch (Exception ex)
+            {
+                Logger.WriteLog("Error deregistering event " + ex.Message);
+                //throw;
+            }
+
+
+            try
+            {
+                Logger.WriteLog("diposing all sma data");
+
+                if (LargestMa != null)
+                    LargestMa.Dispose();
+                if (MediumMa != null)
+                    MediumMa.Dispose();
+                if (SmallestMa != null)
+                    SmallestMa.Dispose();
+            }
+            catch (Exception ex)
+            {
+                Logger.WriteLog("Error disposing sma, continuing " + ex.Message);
+                //throw;
+            }
+            finally
+            {
+                LargestMa = null;
+                MediumMa = null;
+                SmallestMa = null;
+            }
+
+
+
+        }
     }
 
 

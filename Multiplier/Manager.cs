@@ -167,9 +167,14 @@ namespace Multiplier
             if (intervalValues == null)
                 intervalValues = new IntervalValues(5, 3, 1);
 
-            currentTradeStrategy = new TradeStrategyE(ref CurContextValues, intervalValues);
+            //currentTradeStrategy = new TradeStrategyE(ref CurContextValues, intervalValues);
+
+            CreateUpdateStrategyInstance(intervalValues, true).Wait();
 
             currentTradeStrategy.CurrentActionChangedEvent += CUrrentActionChangeEventHandler;
+
+
+            
 
             //save the interval values for later use
             CurContextValues.CurrentIntervalValues = intervalValues; 
@@ -178,14 +183,34 @@ namespace Multiplier
             UpdateBuySellAmount(0.01m); //default
             //UpdateBuySellBuffer(0.03m); //default 
 
-            
+
+            //writeCurrentStrategySmaValues();
+
+        }
+
+
+        private void writeCurrentStrategySmaValues()
+        {
+            if (currentTradeStrategy == null)
+                return;
+
+            var smaList = currentTradeStrategy.GetSmaList();
+
+            if (smaList != null)
+            {
+                foreach (SmaValues sma in smaList)
+                {
+                    Logger.WriteLog(string.Format("Largest Sma (interval: {0} min, Slices: {1}): {2}", sma.CommonSmaInterval, sma.LargeSmaSlice, sma.largestSmaPrice));
+                    Logger.WriteLog(string.Format("Medium Sma (interval: {0} min, Slices: {1}): {2}", sma.CommonSmaInterval, sma.MedSmaSlice, sma.mediumSmaPrice));
+                    Logger.WriteLog(string.Format("Smallest Sma (interval: {0} min, Slices: {1}): {2}\n", sma.CommonSmaInterval, sma.SmallSmaSlice, sma.smallestSmaPrice));
+                }
+            }
 
         }
 
 
 
-
-        private void TickerDisconnectedHandler(object sender, EventArgs e)
+        public void TickerDisconnectedHandler(object sender, EventArgs e)
         {
             Logger.WriteLog("Ticker disconnected... pausing all buy / sell");
 
@@ -199,7 +224,7 @@ namespace Multiplier
 
         }
 
-        private void TickerConnectedHandler(object sender, EventArgs args)
+        public void TickerConnectedHandler(object sender, EventArgs args)
         {
 
             while (isBuysyDisposingCurStrategy)
@@ -215,7 +240,7 @@ namespace Multiplier
             //Task.Run(()=> UpdateSmaParameters(SmaTimeInterval, SmaSlices, true)).Wait();
 
 
-            var updateIntervalResult = UpdateIntervals(CurContextValues.CurrentIntervalValues);
+            var updateIntervalResult = CreateUpdateStrategyInstance(CurContextValues.CurrentIntervalValues);
             updateIntervalResult.Wait();
 
             Logger.WriteLog("SMA updating ends here");
@@ -236,7 +261,7 @@ namespace Multiplier
             TickerConnectedEvent?.Invoke(this, EventArgs.Empty);
         }
 
-        public async Task<bool> UpdateIntervals(IntervalValues intervalValues)
+        public async Task<bool> CreateUpdateStrategyInstance(IntervalValues intervalValues, bool CreateNewInstance = false)
         {
 
             if (isBuysyDisposingCurStrategy)
@@ -247,22 +272,27 @@ namespace Multiplier
 
             isBuysyDisposingCurStrategy = true;
 
-            try
+            if (!CreateNewInstance) //instance exists
             {
-                currentTradeStrategy.Dispose();
+                try
+                {
+                    currentTradeStrategy.Dispose();
+                }
+                catch (Exception ex)
+                {
+                    Logger.WriteLog("Error disposing strategy, continuing to create new instance" + ex.Message);
+
+                    ////dont stop creating new isntace even if erro occurs
+                    //remnants of previous sma may be active eg an un disposed sma 
+                    //return false;
+                }
+                finally
+                {
+                    currentTradeStrategy = null;
+                }
             }
-            catch (Exception ex)
-            {
-                Logger.WriteLog("Error disposing strategy, continuing to create new instance" + ex.Message);
-                
-                ////dont stop creating new isntace even if erro occurs
-                //remnants of previous sma may be active eg an un disposed sma 
-                //return false;
-            }
-            finally
-            {
-                currentTradeStrategy = null;
-            }
+
+
 
             if (CurContextValues.UserStartedTrading)
                 CurContextValues.StartAutoTrading = false;
@@ -270,8 +300,8 @@ namespace Multiplier
             await Task.Run(() =>
             {
                 currentTradeStrategy = new TradeStrategyE(ref CurContextValues, intervalValues);
-                Logger.WriteLog("Waiting 20 sec for data download to complete ");
-                Thread.Sleep(20 * 1000);
+                //Logger.WriteLog("Waiting 20 sec for data download to complete ");
+                //Thread.Sleep(20 * 1000);
             }).ContinueWith((t) => t.Wait());
 
             //await createNewTradeInstance(intervalValues);
@@ -282,6 +312,8 @@ namespace Multiplier
 
             isBuysyDisposingCurStrategy = false;
             Logger.WriteLog("Done updating intervals");
+
+            writeCurrentStrategySmaValues();
 
             return true;
         }

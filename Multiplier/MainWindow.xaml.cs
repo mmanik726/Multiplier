@@ -894,7 +894,7 @@ namespace Multiplier
             Dispatcher.Invoke(() => btnStopAndCancel.IsEnabled = true);
         }
 
-        private void rdoBtn_Clicked(object sender, RoutedEventArgs e)
+        private async void rdoBtn_Clicked(object sender, RoutedEventArgs e)
         {
             var response = MessageBox.Show("Sure to change intervals?", "Change Intervals?", MessageBoxButton.YesNo);
 
@@ -904,9 +904,9 @@ namespace Multiplier
                 toggleRdoBtn(false);
                 if (ProductManager != null)
                 {
-                    Task.Run(() => 
+                    await Task.Run(() => 
                     {
-                        var a = ProductManager.UpdateIntervals(GetIntervals());
+                        var a = ProductManager.CreateUpdateStrategyInstance(GetIntervals()).Result;
                         //result.Wait();
                     }).ContinueWith((t)=>t.Wait());
 
