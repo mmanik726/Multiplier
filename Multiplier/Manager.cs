@@ -299,7 +299,8 @@ namespace Multiplier
 
             await Task.Run(() =>
             {
-                currentTradeStrategy = new TradeStrategyE(ref CurContextValues, intervalValues);
+                //currentTradeStrategy = new TradeStrategyE(ref CurContextValues, intervalValues);
+                currentTradeStrategy = new TradeStrategyF(ref CurContextValues, intervalValues);
                 //Logger.WriteLog("Waiting 20 sec for data download to complete ");
                 //Thread.Sleep(20 * 1000);
             }).ContinueWith((t) => t.Wait());

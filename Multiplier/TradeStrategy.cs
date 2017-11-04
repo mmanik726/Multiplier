@@ -713,14 +713,14 @@ namespace Multiplier
     class TradeStrategyE : TradeStrategyBase
     {
 
-        private decimal LastBuyAtPrice;
-        private decimal LastSellAtPrice;
+        internal decimal LastBuyAtPrice;
+        internal decimal LastSellAtPrice;
 
-        SmaValues BigIntervalSmaValues; 
+        internal SmaValues BigIntervalSmaValues; 
 
-        SmaValues SmallIntervalSmaValues;
+        internal SmaValues SmallIntervalSmaValues;
 
-        SmaValues TinyIntervalSmaValues;
+        internal SmaValues TinyIntervalSmaValues;
 
         //SmaGroup LargeSmaGroup;
         //SmaGroup SmallSmaGroup;
@@ -737,13 +737,6 @@ namespace Multiplier
             BigIntervalSmaValues = new SmaValues("BigInterval", ref inputContextValues, intervalValues.LargeIntervalInMin, 60, 55, 28);
             SmallIntervalSmaValues = new SmaValues("SmallInterval", ref inputContextValues, intervalValues.MediumIntervalInMin, 60, 55, 28);
             TinyIntervalSmaValues = new SmaValues("TinyInterval", ref inputContextValues, intervalValues.SmallIntervalInMin, 60, 55, 28);
-
-            //Task.Run(() => 
-            //{
-            //    BigIntervalSmaValues = new SmaValues("BigInterval", ref inputContextValues, intervalValues.LargeIntervalInMin, 60, 55, 28);
-            //    SmallIntervalSmaValues = new SmaValues("SmallInterval", ref inputContextValues, intervalValues.MediumIntervalInMin, 60, 55, 28);
-            //    TinyIntervalSmaValues = new SmaValues("TinyInterval", ref inputContextValues, intervalValues.SmallIntervalInMin, 60, 55, 28);
-            //}).Wait();
 
 
             inputContextValues.WaitTimeAfterBigSmaCrossInMin = intervalValues.LargeIntervalInMin; 
@@ -851,44 +844,9 @@ namespace Multiplier
 
         }
 
-        //private void TradeUsing(SmaGroup inputSmaGroup, string intervalUseReason = "")
-        //{
-
-        //    var curPrice = CurrentValues.CurrentBufferedPrice;
-
-        //    if (inputSmaGroup.LargeGroupValues.Buy == true)
-        //    {
-        //        if (!CurrentValues.BuyOrderFilled) //if not already bought
-        //        {
-        //            if (!CurrentValues.WaitingBuyOrSell)
-        //            {
-        //                CurrentValues.WaitingBuyOrSell = true;
-        //                Logger.WriteLog(intervalUseReason);
-        //                Logger.WriteLog(inputSmaGroup.LargeGroupValues.BuyReason);
-        //                LastBuyAtPrice = curPrice;
-        //                Buy();
-        //            }
-        //        }
-        //    }
 
 
-        //    if (inputSmaGroup.SmallGroupValues.Sell == true)
-        //    {
-        //        if (!CurrentValues.SellOrderFilled) //if not already sold
-        //        {
-        //            if (!CurrentValues.WaitingBuyOrSell)
-        //            {
-        //                CurrentValues.WaitingBuyOrSell = true;
-        //                Logger.WriteLog(intervalUseReason);
-        //                Logger.WriteLog(inputSmaGroup.SmallGroupValues.SellReason);
-        //                LastSellAtPrice = curPrice;
-        //                Sell();
-        //            }
-        //        }
-        //    }
-        //}
-
-        private void TradeUsing(SmaValues inputSmaValues, string intervalUseReason = "")
+        internal void TradeUsing(SmaValues inputSmaValues, string intervalUseReason = "")
         {
 
             var curPrice = CurrentValues.CurrentBufferedPrice;
@@ -927,18 +885,60 @@ namespace Multiplier
         }
 
 
-        //class SmaGroup
-        //{
-        //    public SmaValues SmallGroupValues;
-        //    public SmaValues LargeGroupValues;
+    }
 
-        //    public void SetGroup(SmaValues smallGroup, SmaValues largeGroup)
-        //    {
-        //        SmallGroupValues = smallGroup;
-        //        LargeGroupValues = largeGroup;
-        //    }
-        //}
 
+    class TradeStrategyF : TradeStrategyE
+    {
+        public TradeStrategyF(ref ContextValues inputContextValues, IntervalValues intervalValues) : base(ref inputContextValues, intervalValues)
+        {
+
+        }
+
+
+
+        public override async void Trade()
+        {
+            if (CurrentValues.WaitingBuyOrSell)
+                return;
+
+
+            var secSinceLastCrosss = (DateTime.UtcNow.ToLocalTime() - CurrentValues.LastLargeSmaCrossTime).TotalSeconds;
+
+            if (secSinceLastCrosss < (CurrentValues.WaitTimeAfterBigSmaCrossInMin * 60))
+                return;
+
+
+            BigIntervalSmaValues.DetermineBuySell();
+
+            SmallIntervalSmaValues.DetermineBuySell();
+
+            TinyIntervalSmaValues.DetermineBuySell();
+
+
+
+            var curPrice = CurrentValues.CurrentBufferedPrice;
+
+            if (!CurrentValues.BuyOrderFilled) // not bought yet
+            {
+                //if (SmallIntervalSmaValues.Buy && BigIntervalSmaValues.Buy)
+                if (TinyIntervalSmaValues.Buy && SmallIntervalSmaValues.Buy && BigIntervalSmaValues.Buy)
+                {
+                    TradeUsing(BigIntervalSmaValues);
+                }
+
+            }
+
+            if (!CurrentValues.SellOrderFilled) // not sold yet
+            {
+                if (SmallIntervalSmaValues.Sell && BigIntervalSmaValues.Sell)
+                {
+                    TradeUsing(BigIntervalSmaValues);
+                }
+
+            }
+
+        }
 
     }
 
@@ -1093,9 +1093,10 @@ namespace Multiplier
 
             var smallestToMedGap = Math.Abs(smallestSmaPrice - mediumSmaPrice);
             var threshold = smallestSmaPrice - (smallestToMedGap / 50);
-            if ((curPrice <= mediumSmaPrice) || (curPrice <= threshold))  //if price is < the smallest sma or medium sma
+            //if ((curPrice <= mediumSmaPrice) || (curPrice <= threshold))  //if price is < the smallest sma or medium sma
+            if ((curPrice <= mediumSmaPrice) || (curPrice <= smallestSmaPrice))  //if price is < the smallest sma or medium sma
             {
-                if (!myContextValues.SellOrderFilled)//if not already bought
+                if (!myContextValues.SellOrderFilled)//if not already sold
                 {
                     SellReason = "Selling based on:\nCur price <= Medium Sma OR threshold (less than smalles sma)\n\tMedium Sma > Largest Sma";
                     BuyReason = "";
