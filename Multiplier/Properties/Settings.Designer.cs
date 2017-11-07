@@ -71,5 +71,89 @@ namespace Multiplier.Properties {
                 this["Secret"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool UseUISmaValues {
+            get {
+                return ((bool)(this["UseUISmaValues"]));
+            }
+            set {
+                this["UseUISmaValues"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("5")]
+        public int CommonLargeInterval {
+            get {
+                return ((int)(this["CommonLargeInterval"]));
+            }
+            set {
+                this["CommonLargeInterval"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("3")]
+        public int ComonMediumInterval {
+            get {
+                return ((int)(this["ComonMediumInterval"]));
+            }
+            set {
+                this["ComonMediumInterval"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("1")]
+        public int CommonSmallInterval {
+            get {
+                return ((int)(this["CommonSmallInterval"]));
+            }
+            set {
+                this["CommonSmallInterval"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("60")]
+        public int CommonLargeSlices {
+            get {
+                return ((int)(this["CommonLargeSlices"]));
+            }
+            set {
+                this["CommonLargeSlices"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("55")]
+        public int CommonMediumSlices {
+            get {
+                return ((int)(this["CommonMediumSlices"]));
+            }
+            set {
+                this["CommonMediumSlices"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("28")]
+        public int CommonSmallSlices {
+            get {
+                return ((int)(this["CommonSmallSlices"]));
+            }
+            set {
+                this["CommonSmallSlices"] = value;
+            }
+        }
     }
 }

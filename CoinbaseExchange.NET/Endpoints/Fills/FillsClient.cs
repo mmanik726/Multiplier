@@ -323,26 +323,34 @@ namespace CoinbaseExchange.NET.Endpoints.Fills
             if (FillWatchList.Count() > 0)
                 IsBusy_TrackIngOrder = true;
 
+            int counter = 0;
+
             while (FillWatchList.Count() > 0)
             {
 
                 //if ticker is offline then return
 
-
-
-                Logger.WriteLog(string.Format("Watching {0} order(s)", FillWatchList.Count()));
-
-                //Logger.WriteLog(FillWatchList.FirstOrDefault().OrderId);
-                try
+                //not to overwhelm the logger 
+                counter++;
+                if (counter % 10 == 0)
                 {
-                    //list may change in the middle of operation
-                    FillWatchList.ForEach((x) => Logger.WriteLog(string.Format("{0} -> {1} {2} {3} @{4}",
-                        x.OrderId, x.Side, x.ProductSize, x.Productname, x.UsdPrice)));
+                    Logger.WriteLog(string.Format("Watching {0} order(s)", FillWatchList.Count()));
+
+                    Logger.WriteLog(FillWatchList.FirstOrDefault().OrderId);
+                    try
+                    {
+                        //list may change in the middle of operation
+                        FillWatchList.ForEach((x) => Logger.WriteLog(string.Format("{0} -> {1} {2} {3} @{4}",
+                            x.OrderId, x.Side, x.ProductSize, x.Productname, x.UsdPrice)));
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.WriteLog("Error writing watch list (" + ex.Message + ")");
+                    };
                 }
-                catch (Exception ex)
-                {
-                    Logger.WriteLog("Error writing watch list (" + ex.Message + ")");
-                };
+
+                if (counter >= int.MaxValue - 100)
+                    counter = 0; 
 
 
                 if (myActiveOrderBook.BusyWithWithCancelReorder)

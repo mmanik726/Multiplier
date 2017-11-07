@@ -64,7 +64,7 @@ namespace Multiplier
         public int CurrentDisplaySmaTimeInterval { get; set; }
         //public double WaitTimeAfterLargeSmaCrossInMin { get; set; }
 
-
+        private bool AvoidExchangeFees;
 
         public Manager(string inputProductName, string PassPhrase, string Key, string Secret)
         {
@@ -126,7 +126,7 @@ namespace Multiplier
 
             ProductTickerClient.PriceUpdated += ProductTickerClient_UpdateHandler;
 
-
+            AvoidExchangeFees = false;
 
             ProductTickerClient.TickerConnectedEvent += TickerConnectedHandler;
             ProductTickerClient.TickerDisconnectedEvent += TickerDisconnectedHandler;
@@ -319,6 +319,11 @@ namespace Multiplier
             return true;
         }
 
+        public void setAvoidExFeesVar(bool inputValue)
+        {
+            AvoidExchangeFees = inputValue;
+            MyProductOrderBook.setAvoidFeeVar(inputValue);
+        }
 
 
         public async Task<bool> UpdateDisplaySmaParameters(int InputTimerInterval, int InputSlices, bool forceRedownload = false)
@@ -743,11 +748,51 @@ namespace Multiplier
         public int MediumIntervalInMin { get; set; }
         public int SmallIntervalInMin { get; set; }
 
+        public int LargeSmaSlices { get; set; }
+        public int MediumSmaSlice { get; set; }
+        public int SmallSmaSlices { get; set; }
+
         public IntervalValues(int largeInterval, int mediumInterval, int smallInterval)
         {
+            try
+            {
+                if (Properties.Settings.Default.UseUISmaValues == false)
+                {
+                    Logger.WriteLog("UseUISmaValues is set to True. Using config file sma values.");
+                    var configLargeInterval = Convert.ToInt16(Properties.Settings.Default.CommonLargeInterval);
+                    var configMediumInterval = Convert.ToInt16(Properties.Settings.Default.ComonMediumInterval);
+                    var configSmallInterval = Convert.ToInt16(Properties.Settings.Default.CommonSmallInterval);
+
+                    var configLargeSmaSlice = Convert.ToInt16(Properties.Settings.Default.CommonLargeSlices);
+                    var configMediumSmaSlice = Convert.ToInt16(Properties.Settings.Default.CommonMediumSlices);
+                    var configSmallSmaSlice = Convert.ToInt16(Properties.Settings.Default.CommonSmallSlices);
+
+                    LargeIntervalInMin = configLargeInterval;
+                    MediumIntervalInMin = configMediumInterval;
+                    SmallIntervalInMin = configSmallInterval;
+
+                    //defaults 
+                    LargeSmaSlices = configLargeSmaSlice;
+                    MediumSmaSlice = configMediumSmaSlice;
+                    SmallSmaSlices = configSmallSmaSlice;
+
+                    return;
+                }
+            }
+            catch (Exception)
+            {
+                Logger.WriteLog("Error reading config file for sma values, using ui defaults");
+            }
+
+
             LargeIntervalInMin = largeInterval;
             MediumIntervalInMin = mediumInterval;
             SmallIntervalInMin = smallInterval;
+
+            //defaults 
+            LargeSmaSlices = 60;
+            MediumSmaSlice = 55;
+            SmallSmaSlices = 28;
         }
     }
 

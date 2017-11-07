@@ -270,6 +270,8 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
         private TickerClient PriceTicker;
         private FillsClient fillsClient;
 
+        private bool AvoidExFees; 
+
         //private List<MyOrder> MyActiveOrderList;
         public List<MyOrder> MyChaseOrderList;
 
@@ -312,6 +314,7 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
             OrderRetriedCount = 0;
             OrderStartingPrice = 0;
 
+            AvoidExFees = false;
 
             ProductName = product;
             _auth = authContainer;
@@ -335,6 +338,12 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
         {
             //remove all the items from the watch list
 
+        }
+
+
+        public void setAvoidFeeVar(bool inputValue)
+        {
+            AvoidExFees = inputValue;
         }
 
         private void TickerConnectedEventHandler(object sender, EventArgs args)
@@ -635,7 +644,12 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
                 //OrderStartingPrice = adjustedPrice;
 
                 //var priceChangePercent = PriceTicker.CurrentPrice * 10.00m;//0.0025m; //for testing
-                var priceChangePercent = PriceTicker.CurrentPrice * 0.0010m; // 0.0025m
+                decimal priceChangePercent = 0.0m;
+                if (AvoidExFees)
+                    priceChangePercent = PriceTicker.CurrentPrice * 0.0020m; // 0.0025m
+                else
+                    priceChangePercent = PriceTicker.CurrentPrice * 0.0010m; // 0.0025m
+
 
                 if (OrderRetriedCount <= 13 && curPriceDifference <= priceChangePercent) // retry a total of 15 times or while less than a "big jump"
                 {
@@ -802,8 +816,9 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
             orderBodyObj.Add(new JProperty("price", oPrice));
             orderBodyObj.Add(new JProperty("size", oSize));
 
-            //if (orderType == "limit")
-            //    orderBodyObj.Add(new JProperty("post_only", "T"));
+            //if post only is set then use this
+            if (AvoidExFees)
+                orderBodyObj.Add(new JProperty("post_only", "T"));
 
             if (OrderStartingPrice == 0) //not yet set
                 OrderStartingPrice = Convert.ToDecimal(oPrice);
@@ -892,10 +907,23 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
 
 
             //for not post only sales place at same price as now 
-            if (order.Side == "buy")
-                return curTmpPrice; //m is for decimal
+
+            if (AvoidExFees)
+            {
+                if (order.Side == "buy")
+                    return curTmpPrice - 0.01m; //m is for decimal
+                else
+                    return curTmpPrice + 0.01m;
+            }
             else
-                return curTmpPrice;
+            {
+                if (order.Side == "buy")
+                    return curTmpPrice; //m is for decimal
+                else
+                    return curTmpPrice;
+            }
+
+
 
         }
 

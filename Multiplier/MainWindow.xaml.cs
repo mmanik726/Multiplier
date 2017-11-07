@@ -932,6 +932,28 @@ namespace Multiplier
             });
         }
 
+        private void chkAvoidFees_Click(object sender, RoutedEventArgs e)
+        {
+            if (ProductManager == null)
+            {
+                MessageBox.Show("Please select product first");
+                return;
+            }
+
+            if ((bool)chkAvoidFees.IsChecked)
+            {
+                ProductManager.setAvoidExFeesVar(true);
+            }
+            else
+            {
+                ProductManager.setAvoidExFeesVar(false);
+            }
+        }
+
+
+
+
+
         //private void btnDisconnect_Click(object sender, RoutedEventArgs e)
         //{
         //    Dispatcher.Invoke(() => ProductManager.TickerDisconnectedHandler(this, EventArgs.Empty));

@@ -64,6 +64,7 @@
             </StackPanel>
         </GroupBox>
         <Button x:Name="btnBuyAtNow" Content="Buy NOW" Margin="0,315,323.5,0" VerticalAlignment="Top" Click="btnBuyAtNow_Click" HorizontalAlignment="Right" Width="134"/>
+        <CheckBox x:Name="chkAvoidFees" Content="Avoid fees (Post Only)" HorizontalAlignment="Left" Margin="632,377,0,0" VerticalAlignment="Top" Click="chkAvoidFees_Click"/>
 
     </Grid>
 </Window>

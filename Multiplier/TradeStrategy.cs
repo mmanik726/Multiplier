@@ -734,9 +734,12 @@ namespace Multiplier
 
 
 
-            BigIntervalSmaValues = new SmaValues("BigInterval", ref inputContextValues, intervalValues.LargeIntervalInMin, 60, 55, 28);
-            SmallIntervalSmaValues = new SmaValues("SmallInterval", ref inputContextValues, intervalValues.MediumIntervalInMin, 60, 55, 28);
-            TinyIntervalSmaValues = new SmaValues("TinyInterval", ref inputContextValues, intervalValues.SmallIntervalInMin, 60, 55, 28);
+            BigIntervalSmaValues = new SmaValues("BigInterval", ref inputContextValues, intervalValues.LargeIntervalInMin, 
+                intervalValues.LargeSmaSlices, intervalValues.MediumSmaSlice, intervalValues.SmallSmaSlices);
+            SmallIntervalSmaValues = new SmaValues("SmallInterval", ref inputContextValues, intervalValues.MediumIntervalInMin,
+                intervalValues.LargeSmaSlices, intervalValues.MediumSmaSlice, intervalValues.SmallSmaSlices);
+            TinyIntervalSmaValues = new SmaValues("TinyInterval", ref inputContextValues, intervalValues.SmallIntervalInMin,
+                intervalValues.LargeSmaSlices, intervalValues.MediumSmaSlice, intervalValues.SmallSmaSlices);
 
 
             inputContextValues.WaitTimeAfterBigSmaCrossInMin = intervalValues.LargeIntervalInMin; 
@@ -747,12 +750,12 @@ namespace Multiplier
             //SmallSmaGroup.SetGroup(TinyIntervalSmaValues, SmallIntervalSmaValues); 
         }
 
-        private void createSmaInstances(ref ContextValues inputContextValues, IntervalValues intervalValues)
-        {
-            BigIntervalSmaValues = new SmaValues("BigInterval", ref inputContextValues, intervalValues.LargeIntervalInMin, 60, 55, 28);
-            SmallIntervalSmaValues = new SmaValues("SmallInterval", ref inputContextValues, intervalValues.MediumIntervalInMin, 60, 55, 28);
-            TinyIntervalSmaValues = new SmaValues("TinyInterval", ref inputContextValues, intervalValues.SmallIntervalInMin, 60, 55, 28);
-        }
+        //private void createSmaInstances(ref ContextValues inputContextValues, IntervalValues intervalValues)
+        //{
+        //    BigIntervalSmaValues = new SmaValues("BigInterval", ref inputContextValues, intervalValues.LargeIntervalInMin, 60, 55, 28);
+        //    SmallIntervalSmaValues = new SmaValues("SmallInterval", ref inputContextValues, intervalValues.MediumIntervalInMin, 60, 55, 28);
+        //    TinyIntervalSmaValues = new SmaValues("TinyInterval", ref inputContextValues, intervalValues.SmallIntervalInMin, 60, 55, 28);
+        //}
 
 
         public override void Dispose()
@@ -1092,9 +1095,11 @@ namespace Multiplier
 
 
             var smallestToMedGap = Math.Abs(smallestSmaPrice - mediumSmaPrice);
-            var threshold = smallestSmaPrice - (smallestToMedGap / 50);
-            //if ((curPrice <= mediumSmaPrice) || (curPrice <= threshold))  //if price is < the smallest sma or medium sma
-            if ((curPrice <= mediumSmaPrice) || (curPrice <= smallestSmaPrice))  //if price is < the smallest sma or medium sma
+            var threshold = smallestSmaPrice - (smallestToMedGap / 3);
+
+            //if ((curPrice <= mediumSmaPrice) || (curPrice <= smallestSmaPrice))  //if price is < the smallest sma or medium sma
+            
+            if ((curPrice <= mediumSmaPrice) || (curPrice <= threshold))  //if price is < the smallest sma or medium sma
             {
                 if (!myContextValues.SellOrderFilled)//if not already sold
                 {
