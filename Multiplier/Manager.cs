@@ -350,6 +350,10 @@ namespace Multiplier
         private void FillUpdateEventHandler(object sender, EventArgs args)
         {
 
+            //set buy sell waiting flag to off only when there are no order in the orderbook 
+            if (CurContextValues.MyOrderBook.MyChaseOrderList.Count == 0)
+                CurContextValues.WaitingBuyOrSell = false;
+
             var filledOrder = ((OrderUpdateEventArgs)args);
 
             if (filledOrder.side == "UNKNOWN")
@@ -400,9 +404,9 @@ namespace Multiplier
 
             //CurContextValues.WaitingBuyOrSell = false;
 
-            //set buy sell waiting flag to off only when there are no order in the orderbook 
-            if (CurContextValues.MyOrderBook.MyChaseOrderList.Count == 0) 
-                CurContextValues.WaitingBuyOrSell = false;
+            ////set buy sell waiting flag to off only when there are no order in the orderbook 
+            //if (CurContextValues.MyOrderBook.MyChaseOrderList.Count == 0) 
+            //    CurContextValues.WaitingBuyOrSell = false;
 
 
             if (CurContextValues.ForceSold) 
