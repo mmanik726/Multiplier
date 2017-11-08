@@ -74,7 +74,7 @@ namespace Multiplier.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
         public bool UseUISmaValues {
             get {
                 return ((bool)(this["UseUISmaValues"]));
@@ -122,7 +122,7 @@ namespace Multiplier.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("60")]
+        [global::System.Configuration.DefaultSettingValueAttribute("25")]
         public int CommonLargeSlices {
             get {
                 return ((int)(this["CommonLargeSlices"]));
@@ -134,7 +134,7 @@ namespace Multiplier.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("55")]
+        [global::System.Configuration.DefaultSettingValueAttribute("23")]
         public int CommonMediumSlices {
             get {
                 return ((int)(this["CommonMediumSlices"]));
@@ -146,7 +146,7 @@ namespace Multiplier.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("28")]
+        [global::System.Configuration.DefaultSettingValueAttribute("14")]
         public int CommonSmallSlices {
             get {
                 return ((int)(this["CommonSmallSlices"]));

@@ -15,7 +15,7 @@
       <Value Profile="(Default)">NXmcu07qBfmAq45L2l/Cm1jOXWHfozaMw3s9xYHKjGjmIHtbypyc2TqF62SK61NJcuAr1whiOjvDrRupEHnl5w==</Value>
     </Setting>
     <Setting Name="UseUISmaValues" Type="System.Boolean" Scope="User">
-      <Value Profile="(Default)">True</Value>
+      <Value Profile="(Default)">False</Value>
     </Setting>
     <Setting Name="CommonLargeInterval" Type="System.Int32" Scope="User">
       <Value Profile="(Default)">5</Value>
@@ -27,13 +27,13 @@
       <Value Profile="(Default)">1</Value>
     </Setting>
     <Setting Name="CommonLargeSlices" Type="System.Int32" Scope="User">
-      <Value Profile="(Default)">60</Value>
+      <Value Profile="(Default)">25</Value>
     </Setting>
     <Setting Name="CommonMediumSlices" Type="System.Int32" Scope="User">
-      <Value Profile="(Default)">55</Value>
+      <Value Profile="(Default)">23</Value>
     </Setting>
     <Setting Name="CommonSmallSlices" Type="System.Int32" Scope="User">
-      <Value Profile="(Default)">28</Value>
+      <Value Profile="(Default)">14</Value>
     </Setting>
   </Settings>
 </SettingsFile>

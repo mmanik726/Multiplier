@@ -596,8 +596,10 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
 
                     if (ex.InnerException.Message == "OrderNotFound")
                     {
-                        Logger.WriteLog("Order not found " + myCurrentOrder.OrderId);
+                        Logger.WriteLog("Order not found, removing from watch list and continueing" + myCurrentOrder.OrderId);
 
+                        RemoveFromOrderList(myCurrentOrder.OrderId);
+                        
                         NotifyOrderUpdateListener(new OrderUpdateEventArgs
                         {
                             side = "UNKNOWN",
@@ -610,7 +612,6 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
 
                         });
 
-                        RemoveFromOrderList(myCurrentOrder.OrderId);
                     }
 
                     if (ex.InnerException.Message == "OrderAlreadyDone")
@@ -817,7 +818,7 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
             orderBodyObj.Add(new JProperty("size", oSize));
 
             //if post only is set then use this
-            if (AvoidExFees)
+            if (AvoidExFees && orderType != "market")
                 orderBodyObj.Add(new JProperty("post_only", "T"));
 
             if (OrderStartingPrice == 0) //not yet set
