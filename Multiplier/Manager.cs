@@ -26,6 +26,7 @@ namespace Multiplier
         private string MyKey { get; set; }
         private string MySecret { get; set; }
 
+        private string ConfigStrategyInUse { get; set; }
 
         private MovingAverage DisplaySma { get; set; }
 
@@ -126,7 +127,7 @@ namespace Multiplier
 
             ProductTickerClient.PriceUpdated += ProductTickerClient_UpdateHandler;
 
-            AvoidExchangeFees = false;
+            AvoidExchangeFees = true;
 
             ProductTickerClient.TickerConnectedEvent += TickerConnectedHandler;
             ProductTickerClient.TickerDisconnectedEvent += TickerDisconnectedHandler;
@@ -146,7 +147,7 @@ namespace Multiplier
 
 
             CurrentDisplaySmaTimeInterval = intervalValues.LargeIntervalInMin;
-            CurrentDisplaySmaSlices = 60; //default large sma slice value 
+            CurrentDisplaySmaSlices = intervalValues.LargeSmaSlices; //default large sma slice value 
 
 
             DisplaySma = new MovingAverage(ref ProductTickerClient, ProductName, CurrentDisplaySmaTimeInterval, CurrentDisplaySmaSlices);
@@ -297,10 +298,29 @@ namespace Multiplier
             if (CurContextValues.UserStartedTrading)
                 CurContextValues.StartAutoTrading = false;
 
+
+            ConfigStrategyInUse =  Properties.Settings.Default.StrategyInUse;
+
             await Task.Run(() =>
             {
                 //currentTradeStrategy = new TradeStrategyE(ref CurContextValues, intervalValues);
-                currentTradeStrategy = new TradeStrategyF(ref CurContextValues, intervalValues);
+
+                switch (ConfigStrategyInUse)
+                {
+                    case "E":
+                        Logger.WriteLog("Setting Current Strategy to E");
+                        currentTradeStrategy = new TradeStrategyE(ref CurContextValues, intervalValues);
+                        break;
+                    case "F":
+                        Logger.WriteLog("Setting Current Strategy to F");
+                        currentTradeStrategy = new TradeStrategyF(ref CurContextValues, intervalValues);
+                        break;
+                    default:
+                        Logger.WriteLog("Using Default Strategy: F");
+                        currentTradeStrategy = new TradeStrategyF(ref CurContextValues, intervalValues);
+                        break;
+                }
+
                 //Logger.WriteLog("Waiting 20 sec for data download to complete ");
                 //Thread.Sleep(20 * 1000);
             }).ContinueWith((t) => t.Wait());
@@ -322,6 +342,7 @@ namespace Multiplier
         public void setAvoidExFeesVar(bool inputValue)
         {
             AvoidExchangeFees = inputValue;
+            Logger.WriteLog("Avoid exchange fees (post only) is set to " + inputValue.ToString());
             MyProductOrderBook.setAvoidFeeVar(inputValue);
         }
 
@@ -409,27 +430,28 @@ namespace Multiplier
             //    CurContextValues.WaitingBuyOrSell = false;
 
 
-            if (CurContextValues.ForceSold) 
-            {
-                ForcedOrderFilledEventArgs tempArgs = new ForcedOrderFilledEventArgs();
-                tempArgs.filledAtPrice = filledOrder.filledAtPrice;
-                tempArgs.fillFee = filledOrder.fillFee;
-                tempArgs.fillSize = filledOrder.fillSize;
-                tempArgs.Message = filledOrder.Message;
-                tempArgs.OrderId = filledOrder.OrderId;
-                tempArgs.ProductName = filledOrder.ProductName;
-                tempArgs.side = filledOrder.side;
-                tempArgs.ForcedOrder = true;
-                //var temp = (ForcedOrderFilledEventArgs)filledOrder;
-                tempArgs.ForcedOrder = true;
-                CurContextValues.ForceSold = false;
-                OrderFilledEvent?.Invoke(this, tempArgs);
-            }
-            else
-            {
-                OrderFilledEvent?.Invoke(this, filledOrder);
-            }
+            //if (CurContextValues.ForceSold) 
+            //{
+            //    ForcedOrderFilledEventArgs tempArgs = new ForcedOrderFilledEventArgs();
+            //    tempArgs.filledAtPrice = filledOrder.filledAtPrice;
+            //    tempArgs.fillFee = filledOrder.fillFee;
+            //    tempArgs.fillSize = filledOrder.fillSize;
+            //    tempArgs.Message = filledOrder.Message;
+            //    tempArgs.OrderId = filledOrder.OrderId;
+            //    tempArgs.ProductName = filledOrder.ProductName;
+            //    tempArgs.side = filledOrder.side;
+            //    tempArgs.ForcedOrder = true;
+            //    //var temp = (ForcedOrderFilledEventArgs)filledOrder;
+            //    tempArgs.ForcedOrder = true;
+            //    CurContextValues.ForceSold = false;
+            //    OrderFilledEvent?.Invoke(this, tempArgs);
+            //}
+            //else
+            //{
+            //    OrderFilledEvent?.Invoke(this, filledOrder);
+            //}
 
+            OrderFilledEvent?.Invoke(this, filledOrder);
 
 
             //this.Dispatcher.Invoke(() => updateListView(filledOrder));
@@ -437,7 +459,14 @@ namespace Multiplier
 
         public async Task<bool> StopAndCancel()
         {
-            await currentTradeStrategy.CancelCurrentTradeAction();
+            if (CurContextValues.MyOrderBook.MyChaseOrderList.Count() > 0)
+            {
+                await currentTradeStrategy.CancelCurrentTradeAction();
+
+            }
+
+            CurContextValues.StartAutoTrading = false;
+
             //test.Wait();
 
             if (CurContextValues.StartAutoTrading == false)
@@ -447,6 +476,7 @@ namespace Multiplier
 
             if (CurContextValues.MyOrderBook.MyChaseOrderList.Count() == 0)
             {
+                //Logger.WriteLog("No orders in order list, setting WaitingBuyOrSell flag to false");
                 CurContextValues.WaitingBuyOrSell = false;
             }
 
@@ -468,9 +498,16 @@ namespace Multiplier
 
                 CurContextValues.WaitingBuyOrSell = true;
 
+                while (CurContextValues.CurrentBufferedPrice == 0)
+                {
+                    Logger.WriteLog("waiting for currrent buffered price ");
+                    await Task.Run(() => Thread.Sleep(500)).ContinueWith((t) => t.Wait());
+                }
+
                 var ForceOrderResult = await MyProductOrderBook.PlaceNewOrder("sell", CurContextValues.ProductName, 
                     CurContextValues.BuySellAmount.ToString(), CurContextValues.CurrentBufferedPrice.ToString(), true);
-                CurContextValues.ForceSold = true;
+
+                //CurContextValues.ForceSold = true;
                 //ForceOrderResult.Wait();
 
             }
@@ -551,22 +588,23 @@ namespace Multiplier
             CurContextValues.CurrentRealtimePrice = tickerData.RealTimePrice;
             CurContextValues.LastTickerUpdateTime = DateTime.UtcNow.ToLocalTime();
 
-            if (CurContextValues.ForceSold)
-            {
-                if (CurContextValues.CurrentBufferedPrice <= (CurrentDisplaySmaPrice - CurContextValues.PriceBuffer)) // price below average 
-                {
+            //wtf does the following needed for?
+            //if (CurContextValues.ForceSold)
+            //{
+            //    if (CurContextValues.CurrentBufferedPrice <= (CurrentDisplaySmaPrice - CurContextValues.PriceBuffer)) // price below average 
+            //    {
 
-                    PriceBelowAverageEvent?.Invoke(this, EventArgs.Empty);
+            //        PriceBelowAverageEvent?.Invoke(this, EventArgs.Empty);
 
-                    CurContextValues.ForceSold = false;
+            //        CurContextValues.ForceSold = false;
 
-                    if (CurContextValues.UserStartedTrading)
-                    {
-                        StartTrading_ByBuying();
-                    }
-                }
+            //        if (CurContextValues.UserStartedTrading)
+            //        {
+            //            StartTrading_ByBuying();
+            //        }
+            //    }
 
-            }
+            //}
 
 
             if ((CurContextValues.LastTickerUpdateTime - CurContextValues.LastBuySellTime).TotalMilliseconds < 1000)
@@ -707,7 +745,7 @@ namespace Multiplier
                 Logger.WriteLog("Checking Ticker");
                 var curTime = DateTime.UtcNow.ToLocalTime();
                 var timeDiff = curTime.Subtract(CurContextValues.LastTickerUpdateTime).TotalSeconds; // (curTime - CurContextValues.LastTickerUpdateTime).Seconds;
-                var maxInactiveTime = 120;
+                var maxInactiveTime = 240; // 4 minutes 
                 if (timeDiff >= maxInactiveTime)
                 {
                     Logger.WriteLog(string.Format("Ticker inactive for more than {0} seconds, closing and reconnecting now", maxInactiveTime));
@@ -737,7 +775,7 @@ namespace Multiplier
         }
     }
 
-    public class ForcedOrderFilledEventArgs: OrderUpdateEventArgs {public bool ForcedOrder { get; set; } }
+    //public class ForcedOrderFilledEventArgs: OrderUpdateEventArgs {public bool ForcedOrder { get; set; } }
 
     public class SmaParamUpdateArgs : EventArgs
     {
@@ -762,7 +800,7 @@ namespace Multiplier
             {
                 if (Properties.Settings.Default.UseUISmaValues == false)
                 {
-                    Logger.WriteLog("UseUISmaValues is set to True. Using config file sma values.");
+                    Logger.WriteLog("UseUISmaValues is set to false. Using config file sma values.");
                     var configLargeInterval = Convert.ToInt16(Properties.Settings.Default.CommonLargeInterval);
                     var configMediumInterval = Convert.ToInt16(Properties.Settings.Default.ComonMediumInterval);
                     var configSmallInterval = Convert.ToInt16(Properties.Settings.Default.CommonSmallInterval);
@@ -864,7 +902,7 @@ namespace Multiplier
         }
 
 
-        public bool ForceSold { get; set; }
+        //public bool ForceSold { get; set; }
         
 
         public double WaitTimeAfterBigSmaCrossInMin { get; set; }
@@ -880,7 +918,7 @@ namespace Multiplier
 
             UserStartedTrading = false;
             TradeActionList = new List<string>();
-            ForceSold = false;
+            //ForceSold = false;
 
             BuySellAmount = 0.01m;//default
 

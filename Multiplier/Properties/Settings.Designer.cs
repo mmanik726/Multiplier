@@ -155,5 +155,41 @@ namespace Multiplier.Properties {
                 this["CommonSmallSlices"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("E")]
+        public string StrategyInUse {
+            get {
+                return ((string)(this["StrategyInUse"]));
+            }
+            set {
+                this["StrategyInUse"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0.75")]
+        public decimal StrategyE_SmallPriceIncreasedPercent {
+            get {
+                return ((decimal)(this["StrategyE_SmallPriceIncreasedPercent"]));
+            }
+            set {
+                this["StrategyE_SmallPriceIncreasedPercent"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("1.75")]
+        public decimal StrategyE_BigPriceIncreasedPercent {
+            get {
+                return ((decimal)(this["StrategyE_BigPriceIncreasedPercent"]));
+            }
+            set {
+                this["StrategyE_BigPriceIncreasedPercent"] = value;
+            }
+        }
     }
 }

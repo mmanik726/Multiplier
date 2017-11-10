@@ -655,8 +655,11 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
                 if (OrderRetriedCount <= 13 && curPriceDifference <= priceChangePercent) // retry a total of 15 times or while less than a "big jump"
                 {
                     adjustedPrice = getAdjustedCurrentPrice(myCurrentOrder);
-                    //place new order limit order
-                    var orderAtNewPrice = PlaceNewOrder(
+
+                    try
+                    {
+                        //place new order limit order
+                        var orderAtNewPrice = PlaceNewOrder(
                         oSide: myCurrentOrder.Side,
                         oProdName: myCurrentOrder.Productname,
                         oSize: myCurrentOrder.ProductSize.ToString(),
@@ -665,8 +668,7 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
                         orderType: "limit"
                         );
 
-                    try
-                    {
+
                         orderAtNewPrice.Wait();
                     }
                     catch (Exception)
@@ -692,7 +694,10 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
                         Logger.WriteLog("Price changed more than " + curPriceDifference + " Forcing market order");
                     adjustedPrice = getAdjustedCurrentPrice(myCurrentOrder, "market");
                     //place new market order
-                    var orderAtNewPrice = PlaceNewOrder(
+
+                    try
+                    {
+                        var orderAtNewPrice = PlaceNewOrder(
                         oSide: myCurrentOrder.Side,
                         oProdName: myCurrentOrder.Productname,
                         oSize: myCurrentOrder.ProductSize.ToString(),
@@ -701,8 +706,7 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
                         orderType: "market"
                         );
 
-                    try
-                    {
+
                         orderAtNewPrice.Wait();
                     }
                     catch (Exception)
@@ -818,8 +822,13 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
             orderBodyObj.Add(new JProperty("size", oSize));
 
             //if post only is set then use this
-            if (AvoidExFees && orderType != "market")
-                orderBodyObj.Add(new JProperty("post_only", "T"));
+            if (AvoidExFees)
+            {
+                if (orderType != "market")
+                {
+                    orderBodyObj.Add(new JProperty("post_only", "T"));
+                }
+            }
 
             if (OrderStartingPrice == 0) //not yet set
                 OrderStartingPrice = Convert.ToDecimal(oPrice);
@@ -862,7 +871,9 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
                     Logger.WriteLog("Last order rejected, retrying..."); 
                     decimal adjustedPrice = getAdjustedCurrentPrice(myCurOrder);
 
-                    var orderAtNewPrice = PlaceNewOrder(
+                    try
+                    {
+                        var orderAtNewPrice = PlaceNewOrder(
                         oSide: myCurOrder.Side,
                         oProdName: myCurOrder.Productname,
                         oSize: myCurOrder.ProductSize.ToString(),
@@ -870,6 +881,13 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
                         chaseBestPrice: true,
                         orderType: orderType
                         );
+                    }
+                    catch (Exception)
+                    {
+                        Logger.WriteLog("error with recursive new order after last order rejected. Throwing OrderRetryError error (should be cought by CancelAndReorder func)");
+                        throw new Exception("OrderRetryError");
+                    }
+
                 }
 
 

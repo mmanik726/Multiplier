@@ -79,7 +79,7 @@ namespace Multiplier
             cmbProduct.Items.Add("LTC-USD");
             
 
-            btnSellAtNow.IsEnabled = false;
+            //btnSellAtNow.IsEnabled = false;
             btnStartByBuying.IsEnabled = false;
             btnStartBySelling.IsEnabled = false;
 
@@ -200,10 +200,10 @@ namespace Multiplier
             var msg = "Buy Sell Price buffer updated to " + data.NewBuySellBuffer.ToString();
             //MessageBox.Show(msg);
 
-            this.Dispatcher.Invoke(() => 
-            {
-                lblBuySellBuffer.Content = data.NewBuySellBuffer.ToString();
-            });
+            //this.Dispatcher.Invoke(() => 
+            //{
+            //    lblBuySellBuffer.Content = data.NewBuySellBuffer.ToString();
+            //});
             
 
         }
@@ -213,7 +213,7 @@ namespace Multiplier
             Dispatcher.Invoke(() =>
             {
                 btnStartByBuying.IsEnabled = false;
-                btnSellAtNow.IsEnabled = false;
+                //btnSellAtNow.IsEnabled = false;
             });
         }
 
@@ -229,27 +229,28 @@ namespace Multiplier
         {
             OrderUpdateEventArgs filledOrder = null;
 
-            if (args is ForcedOrderFilledEventArgs)
-            {
-                filledOrder = (ForcedOrderFilledEventArgs)args;
+            //if (args is ForcedOrderFilledEventArgs)
+            //{
+            //    filledOrder = (ForcedOrderFilledEventArgs)args;
 
-                Dispatcher.Invoke(() => 
-                {
-                    if (filledOrder.side != "UNKNOWN")
-                    {
-                        btnSellAtNow.IsEnabled = false;
-                        btnStartByBuying.IsEnabled = true;
-                    }
+            //    Dispatcher.Invoke(() => 
+            //    {
+            //        if (filledOrder.side != "UNKNOWN")
+            //        {
+            //            btnSellAtNow.IsEnabled = false;
+            //            btnStartByBuying.IsEnabled = true;
+            //        }
 
-                });
+            //    });
 
-            }
-            else
-            {
-                filledOrder = ((OrderUpdateEventArgs)args);
-            }
+            //}
+            //else
+            //{
+            //    filledOrder = ((OrderUpdateEventArgs)args);
+            //}
 
-            
+            filledOrder = ((OrderUpdateEventArgs)args);
+
 
 
             //MessageBox.Show(string.Format("{0} order ({1}) filled @{2} ", filledOrder.side, filledOrder.OrderId, filledOrder.filledAtPrice));
@@ -284,15 +285,15 @@ namespace Multiplier
 
             sharedCurrentLargeSmaPrice = currentSmaData.CurrentMAPrice; 
 
-            var x = this.Dispatcher.Invoke(() => chkUseSd.IsChecked);
-            if (x == true)
-            {
-                //LTCManager.UpdateBuySellBuffer(currentSmaData.CurrentSd);
+            //var x = this.Dispatcher.Invoke(() => chkUseSd.IsChecked);
+            //if (x == true)
+            //{
+            //    //LTCManager.UpdateBuySellBuffer(currentSmaData.CurrentSd);
 
-                bool isUseInvers = (bool)Dispatcher.Invoke(() => chkUseInverse.IsChecked);
+            //    bool isUseInvers = (bool)Dispatcher.Invoke(() => chkUseInverse.IsChecked);
 
-                ProductManager.UpdateBuySellBuffer(currentSmaData.CiBuffer, isUseInvers); //use the 95% confidence interval buffer
-            }
+            //    ProductManager.UpdateBuySellBuffer(currentSmaData.CiBuffer, isUseInvers); //use the 95% confidence interval buffer
+            //}
 
             this.Dispatcher.Invoke(() =>
             {
@@ -354,13 +355,13 @@ namespace Multiplier
                 {
                     lblCurPrice.Foreground = Brushes.Green;
 
-                    if (AutoTradingOn) 
-                        btnSellAtNow.IsEnabled = true;
+                    //if (AutoTradingOn) 
+                    //    btnSellAtNow.IsEnabled = true;
                 }
                 else
                 {
-                    if (AutoTradingOn)
-                        btnSellAtNow.IsEnabled = false;
+                    //if (AutoTradingOn)
+                    //    btnSellAtNow.IsEnabled = false;
 
                     lblCurPrice.Foreground = Brushes.Red;
                 }
@@ -669,28 +670,28 @@ namespace Multiplier
 
         }
 
-        private void Button_Click(object sender, RoutedEventArgs e)
-        {
-            decimal buySellBuffer = 0.03m; //default 
+        //private void Button_Click(object sender, RoutedEventArgs e)
+        //{
+        //    decimal buySellBuffer = 0.03m; //default 
 
-            try
-            {
-                buySellBuffer = Convert.ToDecimal(txtPriceBuffer.Text);
+        //    try
+        //    {
+        //        buySellBuffer = Convert.ToDecimal(txtPriceBuffer.Text);
 
-                if (buySellBuffer < 0)
-                {
-                    MessageBox.Show("price buffer cannot be less than 0");
-                    return;
-                }
+        //        if (buySellBuffer < 0)
+        //        {
+        //            MessageBox.Show("price buffer cannot be less than 0");
+        //            return;
+        //        }
 
-                ProductManager.UpdateBuySellBuffer(buySellBuffer, (bool)chkUseInverse.IsChecked);
+        //        ProductManager.UpdateBuySellBuffer(buySellBuffer, (bool)chkUseInverse.IsChecked);
 
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("invalid decimal value for price buffer");
-            }
-        }
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        MessageBox.Show("invalid decimal value for price buffer");
+        //    }
+        //}
 
 
         private void Button_Click_1(object sender, RoutedEventArgs e)
@@ -855,8 +856,31 @@ namespace Multiplier
 
         private void btnSellAtNow_Click(object sender, RoutedEventArgs e)
         {
-            btnSellAtNow.IsEnabled = false;
+            //btnSellAtNow.IsEnabled = false;
+            //ProductManager.ForceSellAtNow();
+
+
+
+
+            var response = MessageBox.Show(string.Format("confirm sell?"), "Confirm sell", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No);
+
+            if (response == MessageBoxResult.No)
+                return;
+
+            if (ProductManager == null)
+            {
+                MessageBox.Show("Please select a product first");
+                return;
+            }
+
             ProductManager.ForceSellAtNow();
+            btnSellAtNow.IsEnabled = false;
+
+            Task.Run(() => System.Threading.Thread.Sleep(1000)).ContinueWith((t) => t.Wait());
+
+            btnSellAtNow.IsEnabled = true;
+
+
         }
 
         private void btnBuyAtNow_Click(object sender, RoutedEventArgs e)
@@ -883,11 +907,18 @@ namespace Multiplier
 
         private async void btnStopAndCancel_Click(object sender, RoutedEventArgs e)
         {
-            if (!AutoTradingOn)
+
+            if (ProductManager == null)
             {
-                MessageBox.Show("Auto trading has not been started yet");
+                MessageBox.Show("Please select a product first");
                 return;
             }
+
+            //if (!AutoTradingOn)
+            //{
+            //    MessageBox.Show("Auto trading has not been started yet");
+            //    return;
+            //}
 
             Dispatcher.Invoke(() => btnStopAndCancel.IsEnabled = false);
             await ProductManager.StopAndCancel().ContinueWith((t) => t.Wait());

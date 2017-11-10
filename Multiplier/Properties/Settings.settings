@@ -35,5 +35,14 @@
     <Setting Name="CommonSmallSlices" Type="System.Int32" Scope="User">
       <Value Profile="(Default)">14</Value>
     </Setting>
+    <Setting Name="StrategyInUse" Type="System.String" Scope="User">
+      <Value Profile="(Default)">E</Value>
+    </Setting>
+    <Setting Name="StrategyE_SmallPriceIncreasedPercent" Type="System.Decimal" Scope="User">
+      <Value Profile="(Default)">0.75</Value>
+    </Setting>
+    <Setting Name="StrategyE_BigPriceIncreasedPercent" Type="System.Decimal" Scope="User">
+      <Value Profile="(Default)">1.75</Value>
+    </Setting>
   </Settings>
 </SettingsFile>

@@ -288,7 +288,11 @@ namespace CoinbaseExchange.NET.Endpoints.Fills
                     }
                     catch (Exception)
                     {
-                        Logger.WriteLog("Error cancelling partially filled order " + myCurrentOrder.OrderId);
+                        Logger.WriteLog("Error cancelling partially filled order, marking as CANCEL_ERROR" + myCurrentOrder.OrderId);
+                        // this will stop from entering this method 
+                        //also it will be tried to be cancelled in cancelAndReorder where 
+                        //it will fail and a new order will be placed
+                        FillWatchList[orderIndex].Status = "CANCEL_ERROR";
                     }
 
 
@@ -334,12 +338,12 @@ namespace CoinbaseExchange.NET.Endpoints.Fills
                 counter++;
                 if (counter % 10 == 0)
                 {
-                    Logger.WriteLog(string.Format("Watching {0} order(s)", FillWatchList.Count()));
+                    //Logger.WriteLog(string.Format("Watching {0} order(s)", FillWatchList.Count()));
 
-                    Logger.WriteLog(FillWatchList.FirstOrDefault().OrderId);
+                    //Logger.WriteLog(FillWatchList.FirstOrDefault().OrderId);
                     try
                     {
-                        //list may change in the middle of operation
+
                         FillWatchList.ForEach((x) => Logger.WriteLog(string.Format("{0} -> {1} {2} {3} @{4}",
                             x.OrderId, x.Side, x.ProductSize, x.Productname, x.UsdPrice)));
                     }

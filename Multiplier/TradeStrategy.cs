@@ -725,7 +725,11 @@ namespace Multiplier
         //SmaGroup LargeSmaGroup;
         //SmaGroup SmallSmaGroup;
 
+        private decimal SmallPriceIncreasedPercentage;
+        private decimal BigPriceIncreasedPercentage;
 
+
+        //use big, medium or small sma to sell depending on market conditions 
         public TradeStrategyE(ref ContextValues inputContextValues, IntervalValues intervalValues) : base(ref inputContextValues)
         {
             SetCurrentAction(inputContextValues.CurrentAction);
@@ -742,20 +746,28 @@ namespace Multiplier
                 intervalValues.LargeSmaSlices, intervalValues.MediumSmaSlice, intervalValues.SmallSmaSlices);
 
 
-            inputContextValues.WaitTimeAfterBigSmaCrossInMin = intervalValues.LargeIntervalInMin; 
+            inputContextValues.WaitTimeAfterBigSmaCrossInMin = intervalValues.LargeIntervalInMin;
             //LargeSmaGroup = new SmaGroup();
             //LargeSmaGroup.SetGroup(SmallIntervalSmaValues, BigIntervalSmaValues);
 
             //SmallSmaGroup = new SmaGroup();
             //SmallSmaGroup.SetGroup(TinyIntervalSmaValues, SmallIntervalSmaValues); 
+
+            try
+            {
+                SmallPriceIncreasedPercentage = Properties.Settings.Default.StrategyE_SmallPriceIncreasedPercent;
+                BigPriceIncreasedPercentage = Properties.Settings.Default.StrategyE_BigPriceIncreasedPercent;
+            }
+            catch (Exception)
+            {
+                Logger.WriteLog("Couldnt read strategy E big and samll price change percentage values, using default of .75 and 1.75");
+                SmallPriceIncreasedPercentage = 0.75m;
+                BigPriceIncreasedPercentage = 1.75m;
+            }
+
+
         }
 
-        //private void createSmaInstances(ref ContextValues inputContextValues, IntervalValues intervalValues)
-        //{
-        //    BigIntervalSmaValues = new SmaValues("BigInterval", ref inputContextValues, intervalValues.LargeIntervalInMin, 60, 55, 28);
-        //    SmallIntervalSmaValues = new SmaValues("SmallInterval", ref inputContextValues, intervalValues.MediumIntervalInMin, 60, 55, 28);
-        //    TinyIntervalSmaValues = new SmaValues("TinyInterval", ref inputContextValues, intervalValues.SmallIntervalInMin, 60, 55, 28);
-        //}
 
 
         public override void Dispose()
@@ -823,13 +835,13 @@ namespace Multiplier
                     priceDiffPercent = Math.Round((priceDiffFromBuyTime / curPrice) * 100, 4);
                 //Logger.WriteLog(string.Format("price change {0} {1}%", priceDiffFromBuyTime, priceDiffPercent));
 
-                if (priceDiffPercent > 3.0m)
+                if (priceDiffPercent > BigPriceIncreasedPercentage)
                 {
                     var intervalReason = string.Format("price changed {0} {1}% using tiny sma", priceDiffFromBuyTime, priceDiffPercent);
                     //Logger.WriteLog(intervalReason);
                     TradeUsing(TinyIntervalSmaValues, intervalReason);
                 }
-                else if (priceDiffPercent > 1.75m)
+                else if (priceDiffPercent > SmallPriceIncreasedPercentage)
                 {
                     var intervalReason = string.Format("price changed {0} {1}% using small sma", priceDiffFromBuyTime, priceDiffPercent);
                     //Logger.WriteLog(intervalReason);
@@ -890,7 +902,7 @@ namespace Multiplier
 
     }
 
-
+    //trade using the big sma regardless of conditions
     class TradeStrategyF : TradeStrategyE
     {
         public TradeStrategyF(ref ContextValues inputContextValues, IntervalValues intervalValues) : base(ref inputContextValues, intervalValues)
@@ -1095,7 +1107,7 @@ namespace Multiplier
 
 
             var smallestToMedGap = Math.Abs(smallestSmaPrice - mediumSmaPrice);
-            var threshold = smallestSmaPrice - (smallestToMedGap / 3);
+            var threshold = smallestSmaPrice - (smallestToMedGap / 10);
 
             //if ((curPrice <= mediumSmaPrice) || (curPrice <= smallestSmaPrice))  //if price is < the smallest sma or medium sma
             
