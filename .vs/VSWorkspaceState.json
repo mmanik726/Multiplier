@@ -1,10 +1,6 @@
 {
   "ExpandedNodes": [
     "",
-    "\\CoinbaseExchange.NET\\Endpoints",
-    "\\CoinbaseExchange.NET\\Endpoints\\Fills",
-    "\\CoinbaseExchange.NET\\Endpoints\\MyOrders",
-    "\\CoinbaseExchange.NET\\Endpoints\\OrderBook",
     "\\Multiplier"
   ],
   "SelectedNode": "\\Multiplier",

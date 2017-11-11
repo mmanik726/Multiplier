@@ -826,24 +826,27 @@ namespace Multiplier
 
             var checkedButton = getCurrentRdoBtnSelection();
 
-            
+            IntervalValues intervalVals = null;
+
             if (Dispatcher.Invoke(()=>checkedButton.Name == "rdoBtn_5_3_1"))
             {
-                return new IntervalValues(5, 3, 1);
+                intervalVals = new IntervalValues(5, 3, 1);
             }
             else if (Dispatcher.Invoke(() => checkedButton.Name == "rdoBtn_15_5_3"))
             {
-                return new IntervalValues(15, 5, 3);
+                intervalVals = new IntervalValues(15, 5, 3);
             }
             else if (Dispatcher.Invoke(() => checkedButton.Name == "rdoBtn_30_15_5"))
             {
-                return new IntervalValues(30, 15, 5);
+                intervalVals = new IntervalValues(30, 15, 5);
             }
             else
             {
-                return new IntervalValues(5, 3, 1); ;
+                intervalVals = new IntervalValues(5, 3, 1); ;
             }
 
+            ProductManager.SetCurrentIntervalValues(intervalVals);
+            return intervalVals;
         }
 
         public RadioButton getCurrentRdoBtnSelection()
@@ -980,7 +983,6 @@ namespace Multiplier
                 ProductManager.setAvoidExFeesVar(false);
             }
         }
-
 
 
 

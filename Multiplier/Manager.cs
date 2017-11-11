@@ -175,11 +175,11 @@ namespace Multiplier
             currentTradeStrategy.CurrentActionChangedEvent += CUrrentActionChangeEventHandler;
 
 
-            
+
 
             //save the interval values for later use
-            CurContextValues.CurrentIntervalValues = intervalValues; 
-
+            //CurContextValues.CurrentIntervalValues = intervalValues; 
+            SetCurrentIntervalValues(intervalValues);
 
             UpdateBuySellAmount(0.01m); //default
             //UpdateBuySellBuffer(0.03m); //default 
@@ -189,6 +189,12 @@ namespace Multiplier
 
         }
 
+
+        public void SetCurrentIntervalValues(IntervalValues inputValues)
+        {
+            if (CurContextValues != null)
+                CurContextValues.CurrentIntervalValues = inputValues; 
+        }
 
         private void writeCurrentStrategySmaValues()
         {
@@ -800,6 +806,8 @@ namespace Multiplier
             {
                 if (Properties.Settings.Default.UseUISmaValues == false)
                 {
+                    Properties.Settings.Default.Reload();
+
                     Logger.WriteLog("UseUISmaValues is set to false. Using config file sma values.");
                     var configLargeInterval = Convert.ToInt16(Properties.Settings.Default.CommonLargeInterval);
                     var configMediumInterval = Convert.ToInt16(Properties.Settings.Default.ComonMediumInterval);

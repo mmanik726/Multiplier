@@ -86,7 +86,7 @@ namespace Multiplier.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("5")]
+        [global::System.Configuration.DefaultSettingValueAttribute("15")]
         public int CommonLargeInterval {
             get {
                 return ((int)(this["CommonLargeInterval"]));
@@ -98,7 +98,7 @@ namespace Multiplier.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("3")]
+        [global::System.Configuration.DefaultSettingValueAttribute("5")]
         public int ComonMediumInterval {
             get {
                 return ((int)(this["ComonMediumInterval"]));
