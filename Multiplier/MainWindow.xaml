@@ -40,8 +40,8 @@
         <ComboBox x:Name="cmbProduct" HorizontalAlignment="Left" Margin="165,43,0,0" VerticalAlignment="Top" Width="120" SelectionChanged="cmbProduct_SelectionChanged"/>
         <Button x:Name="btnSellAtNow" Content="Sell NOW" Margin="0,315,9.5,0" VerticalAlignment="Top" Click="btnSellAtNow_Click" HorizontalAlignment="Right" Width="136"/>
         <Label x:Name="lblStatus" Content="Status" HorizontalAlignment="Left" Margin="10,112,0,0" VerticalAlignment="Top"/>
-        <Label Content="Next action:" Margin="0,346,70.5,0" VerticalAlignment="Top" HorizontalAlignment="Right" Width="73"/>
-        <Label x:Name="lblNextAction" Content="NOT SET" Margin="0,346,9.5,0" VerticalAlignment="Top" HorizontalAlignment="Right" Width="56"/>
+        <Label Content="Next action:" Margin="0,368,70.5,0" VerticalAlignment="Top" HorizontalAlignment="Right" Width="73"/>
+        <Label x:Name="lblNextAction" Content="NOT SET" Margin="0,368,9.5,0" VerticalAlignment="Top" HorizontalAlignment="Right" Width="56"/>
         <RichTextBox x:Name="txtMainLog" Margin="10,447,9,10" LostFocus="txtMainLog_LostFocus" GotFocus="txtMainLog_GotFocus" TextChanged="txtMainLog_TextChanged" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
             <FlowDocument/>
         </RichTextBox>
@@ -58,6 +58,8 @@
         </GroupBox>
         <Button x:Name="btnBuyAtNow" Content="Buy NOW" Margin="10,316,0,0" VerticalAlignment="Top" Click="btnBuyAtNow_Click" HorizontalAlignment="Left" Width="134"/>
         <CheckBox x:Name="chkAvoidFees" Content="Avoid fees (Post Only)" HorizontalAlignment="Left" Margin="696,315,0,0" VerticalAlignment="Top" Click="chkAvoidFees_Click" IsChecked="True"/>
+        <CheckBox x:Name="chkBuyMarketOrder" Content="Buy via Market Order" HorizontalAlignment="Left" Margin="10,341,0,0" VerticalAlignment="Top" Click="chkMarketOrder_Click"/>
+        <CheckBox x:Name="chkSellMarketOrder" Content="Sell via Market Order " HorizontalAlignment="Left" Margin="910,340,0,0" VerticalAlignment="Top" Click="chkMarketOrder_Click"/>
 
     </Grid>
 </Window>

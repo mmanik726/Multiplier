@@ -255,6 +255,8 @@ namespace Multiplier
 
             //MessageBox.Show(string.Format("{0} order ({1}) filled @{2} ", filledOrder.side, filledOrder.OrderId, filledOrder.filledAtPrice));
 
+            Dispatcher.Invoke(() => btnBuyAtNow.IsEnabled = true);
+            Dispatcher.Invoke(() => btnSellAtNow.IsEnabled = true);
 
             this.Dispatcher.Invoke(() => updateListView(filledOrder));
         }
@@ -857,15 +859,20 @@ namespace Multiplier
 
 
 
-        private void btnSellAtNow_Click(object sender, RoutedEventArgs e)
+        private async void btnSellAtNow_Click(object sender, RoutedEventArgs e)
         {
             //btnSellAtNow.IsEnabled = false;
             //ProductManager.ForceSellAtNow();
 
 
+            var msg = "";
 
+            if ((bool)chkSellMarketOrder.IsChecked)
+                msg = string.Format("confirm MARKET ORDER sell?");
+            else
+                msg = string.Format("confirm limit sell?");
 
-            var response = MessageBox.Show(string.Format("confirm sell?"), "Confirm sell", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No);
+            var response = MessageBox.Show(msg, "Confirm sell", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No);
 
             if (response == MessageBoxResult.No)
                 return;
@@ -876,20 +883,31 @@ namespace Multiplier
                 return;
             }
 
-            ProductManager.ForceSellAtNow();
-            btnSellAtNow.IsEnabled = false;
+            var isMarketOrder = Dispatcher.Invoke(() => (bool)chkSellMarketOrder.IsChecked);
 
-            Task.Run(() => System.Threading.Thread.Sleep(1000)).ContinueWith((t) => t.Wait());
+            await Task.Run(() =>
+            {
+                Dispatcher.Invoke(()=> btnSellAtNow.IsEnabled = false);
+                ProductManager.ForceSellAtNow(isMarketOrder).Wait();
 
-            btnSellAtNow.IsEnabled = true;
+                //Task.Run(() => System.Threading.Thread.Sleep(1000)).ContinueWith((t) => t.Wait());
+                //Dispatcher.Invoke(()=> btnSellAtNow.IsEnabled = true);
+            });
 
 
         }
 
-        private void btnBuyAtNow_Click(object sender, RoutedEventArgs e)
+        private async void btnBuyAtNow_Click(object sender, RoutedEventArgs e)
         {
             //btnSellAtNow.IsEnabled = false;
-            var response = MessageBox.Show(string.Format("confirm buy?"), "Confirm buy", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No);
+            var msg = "";
+
+            if ((bool)chkBuyMarketOrder.IsChecked)
+                msg = string.Format("confirm MARKET ORDER buy?");
+            else
+                msg = string.Format("confirm limit buy?");
+
+            var response = MessageBox.Show(msg, "Confirm buy", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No);
 
             if (response == MessageBoxResult.No)
                 return;
@@ -900,12 +918,17 @@ namespace Multiplier
                 return;
             }
 
-            ProductManager.ForceBuyAtNow();
-            btnBuyAtNow.IsEnabled = false;
+            var isMarketOrder = Dispatcher.Invoke(() => (bool)chkBuyMarketOrder.IsChecked);
 
-            Task.Run(() => System.Threading.Thread.Sleep(1000)).ContinueWith((t)=>t.Wait());
+            await Task.Run(() =>
+            {
+                Dispatcher.Invoke(() => btnBuyAtNow.IsEnabled = false);
+                ProductManager.ForceBuyAtNow(isMarketOrder).Wait();
 
-            btnBuyAtNow.IsEnabled = true;
+                //Task.Run(() => System.Threading.Thread.Sleep(1000)).ContinueWith((t) => t.Wait());
+                //Dispatcher.Invoke(()=> btnSellAtNow.IsEnabled = true);
+            });
+
         }
 
         private async void btnStopAndCancel_Click(object sender, RoutedEventArgs e)
@@ -926,6 +949,10 @@ namespace Multiplier
             Dispatcher.Invoke(() => btnStopAndCancel.IsEnabled = false);
             await ProductManager.StopAndCancel().ContinueWith((t) => t.Wait());
             Dispatcher.Invoke(() => btnStopAndCancel.IsEnabled = true);
+
+            Dispatcher.Invoke(() => btnBuyAtNow.IsEnabled = true);
+            Dispatcher.Invoke(() => btnSellAtNow.IsEnabled = true);
+
         }
 
         private async void rdoBtn_Clicked(object sender, RoutedEventArgs e)
@@ -981,6 +1008,24 @@ namespace Multiplier
             else
             {
                 ProductManager.setAvoidExFeesVar(false);
+            }
+
+            if ((bool)chkBuyMarketOrder.IsChecked)
+            {
+                chkBuyMarketOrder.IsChecked = false;
+            }
+            if ((bool)chkSellMarketOrder.IsChecked)
+            {
+                chkSellMarketOrder.IsChecked = false;
+            }
+        }
+
+        private void chkMarketOrder_Click(object sender, RoutedEventArgs e)
+        {
+            if ((bool)chkAvoidFees.IsChecked)
+            {
+                chkAvoidFees.IsChecked = false;
+                chkAvoidFees_Click(this, null);
             }
         }
 

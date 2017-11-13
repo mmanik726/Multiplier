@@ -493,7 +493,7 @@ namespace Multiplier
         }
 
 
-        public async void ForceSellAtNow()
+        public async Task<bool> ForceSellAtNow(bool marketOrder = false)
         {
 
             try
@@ -510,9 +510,24 @@ namespace Multiplier
                     await Task.Run(() => Thread.Sleep(500)).ContinueWith((t) => t.Wait());
                 }
 
-                var ForceOrderResult = await MyProductOrderBook.PlaceNewOrder("sell", CurContextValues.ProductName, 
-                    CurContextValues.BuySellAmount.ToString(), CurContextValues.CurrentBufferedPrice.ToString(), true);
+                ////var ForceOrderResult = await MyProductOrderBook.PlaceNewOrder("sell", CurContextValues.ProductName, 
+                ////    CurContextValues.BuySellAmount.ToString(), CurContextValues.CurrentBufferedPrice.ToString(), true);
 
+                if (marketOrder)
+                {
+                    var ForceOrderResult = MyProductOrderBook.PlaceNewOrder("sell", CurContextValues.ProductName,
+                        CurContextValues.BuySellAmount.ToString(), CurContextValues.CurrentBufferedPrice.ToString(), true, "market");
+                    ForceOrderResult.Wait();
+                }
+                else
+                {
+                    var ForceOrderResult = MyProductOrderBook.PlaceNewOrder("sell", CurContextValues.ProductName,
+                        CurContextValues.BuySellAmount.ToString(), CurContextValues.CurrentBufferedPrice.ToString(), true);
+                    ForceOrderResult.Wait();
+                }
+
+
+                //Logger.WriteLog(x.Result.Id);
                 //CurContextValues.ForceSold = true;
                 //ForceOrderResult.Wait();
 
@@ -527,9 +542,10 @@ namespace Multiplier
                 }
             }
 
+            return true;
         }
 
-        public async void ForceBuyAtNow()
+        public async Task<bool> ForceBuyAtNow(bool marketOrder = false)
         {
 
             try
@@ -546,9 +562,20 @@ namespace Multiplier
                     await Task.Run(()=> Thread.Sleep(500)).ContinueWith((t)=>t.Wait());
                 }
 
-                var ForceOrderResult = await MyProductOrderBook.PlaceNewOrder("buy", CurContextValues.ProductName,
-                    CurContextValues.BuySellAmount.ToString(), CurContextValues.CurrentBufferedPrice.ToString(), true);
-                
+                if (marketOrder)
+                {
+                    var ForceOrderResult = MyProductOrderBook.PlaceNewOrder("buy", CurContextValues.ProductName,
+                        CurContextValues.BuySellAmount.ToString(), CurContextValues.CurrentBufferedPrice.ToString(), true, "market");
+                    ForceOrderResult.Wait();
+                }
+                else
+                {
+                    var ForceOrderResult = MyProductOrderBook.PlaceNewOrder("buy", CurContextValues.ProductName,
+                        CurContextValues.BuySellAmount.ToString(), CurContextValues.CurrentBufferedPrice.ToString(), true);
+                    ForceOrderResult.Wait();
+                }
+
+
                 //CurContextValues.ForceSold = true;
                 //ForceOrderResult.Wait();
 
@@ -562,6 +589,8 @@ namespace Multiplier
                     msg = msg + ex.Message;
                 }
             }
+
+            return true;
 
         }
 

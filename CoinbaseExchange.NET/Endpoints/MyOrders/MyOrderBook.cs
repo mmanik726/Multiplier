@@ -314,7 +314,7 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
             OrderRetriedCount = 0;
             OrderStartingPrice = 0;
 
-            AvoidExFees = false;
+            AvoidExFees = true; //avoid fees by default
 
             ProductName = product;
             _auth = authContainer;
