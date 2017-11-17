@@ -256,7 +256,7 @@ namespace CoinbaseExchange.NET.Data
 
             Logger.WriteLog("Additional data is being downloaded ");
 
-            int days = 6; //36 hours data in 1 min interval in total
+            int days = 10; //36 hours data in 1 min interval in total
 
             HistoricPrices historicData = new HistoricPrices();
 
