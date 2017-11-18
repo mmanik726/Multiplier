@@ -983,7 +983,7 @@ namespace Multiplier
         public int MedSmaSlice { get; set; }
         public int SmallSmaSlice { get; set; }
 
-
+        private decimal sellBufferFraction; 
 
         public SmaValues(string groupName, ref ContextValues inputContextValues,
             int CommonIntervalMin = 5,
@@ -996,6 +996,7 @@ namespace Multiplier
 
             smaGroupName = groupName;
 
+            sellBufferFraction = 10; //default value
             //int commonLargeIntervalMin = 5;
             smallestSmaPrice = 0;
             mediumSmaPrice = 0;
@@ -1003,6 +1004,17 @@ namespace Multiplier
 
             BuyReason = "";
             SellReason = "";
+
+            try
+            {
+                sellBufferFraction = Properties.Settings.Default.SellBufferFraction;
+                if (sellBufferFraction == 0)
+                    sellBufferFraction = 10;
+            }
+            catch (Exception)
+            {
+                Logger.WriteLog("Error loading settings value sellbufferFraction using default of 10");
+            }
 
             LargestMa = new MovingAverage(ref inputContextValues.CurrentTicker, inputContextValues.ProductName, CommonIntervalMin, LargestSmaSlice);
             MediumMa = new MovingAverage(ref inputContextValues.CurrentTicker, inputContextValues.ProductName, CommonIntervalMin, MediumSmaSlice);
@@ -1037,8 +1049,8 @@ namespace Multiplier
 
             smallestSmaPrice = newSmaPrice;
 
-            Logger.WriteLog(string.Format("{0} Smallest SMA updated: {1} (Time interval: {2} Slices: {3})",
-                smaGroupName, newSmaPrice, currentSmaData.CurrentTimeInterval, currentSmaData.CurrentSlices));
+            //Logger.WriteLog(string.Format("{0} Smallest SMA updated: {1} (Time interval: {2} Slices: {3})",
+            //    smaGroupName, newSmaPrice, currentSmaData.CurrentTimeInterval, currentSmaData.CurrentSlices));
         }
 
 
@@ -1049,8 +1061,8 @@ namespace Multiplier
 
             mediumSmaPrice = newSmaPrice;
 
-            Logger.WriteLog(string.Format("{0} Medium SMA updated: {1} (Time interval: {2} Slices: {3})",
-                smaGroupName, newSmaPrice, currentSmaData.CurrentTimeInterval, currentSmaData.CurrentSlices));
+            //Logger.WriteLog(string.Format("{0} Medium SMA updated: {1} (Time interval: {2} Slices: {3})",
+            //    smaGroupName, newSmaPrice, currentSmaData.CurrentTimeInterval, currentSmaData.CurrentSlices));
         }
 
 
@@ -1107,7 +1119,7 @@ namespace Multiplier
 
 
             var smallestToMedGap = Math.Abs(smallestSmaPrice - mediumSmaPrice);
-            var threshold = smallestSmaPrice - (smallestToMedGap / 10);
+            var threshold = smallestSmaPrice - (smallestToMedGap / sellBufferFraction);
 
             //if ((curPrice <= mediumSmaPrice) || (curPrice <= smallestSmaPrice))  //if price is < the smallest sma or medium sma
             

@@ -191,5 +191,17 @@ namespace Multiplier.Properties {
                 this["StrategyE_BigPriceIncreasedPercent"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("10")]
+        public decimal SellBufferFraction {
+            get {
+                return ((decimal)(this["SellBufferFraction"]));
+            }
+            set {
+                this["SellBufferFraction"] = value;
+            }
+        }
     }
 }
