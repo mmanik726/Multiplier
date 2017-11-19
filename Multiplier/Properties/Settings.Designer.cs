@@ -203,5 +203,17 @@ namespace Multiplier.Properties {
                 this["SellBufferFraction"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool LogSmaUpdates {
+            get {
+                return ((bool)(this["LogSmaUpdates"]));
+            }
+            set {
+                this["LogSmaUpdates"] = value;
+            }
+        }
     }
 }

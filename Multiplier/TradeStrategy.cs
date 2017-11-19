@@ -983,7 +983,9 @@ namespace Multiplier
         public int MedSmaSlice { get; set; }
         public int SmallSmaSlice { get; set; }
 
-        private decimal sellBufferFraction; 
+        private decimal sellBufferFraction;
+        private bool logSmaValueUpdates; 
+
 
         public SmaValues(string groupName, ref ContextValues inputContextValues,
             int CommonIntervalMin = 5,
@@ -997,6 +999,7 @@ namespace Multiplier
             smaGroupName = groupName;
 
             sellBufferFraction = 10; //default value
+            logSmaValueUpdates = false; 
             //int commonLargeIntervalMin = 5;
             smallestSmaPrice = 0;
             mediumSmaPrice = 0;
@@ -1010,6 +1013,8 @@ namespace Multiplier
                 sellBufferFraction = Properties.Settings.Default.SellBufferFraction;
                 if (sellBufferFraction == 0)
                     sellBufferFraction = 10;
+
+                logSmaValueUpdates = Properties.Settings.Default.LogSmaUpdates;
             }
             catch (Exception)
             {
@@ -1049,8 +1054,12 @@ namespace Multiplier
 
             smallestSmaPrice = newSmaPrice;
 
-            //Logger.WriteLog(string.Format("{0} Smallest SMA updated: {1} (Time interval: {2} Slices: {3})",
-            //    smaGroupName, newSmaPrice, currentSmaData.CurrentTimeInterval, currentSmaData.CurrentSlices));
+            if (logSmaValueUpdates)
+            {
+                Logger.WriteLog(string.Format("{0} Smallest SMA updated: {1} (Time interval: {2} Slices: {3})",
+                    smaGroupName, newSmaPrice, currentSmaData.CurrentTimeInterval, currentSmaData.CurrentSlices));
+            }
+
         }
 
 
@@ -1061,8 +1070,11 @@ namespace Multiplier
 
             mediumSmaPrice = newSmaPrice;
 
-            //Logger.WriteLog(string.Format("{0} Medium SMA updated: {1} (Time interval: {2} Slices: {3})",
-            //    smaGroupName, newSmaPrice, currentSmaData.CurrentTimeInterval, currentSmaData.CurrentSlices));
+            if (logSmaValueUpdates)
+            {
+                Logger.WriteLog(string.Format("{0} Medium SMA updated: {1} (Time interval: {2} Slices: {3})",
+                    smaGroupName, newSmaPrice, currentSmaData.CurrentTimeInterval, currentSmaData.CurrentSlices));
+            }
         }
 
 
@@ -1072,9 +1084,12 @@ namespace Multiplier
             decimal newSmaPrice = currentSmaData.CurrentMAPrice;
 
             largestSmaPrice = newSmaPrice;
-
-            Logger.WriteLog(string.Format("{0} Largest SMA updated: {1} (Time interval: {2} Slices: {3})",
-                smaGroupName, newSmaPrice, currentSmaData.CurrentTimeInterval, currentSmaData.CurrentSlices));
+            if (logSmaValueUpdates)
+            {
+                Logger.WriteLog(string.Format("{0} Largest SMA updated: {1} (Time interval: {2} Slices: {3})",
+                    smaGroupName, newSmaPrice, currentSmaData.CurrentTimeInterval, currentSmaData.CurrentSlices));
+            }
+            
         }
 
         internal void DetermineBuySell()
