@@ -49,14 +49,17 @@ namespace CoinbaseExchange.NET.Data
 
         //private bool ForceRedownloadData;
 
+        private int AmountOfDataToDownload; 
         
 
 
         private bool isBusyCalculatingSMA; 
 
-        public MovingAverage(ref TickerClient tickerClient, string ProductName, int timeInterValInMin = 3, int smaSlices = 40)
+        public MovingAverage(ref TickerClient tickerClient, string ProductName, int timeInterValInMin = 3, int smaSlices = 40, int serverDownloadAmount = 10)
         {
             //var a = tickerClient.CurrentPrice;
+
+            AmountOfDataToDownload = serverDownloadAmount;
 
             //Logger.WriteLog("Starting moving avg calculations");
             isBusyCalculatingSMA = false;
@@ -258,7 +261,13 @@ namespace CoinbaseExchange.NET.Data
 
             //int days = 25; //36 hours data in 1 min interval in total
 
-            int days = 35; //36 hours data in 1 min interval in total
+
+
+            int days = 10; // default value if one is not provided 
+
+            if (AmountOfDataToDownload != 0)
+                days = AmountOfDataToDownload;
+
 
             HistoricPrices historicData = new HistoricPrices();
 

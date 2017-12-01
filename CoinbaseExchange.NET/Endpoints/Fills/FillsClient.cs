@@ -270,7 +270,9 @@ namespace CoinbaseExchange.NET.Endpoints.Fills
                 var myCurrentOrder = FillWatchList[orderIndex];
 
                 //when checking the same order after the first time
-                if (FillWatchList[orderIndex].Status != "PARTIALLY_FILLED")
+                //if not (partially filled or Cancel_error)
+                if (!(FillWatchList[orderIndex].Status == "PARTIALLY_FILLED" 
+                    || FillWatchList[orderIndex].Status == "CANCEL_ERROR"))
                 {
 
                     Logger.WriteLog(string.Format("{0} order({1}) of {2} {3} filled partially with following sizes:",
@@ -288,7 +290,7 @@ namespace CoinbaseExchange.NET.Endpoints.Fills
                     }
                     catch (Exception)
                     {
-                        Logger.WriteLog("Error cancelling partially filled order, marking as CANCEL_ERROR" + myCurrentOrder.OrderId);
+                        Logger.WriteLog("Error cancelling partially filled order, marking as CANCEL_ERROR " + myCurrentOrder.OrderId);
                         // this will stop from entering this method 
                         //also it will be tried to be cancelled in cancelAndReorder where 
                         //it will fail and a new order will be placed

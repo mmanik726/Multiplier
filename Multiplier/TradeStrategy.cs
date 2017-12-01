@@ -984,8 +984,9 @@ namespace Multiplier
         public int SmallSmaSlice { get; set; }
 
         private decimal sellBufferFraction;
-        private bool logSmaValueUpdates; 
+        private bool logSmaValueUpdates;
 
+        private int amountOfServerDataToDownload; 
 
         public SmaValues(string groupName, ref ContextValues inputContextValues,
             int CommonIntervalMin = 5,
@@ -1008,6 +1009,8 @@ namespace Multiplier
             BuyReason = "";
             SellReason = "";
 
+            amountOfServerDataToDownload = 10; //default value 
+
             try
             {
                 sellBufferFraction = Properties.Settings.Default.SellBufferFraction;
@@ -1015,15 +1018,17 @@ namespace Multiplier
                     sellBufferFraction = 10;
 
                 logSmaValueUpdates = Properties.Settings.Default.LogSmaUpdates;
+
+                amountOfServerDataToDownload = Properties.Settings.Default.AmountOfServerData;
             }
             catch (Exception)
             {
                 Logger.WriteLog("Error loading settings value sellbufferFraction using default of 10");
             }
 
-            LargestMa = new MovingAverage(ref inputContextValues.CurrentTicker, inputContextValues.ProductName, CommonIntervalMin, LargestSmaSlice);
-            MediumMa = new MovingAverage(ref inputContextValues.CurrentTicker, inputContextValues.ProductName, CommonIntervalMin, MediumSmaSlice);
-            SmallestMa = new MovingAverage(ref inputContextValues.CurrentTicker, inputContextValues.ProductName, CommonIntervalMin, SmallestSmaSlice);
+            LargestMa = new MovingAverage(ref inputContextValues.CurrentTicker, inputContextValues.ProductName, CommonIntervalMin, LargestSmaSlice, amountOfServerDataToDownload);
+            MediumMa = new MovingAverage(ref inputContextValues.CurrentTicker, inputContextValues.ProductName, CommonIntervalMin, MediumSmaSlice, amountOfServerDataToDownload);
+            SmallestMa = new MovingAverage(ref inputContextValues.CurrentTicker, inputContextValues.ProductName, CommonIntervalMin, SmallestSmaSlice, amountOfServerDataToDownload);
 
             CommonSmaInterval = CommonIntervalMin;
             LargeSmaSlice = LargestSmaSlice;
