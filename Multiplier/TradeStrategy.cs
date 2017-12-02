@@ -1013,6 +1013,8 @@ namespace Multiplier
 
             try
             {
+                Properties.Settings.Default.Reload();
+
                 sellBufferFraction = Properties.Settings.Default.SellBufferFraction;
                 if (sellBufferFraction == 0)
                     sellBufferFraction = 10;

@@ -150,8 +150,7 @@ namespace Multiplier
             CurrentDisplaySmaSlices = intervalValues.LargeSmaSlices; //default large sma slice value 
 
 
-            DisplaySma = new MovingAverage(ref ProductTickerClient, ProductName, CurrentDisplaySmaTimeInterval, CurrentDisplaySmaSlices);
-            DisplaySma.MovingAverageUpdatedEvent += DisplaySmaChangedEventHandler;
+
 
             //SmaSmall = new MovingAverage(ref ProductTickerClient, ProductName, CurContextValues.CurrentSmallSmaTimeInterval, CurContextValues.CurrentSmallSmaSlices);
             //SmaSmall.MovingAverageUpdated += SmaSmallChangedEventHandler;
@@ -180,6 +179,12 @@ namespace Multiplier
             //save the interval values for later use
             //CurContextValues.CurrentIntervalValues = intervalValues; 
             SetCurrentIntervalValues(intervalValues);
+
+
+            DisplaySma = new MovingAverage(ref ProductTickerClient, ProductName, CurrentDisplaySmaTimeInterval, CurrentDisplaySmaSlices);
+            DisplaySma.MovingAverageUpdatedEvent += DisplaySmaChangedEventHandler;
+
+            UpdateDisplaySmaParameters(CurrentDisplaySmaTimeInterval, CurrentDisplaySmaSlices);
 
             UpdateBuySellAmount(0.01m); //default
             //UpdateBuySellBuffer(0.03m); //default 
@@ -355,6 +360,10 @@ namespace Multiplier
 
         public async Task<bool> UpdateDisplaySmaParameters(int InputTimerInterval, int InputSlices, bool forceRedownload = false)
         {
+            if (DisplaySma == null)
+            {
+                return false;
+            }
 
             try
             {
