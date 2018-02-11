@@ -10,6 +10,9 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
+
+
+
 namespace Multiplier
 {
 
@@ -111,6 +114,9 @@ namespace Multiplier
 
 
             //try to get ticker first
+
+            
+
             
 
             try
@@ -165,7 +171,7 @@ namespace Multiplier
             //currentTradeStrategy = new TradeStrategyD(ref CurContextValues);
 
             if (intervalValues == null)
-                intervalValues = new IntervalValues(5, 3, 1);
+                intervalValues = new IntervalValues(30, 15, 5);//IntervalValues(5, 3, 1);
 
             //currentTradeStrategy = new TradeStrategyE(ref CurContextValues, intervalValues);
 
@@ -252,6 +258,10 @@ namespace Multiplier
             //Task.Run(()=> UpdateSmaParameters(SmaTimeInterval, SmaSlices, true)).Wait();
 
 
+            //clear serverdata, a redownload will be forced
+            MovingAverage.SharedRawExchangeData.Clear();
+
+
             var updateIntervalResult = CreateUpdateStrategyInstance(CurContextValues.CurrentIntervalValues);
             updateIntervalResult.Wait();
 
@@ -319,9 +329,14 @@ namespace Multiplier
                 switch (ConfigStrategyInUse)
                 {
                     case "E":
-                        Logger.WriteLog("Setting Current Strategy to E");
-                        currentTradeStrategy = new TradeStrategyE(ref CurContextValues, intervalValues);
+                        //////Logger.WriteLog("Setting Current Strategy to E");
+                        //////currentTradeStrategy = new TradeStrategyE(ref CurContextValues, intervalValues);
+                        //////break;
+
+                        Logger.WriteLog("Setting Current Strategy to MACD");
+                        currentTradeStrategy = new MacdStrategy(ref CurContextValues, intervalValues);
                         break;
+
                     case "F":
                         Logger.WriteLog("Setting Current Strategy to F");
                         currentTradeStrategy = new TradeStrategyF(ref CurContextValues, intervalValues);

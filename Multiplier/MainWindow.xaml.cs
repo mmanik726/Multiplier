@@ -33,6 +33,8 @@ namespace Multiplier
     public partial class MainWindow : Window
     {
 
+        
+
 
         Manager ProductManager;
 
@@ -54,7 +56,54 @@ namespace Multiplier
 
         public MainWindow()
         {
+            
+
             InitializeComponent();
+            //var filePath = System.IO.Path.GetFullPath(Assembly.GetExecutingAssembly().Location + @"\..\..\Resources\TradeWidgetPage.html");
+            //cefBrowser.Address = @"https://www.tradingview.com"; //@"C:\Users\bobby\Source\Repos\Multiplier\Multiplier\Resources\TradeWidgetPage.html";//@".\TradeWidgetPage.html"; //Properties.Resources.TradeWidgetPage. //"https://github.com/cefsharp/CefSharp/wiki/Frequently-asked-questions";
+
+            //cefBrowser.Address = @"C:\Users\bobby\Source\Repos\Multiplier\Multiplier\Resources\TradeWidgetPage.html";//@".\TradeWidgetPage.html"; //Properties.Resources.TradeWidgetPage. //"https://github.com/cefsharp/CefSharp/wiki/Frequently-asked-questions";
+            //cefBrowser1.Address = @"C:\Users\bobby\Source\Repos\Multiplier\Multiplier\Resources\TradeWidgetPage.html";//@".\TradeWidgetPage.html"; //Properties.Resources.TradeWidgetPage. //"https://github.com/cefsharp/CefSharp/wiki/Frequently-asked-questions";
+
+            //test
+
+            //            List<double> dbl = new List<double>() {
+            //22.27340d,
+            //22.19400d,
+            //22.08470d,
+            //22.17410d,
+            //22.18400d,
+            //22.13440d,
+            //22.23370d,
+            //22.43230d,
+            //22.24360d,
+            //22.29330d,
+            //22.15420d,
+            //22.39260d,
+            //22.38160d,
+            //22.61090d,
+            //23.35580d,
+            //24.05190d,
+            //23.75300d,
+            //23.83240d,
+            //23.95160d,
+            //23.63380d,
+            //23.82250d,
+            //23.87220d,
+            //23.65370d,
+            //23.18700d,
+            //23.09760d,
+            //23.32600d,
+            //22.68050d,
+            //23.09760d,
+            //22.40250d,
+            //22.17250d
+            //};
+            //            var a = dbl.EMA(10).ToList();
+
+            //a.ForEach((d) => Logger.WriteLog(d.ToString()));
+
+
 
             LogAutoScrolling = true;
 
@@ -1028,6 +1077,36 @@ namespace Multiplier
                 chkAvoidFees_Click(this, null);
             }
         }
+
+        //private void btnShowGraph1_Click(object sender, RoutedEventArgs e)
+        //{
+        //    if (btnShowGraph1.Content.ToString() == "Hide Graph")
+        //    {
+        //        cefBrowser.Load("about:blank"); // = "";
+        //        btnShowGraph1.Content = "Show Graph";
+        //    }
+        //    else
+        //    {
+        //        cefBrowser.Load(@"C:\Users\bobby\Source\Repos\Multiplier\Multiplier\Resources\TradeWidgetPage.html"); // = "";
+        //        btnShowGraph1.Content = "Hide Graph";
+        //    }
+        //}
+
+        //private void btnShowGraph2_Click(object sender, RoutedEventArgs e)
+        //{
+        //    if (btnShowGraph2.Content.ToString() == "Hide Graph")
+        //    {
+        //        cefBrowser1.Load("about:blank"); // = "";
+        //        btnShowGraph2.Content = "Show Graph";
+        //    }
+        //    else
+        //    {
+        //        cefBrowser1.Load(@"C:\Users\bobby\Source\Repos\Multiplier\Multiplier\Resources\TradeWidgetPage.html"); // = "";
+        //        btnShowGraph2.Content = "Hide Graph";
+        //    }
+        //}
+
+
 
 
 

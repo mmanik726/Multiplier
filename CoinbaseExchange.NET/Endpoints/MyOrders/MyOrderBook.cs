@@ -132,7 +132,7 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
             }
             else
             {
-
+                Logger.WriteLog("OrderPlacer Error: " + genericResponse.ContentBody);
                 throw new Exception("OrderUnsuccessfullError: " + genericResponse.ContentBody); 
             }
 
@@ -647,7 +647,7 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
                 //var priceChangePercent = PriceTicker.CurrentPrice * 10.00m;//0.0025m; //for testing
                 decimal priceChangePercent = 0.0m;
                 if (AvoidExFees)
-                    priceChangePercent = PriceTicker.CurrentPrice * 0.0020m; // 0.0025m
+                    priceChangePercent = PriceTicker.CurrentPrice * 0.0025m; // 0.0025m
                 else
                     priceChangePercent = PriceTicker.CurrentPrice * 0.0010m; // 0.0025m
 

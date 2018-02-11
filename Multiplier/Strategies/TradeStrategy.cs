@@ -972,9 +972,9 @@ namespace Multiplier
         public string SellReason;
 
 
-        MovingAverage LargestMa;
-        MovingAverage MediumMa;
-        MovingAverage SmallestMa;
+        public MovingAverage LargestMa;
+        public MovingAverage MediumMa;
+        public MovingAverage SmallestMa;
 
         ContextValues myContextValues;
 

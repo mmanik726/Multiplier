@@ -240,7 +240,7 @@ namespace CoinbaseExchange.NET.Endpoints.Fills
                 FillWatchList.RemoveAll(x => x.OrderId == fillDetails.OrderId);
 
                 Logger.WriteLog("Order filled with following sizes:");
-                FillList.ForEach((f) => Logger.WriteLog(f.Size));
+                FillList.ForEach((f) => Logger.WriteLog(f.Size + " @" + f.Price + " (fee: " + f.Fee + ")"));
 
 
 
@@ -279,7 +279,7 @@ namespace CoinbaseExchange.NET.Endpoints.Fills
                         fillDetails.Side, fillDetails.OrderId, FillWatchList[orderIndex].ProductSize,
                         fillDetails.ProductId));
 
-                    FillList.ForEach((f) => Logger.WriteLog(f.Size));
+                    FillList.ForEach((f) => Logger.WriteLog(f.Size + " @" + f.Price + " (fee: " + f.Fee + ")"));
 
                     try
                     {
