@@ -618,6 +618,9 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
                     {
                         Logger.WriteLog("Order already done " + myCurrentOrder.OrderId);
 
+                        //order already done so remove from watch list 2018-02-18
+                        Logger.WriteLog("Order already done, removing from watch list " + myCurrentOrder.OrderId);
+                        RemoveFromOrderList(myCurrentOrder.OrderId);
                         NotifyFilledOtherWise(myCurrentOrder.OrderId);
                     }
 
@@ -826,7 +829,7 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
             {
                 if (orderType != "market")
                 {
-                    orderBodyObj.Add(new JProperty("post_only", "T"));
+                    orderBodyObj.Add(new JProperty("post_only", Boolean.TrueString));//"T"));
                 }
             }
 

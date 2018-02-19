@@ -41,6 +41,8 @@ namespace CoinbaseExchange.NET.Data
 
         public List<double> SmaDataPoints { get; set; }
 
+        public List<double> EmaDataPoints { get; set; }
+
         public EventHandler<MAUpdateEventArgs> MovingAverageUpdatedEvent;
 
         public decimal CurrentSMAPrice;
@@ -187,11 +189,18 @@ namespace CoinbaseExchange.NET.Data
             PriceDataPtsForMa.Insert(0, newDataPoint); //insert at top
 
 
+            ////var newDataPtCandle = new CandleData {Close = Convert.ToDecimal(newDataPoint), Time = DateTime.Now  };
+            ////SharedRawExchangeData.Insert(0, newDataPtCandle);
+
             var itemsInSlice = PriceDataPtsForMa.Take(SLICES); 
             var itemsInSLiceAvg = itemsInSlice.Average((d) => d);
 
 
             CurrentSMAPrice = (decimal)itemsInSLiceAvg;
+
+            //TODO:needs testing
+            //var curEmaPrice = PriceDataPtsForMa.EMA(SLICES);
+
 
             SmaDataPoints.Insert(0, itemsInSLiceAvg);
 
@@ -351,7 +360,11 @@ namespace CoinbaseExchange.NET.Data
 
             var smaDataPtsList = priceDataPoints.SMA(SLICES).ToList(); //return the continuous sma using the list of doubles (NOT candle data)
 
+            //var emadataPtsList = priceDataPoints.EMA(SLICES).ToList();
+
             SmaDataPoints = new List<double>(smaDataPtsList);
+
+            //EmaDataPoints = new List<double>(emadataPtsList);
 
             smaDataPtsList = smaDataPtsList.Where((data, i)=>i % SLICES == 0).ToList(); //take only sma datapoints that are every SLICE apart ie remove the intermediate values 
 

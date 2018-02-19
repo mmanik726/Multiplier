@@ -88,9 +88,20 @@ namespace Multiplier
             Buy = false;
             Sell = false;
 
-            CommonINTERVAL = 30;//30; //min
-            int largeSmaLENGTH = 100;
-            int smallSmaLENGTH = 15;
+
+
+            var settings = AppSettings.GetStrategySettings("macd");
+            Logger.WriteLog("macd settings found: \n" + settings.ToString());
+            var intervalTime = Convert.ToInt16(settings[0]["time_interval"].ToString());
+            var slowSma = Convert.ToInt16(settings[0]["slow_sma"].ToString());
+            var fastSma = Convert.ToInt16(settings[0]["fast_sma"].ToString());
+            var signal = Convert.ToInt16(settings[0]["signal"].ToString());
+            var mySma = Convert.ToInt16(settings[0]["my_sma"].ToString());
+
+
+            CommonINTERVAL = intervalTime;//30;//30; //min
+            int largeSmaLENGTH = slowSma;//100;
+            int smallSmaLENGTH = fastSma;//15;
             updateInterval = CommonINTERVAL; //update values every 1 min to keep sma data updated
 
             BigSma = new MovingAverage(ref inputContextValues.CurrentTicker, inputContextValues.ProductName, CommonINTERVAL, largeSmaLENGTH);
@@ -136,6 +147,9 @@ namespace Multiplier
 
         }
 
+
+
+
         private void UpdateSMA(object sender, ElapsedEventArgs e)
         {
             Logger.WriteLog("Udating MACD strategy values");
@@ -143,7 +157,7 @@ namespace Multiplier
             var largeSmaDataPoints = BigSma.SmaDataPoints;
             var smallSmaDataPoints = SmallSma.SmaDataPoints;
 
-
+            
             //var emaTest = MovingAverage.SharedRawExchangeData.Select((d) => (double)d.Close).ToList().EMA(500);
             //var fst = emaTest.First();
             //var lst = emaTest.Last();
@@ -156,12 +170,20 @@ namespace Multiplier
 
             var curSmaDiff = smaDiff.First();
 
-            var L_SIGNAL_LEN = 14;
-            var S_SIGNAL_LEN = 5;
+            var settings = AppSettings.GetStrategySettings("macd");
+            
+            var largeSignal = Convert.ToInt16(settings[0]["signal"].ToString());
+            var smallSignal = Convert.ToInt16(settings[0]["my_sma"].ToString());
+
+            var L_SIGNAL_LEN = largeSignal;//14;
+            var S_SIGNAL_LEN = smallSignal;//5;
 
             var bigSmaOfMacd =  smaDiff.ToList().SMA(L_SIGNAL_LEN).First();
             var smallSmaOfMacd = smaDiff.ToList().SMA(S_SIGNAL_LEN).First();
 
+            //todo:
+            //Logger.WriteLog("current large ema " + MovingAverage.SharedRawExchangeData.Select((d) => (double)d.Close).ToList().EMA(100).First());
+            //Logger.WriteLog("current small ema " + MovingAverage.SharedRawExchangeData.Select((d) => (double)d.Close).ToList().EMA(15).First()); //largeSmaDataPoints.EMA(15));
 
             Logger.WriteLog(string.Format("macd values: \n" + 
                 "\tcurent small sma: {0}\n" +
@@ -171,18 +193,39 @@ namespace Multiplier
                 "\tsmall sma of macd: {4}\n", smallSmaDataPoints.First(), largeSmaDataPoints.First(), curSmaDiff, bigSmaOfMacd, smallSmaOfMacd));
 
 
-            if (curSmaDiff > bigSmaOfMacd )
+            var useBothSma = Convert.ToBoolean(settings[0]["use_two_sma"].ToString());
+
+            if (useBothSma)
             {
-                //buy condition 
-                Buy = true;
-                Sell = false;
+                if (curSmaDiff > bigSmaOfMacd && curSmaDiff > smallSmaOfMacd)
+                {
+                    //buy condition 
+                    Buy = true;
+                    Sell = false;
+                }
+                else
+                {
+                    //sell
+                    Sell = true;
+                    Buy = false;
+
+                }
             }
             else
             {
-                //sell
-                Sell = true;
-                Buy = false;
+                if (curSmaDiff > smallSmaOfMacd)
+                {
+                    //buy condition 
+                    Buy = true;
+                    Sell = false;
+                }
+                else
+                {
+                    //sell
+                    Sell = true;
+                    Buy = false;
 
+                }
             }
 
 

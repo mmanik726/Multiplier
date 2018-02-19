@@ -24,6 +24,7 @@ using CoinbaseExchange.NET.Data;
 using CoinbaseExchange.NET.Utilities;
 using static Multiplier.Manager;
 
+using Newtonsoft.Json.Linq;
 
 namespace Multiplier
 {
@@ -59,6 +60,13 @@ namespace Multiplier
             
 
             InitializeComponent();
+
+            
+            //var d = x.Where((f)=>f.ToString() == "Value1");
+            //var s = x["Value1"].ToString();
+
+
+            //AppSettings.CreateNew();
             //var filePath = System.IO.Path.GetFullPath(Assembly.GetExecutingAssembly().Location + @"\..\..\Resources\TradeWidgetPage.html");
             //cefBrowser.Address = @"https://www.tradingview.com"; //@"C:\Users\bobby\Source\Repos\Multiplier\Multiplier\Resources\TradeWidgetPage.html";//@".\TradeWidgetPage.html"; //Properties.Resources.TradeWidgetPage. //"https://github.com/cefsharp/CefSharp/wiki/Frequently-asked-questions";
 
