@@ -122,11 +122,12 @@ namespace CoinbaseExchange.NET
             try
             {
                 //create back up of originla file
-                File.Copy(jsonDBNamePath, jsonDBNamePath + ".bak", true);
+                //no back up really required, wast of space
+                //File.Copy(jsonDBNamePath, jsonDBNamePath + ".bak", true);
 
                 WriteToFile();
 
-                File.Copy(jsonDBNamePath, jsonDBNamePath + ".bak", true);
+                //File.Copy(jsonDBNamePath, jsonDBNamePath + ".bak", true);
             }
             catch (Exception ex)
             {
@@ -152,7 +153,7 @@ namespace CoinbaseExchange.NET
             DateTime startDate = new DateTime();
 
             if (createNewDB)
-                startDate = new DateTime(2017,06,1,0,0,0);
+                startDate = DateTime.Now.AddYears(-1);//get all data from past year //new DateTime(2017,06,1,0,0,0);
             else
                 startDate = RawExchangeData.First().Time.AddMinutes(1);
             

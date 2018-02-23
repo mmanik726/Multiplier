@@ -75,7 +75,8 @@ namespace Multiplier
         MovingAverage SmallSma;
         MovingAverage BigSma;
 
-        public System.Timers.Timer aTimer;
+        //only one instance per class object
+        public static System.Timers.Timer aTimer;
 
         private int CommonINTERVAL; 
         private int updateInterval;
