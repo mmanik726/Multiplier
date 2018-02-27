@@ -96,6 +96,7 @@
     <Compile Include="Core\RequestPaginationType.cs" />
     <Compile Include="Data\ExData.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Utilities\AppSettings.cs" />
     <Compile Include="Utilities\DateTimeUtilities.cs" />
     <Compile Include="Utilities\Logger.cs" />
   </ItemGroup>

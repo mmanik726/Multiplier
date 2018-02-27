@@ -6,6 +6,10 @@ using System.Threading.Tasks;
 using System.Timers;
 using CoinbaseExchange.NET.Data;
 using CoinbaseExchange.NET.Utilities;
+
+using Newtonsoft.Json.Linq;
+
+
 namespace Multiplier
 {
     internal class MacdStrategy : TradeStrategyBase //TradeStrategyE
@@ -33,6 +37,10 @@ namespace Multiplier
                 if (myMacdStrategy.Buy)
                 {
 
+                    //save the last buy init price 
+
+                    //AppSettings.SaveUpdateStrategySetting("macd", "last_buy_price", curPrice.ToString());
+
                     Buy();
 
                     ////////simulation
@@ -53,6 +61,8 @@ namespace Multiplier
             {
                 if (myMacdStrategy.Sell)
                 {
+                    //AppSettings.SaveUpdateStrategySetting("macd", "last_sell_price", curPrice.ToString());
+
                     Sell();
 
                     ////////simulation
@@ -78,20 +88,40 @@ namespace Multiplier
         //only one instance per class object
         public static System.Timers.Timer aTimer;
 
+        public static System.Timers.Timer StopLossTimer;
+
         private int CommonINTERVAL; 
         private int updateInterval;
 
         public bool Buy;
         public bool Sell;
 
+        public decimal LastBuyAtPrice;
+        public decimal LastSellAtPrice;
+
+        public bool StopLossInEffect;
+
+        private JArray settings;
+        private ContextValues contextVals;
+
+        private double stopLossCounter;
+
         public Macd(ref ContextValues inputContextValues)
         {
             Buy = false;
             Sell = false;
 
+            stopLossCounter = 0;
 
+            StopLossInEffect = false;
 
-            var settings = AppSettings.GetStrategySettings("macd");
+            settings = AppSettings.GetStrategySettings("macd");
+
+            if (settings.Count == 0 )
+            {
+                throw new Exception("CantInitSettingsError");
+            }
+
             Logger.WriteLog("macd settings found: \n" + settings.ToString());
             var intervalTime = Convert.ToInt16(settings[0]["time_interval"].ToString());
             var slowSma = Convert.ToInt16(settings[0]["slow_sma"].ToString());
@@ -99,6 +129,8 @@ namespace Multiplier
             var signal = Convert.ToInt16(settings[0]["signal"].ToString());
             var mySma = Convert.ToInt16(settings[0]["my_sma"].ToString());
 
+            LastBuyAtPrice = Convert.ToDecimal(settings[0]["last_buy_price"].ToString());
+            LastSellAtPrice = Convert.ToDecimal(settings[0]["last_sell_price"].ToString());
 
             CommonINTERVAL = intervalTime;//30;//30; //min
             int largeSmaLENGTH = slowSma;//100;
@@ -109,7 +141,7 @@ namespace Multiplier
             SmallSma = new MovingAverage(ref inputContextValues.CurrentTicker, inputContextValues.ProductName, CommonINTERVAL, smallSmaLENGTH);
 
 
-
+            contextVals = inputContextValues;
             //// Create a thread
             //System.Threading.Thread newWindowThread = new System.Threading.Thread(new System.Threading.ThreadStart(() =>
             //{
@@ -146,8 +178,74 @@ namespace Multiplier
 
             UpdateSMA(this, null);
 
+
+
+
+
+            
+            if (StopLossTimer != null) //timer already in place
+            {
+                StopLossTimer.Elapsed -= UpdateSMA;
+                StopLossTimer.Stop();
+                StopLossTimer = null;
+            }
+            StopLossTimer = new System.Timers.Timer();
+            StopLossTimer.Elapsed += DetermineStopLoss;
+            StopLossTimer.Interval = 1 * 60 * 1000; //every minute check the stop loss condition
+            StopLossTimer.Enabled = true;
+            StopLossTimer.Start();
+
+            DetermineStopLoss(this, null);
+
         }
 
+
+        private void DetermineStopLoss(object sender, ElapsedEventArgs e)
+        {
+            settings = AppSettings.GetStrategySettings("macd");
+            LastBuyAtPrice = Convert.ToDecimal(settings[0]["last_buy_price"].ToString());
+            LastSellAtPrice = Convert.ToDecimal(settings[0]["last_sell_price"].ToString());
+
+            if (LastBuyAtPrice == 0)
+                return;
+
+
+
+            var stopLossPercent = Convert.ToDecimal(settings[0]["stop_loss_percent"].ToString());
+
+            var curPrice = contextVals.CurrentBufferedPrice;
+
+
+            var curDiff = Math.Round(curPrice - LastBuyAtPrice, 4);
+
+
+            var diffPercentage = Math.Round((curDiff / LastBuyAtPrice) * 100, 4);
+
+            if (stopLossCounter % 3 == 0)
+            {
+                var msg = string.Format("Price change since last buy: {0}-{1} = {2} ({3})",
+                    Math.Round(LastBuyAtPrice, 4).ToString(), Math.Round(curPrice, 4).ToString(), curDiff.ToString(), diffPercentage.ToString());
+                Logger.WriteLog(msg);
+            }
+
+            stopLossCounter += 1;
+
+            if (diffPercentage <= Math.Abs(stopLossPercent) * -1)
+            {
+                StopLossInEffect = true;
+
+                Sell = true;
+                Buy = false;
+            }
+            else
+            {
+                //Sell = false;
+                //Buy = false;
+                StopLossInEffect = false;
+            }
+
+
+        }
 
 
 
@@ -155,10 +253,19 @@ namespace Multiplier
         {
             Logger.WriteLog("Udating MACD strategy values");
 
+
+            if (StopLossInEffect)
+            {
+                Logger.WriteLog("Stop loss in effect");
+                return;
+            }
+
             var largeSmaDataPoints = BigSma.SmaDataPoints;
             var smallSmaDataPoints = SmallSma.SmaDataPoints;
 
             
+            
+
             //var emaTest = MovingAverage.SharedRawExchangeData.Select((d) => (double)d.Close).ToList().EMA(500);
             //var fst = emaTest.First();
             //var lst = emaTest.Last();
@@ -201,12 +308,14 @@ namespace Multiplier
                 if (curSmaDiff > bigSmaOfMacd && curSmaDiff > smallSmaOfMacd)
                 {
                     //buy condition 
+                    Logger.WriteLog("BUY = true");
                     Buy = true;
                     Sell = false;
                 }
                 else
                 {
                     //sell
+                    Logger.WriteLog("Sell = true");
                     Sell = true;
                     Buy = false;
 

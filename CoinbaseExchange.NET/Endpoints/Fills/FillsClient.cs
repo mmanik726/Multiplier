@@ -9,6 +9,8 @@ using CoinbaseExchange.NET.Endpoints.MyOrders;
 using System.Diagnostics;
 using CoinbaseExchange.NET.Utilities;
 using System.Threading;
+
+
 namespace CoinbaseExchange.NET.Endpoints.Fills
 {
 
@@ -216,6 +218,7 @@ namespace CoinbaseExchange.NET.Endpoints.Fills
                         + Convert.ToDecimal(curFill.Size);
                 }
 
+
             }
             else
             {
@@ -237,12 +240,22 @@ namespace CoinbaseExchange.NET.Endpoints.Fills
                 //BusyCheckingOrder = false;
                 //myActiveOrderBook.RemoveFromOrderList(fillDetails.OrderId);
 
-                FillWatchList.RemoveAll(x => x.OrderId == fillDetails.OrderId);
+                
 
                 Logger.WriteLog("Order filled with following sizes:");
                 FillList.ForEach((f) => Logger.WriteLog(f.Size + " @" + f.Price + " (fee: " + f.Fee + ")"));
 
+                //add the list of filled sizes to fill list if the filledList does not already contain it
+                foreach (var f in FillList)
+                {
+                    if (!(FillWatchList[orderIndex].FilledList.Any((e)=>e.OrderId == f.OrderId))) //if list does not already contain item then add
+                    {
+                        FillWatchList[orderIndex].FilledList.Add(f);
+                    }
+                }
 
+                //blindly adds all filled even if already exists in list 
+                //FillWatchList[orderIndex].FilledList.AddRange(FillList);
 
                 if (fillDetails.Price == null) //indicates a market order
                 {
@@ -258,9 +271,34 @@ namespace CoinbaseExchange.NET.Endpoints.Fills
                     }
                 }
 
-                fillDetails.Size = totalFilled.ToString();
+
+                var filledSizeSum = 0.0m;
+                var filledAmountSum = 0.0m;
+                var filledFeeSum = 0.0m;
+                var filledAtAvgPrice = 0.0m;
+
+                Logger.WriteLog("All fills:");
+                foreach (var fillDet in FillWatchList[orderIndex].FilledList)
+                {
+                    filledSizeSum += Convert.ToDecimal(fillDet.Size);
+                    filledAmountSum += Convert.ToDecimal(fillDet.Size) * Convert.ToDecimal(fillDet.Price);
+                    filledFeeSum += Convert.ToDecimal(fillDet.Fee);
+                    Logger.WriteLog(fillDet.Size + " @" + fillDet.Price + " (fee: " + fillDet.Fee + ")");
+                }
+
+                if (filledSizeSum > 0)
+                    filledAtAvgPrice = filledAmountSum / filledSizeSum;
+
+                //fillDetails.Size = totalFilled.ToString();
+                fillDetails.Size = filledSizeSum.ToString();
+                fillDetails.Price = filledAtAvgPrice.ToString();
+                fillDetails.Fee = filledFeeSum.ToString();
+
+                FillWatchList.RemoveAll(x => x.OrderId == fillDetails.OrderId);
                 FillUpdated?.Invoke(this, new FillEventArgs { filledOrder = fillDetails });
 
+
+                
 
             }
             else
@@ -274,6 +312,19 @@ namespace CoinbaseExchange.NET.Endpoints.Fills
                 if (!(FillWatchList[orderIndex].Status == "PARTIALLY_FILLED" 
                     || FillWatchList[orderIndex].Status == "CANCEL_ERROR"))
                 {
+
+                    ////add the list of filled sizes to fill list
+                    //FillWatchList[orderIndex].FilledList.AddRange(FillList);
+
+                    //add the list of filled sizes to fill list if the filledList does not already contain it
+                    foreach (var f in FillList)
+                    {
+                        if (!(FillWatchList[orderIndex].FilledList.Any((e) => e.OrderId == f.OrderId))) //if list does not already contain item then add
+                        {
+                            FillWatchList[orderIndex].FilledList.Add(f);
+                        }
+                    }
+
 
                     Logger.WriteLog(string.Format("{0} order({1}) of {2} {3} filled partially with following sizes:",
                         fillDetails.Side, fillDetails.OrderId, FillWatchList[orderIndex].ProductSize,

@@ -235,6 +235,8 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
         public string Side { get; set; }
         public decimal OriginalOrderAmount { get; set; }
 
+        public string MyOrderID { get; set; }
+        public List<Fill> FilledList { get; set; }
         public MyOrder(string productName = "")
         {
             OrderId = "";
@@ -247,8 +249,21 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
             OriginalOrderAmount = 0;
             ChaseBestPrice = false;
 
+            Random random = new Random();
+            int num = random.Next(1000, 5000);
+            MyOrderID = num.ToString("X"); //save rand hex number as order id
+
+            FilledList = new List<Fill>();
         }
     }
+
+    //public class MyOrderFillDetails
+    //{
+    //    public decimal FilledAtPrice { get; set; }
+    //    public decimal FilledSize { get; set; }
+    //    public decimal FillFee { get; set; }
+    //}
+
 
     public class OrderUpdateEventArgs : EventArgs
     {

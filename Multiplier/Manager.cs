@@ -276,6 +276,11 @@ namespace Multiplier
                 Thread.Sleep(5 * 1000);
                 Logger.WriteLog("buy sell resumed here");
 
+                //check if any orders exists in order list
+                //set buy sell waiting flag to off only when there are no order in the orderbook 
+                if (CurContextValues.MyOrderBook.MyChaseOrderList.Count == 0)
+                    CurContextValues.WaitingBuyOrSell = false;
+
                 CurContextValues.StartAutoTrading = true;
                 AutoTradingStartedEvent?.Invoke(this, EventArgs.Empty);
             }
@@ -334,7 +339,23 @@ namespace Multiplier
                         //////break;
 
                         Logger.WriteLog("Setting Current Strategy to MACD");
-                        currentTradeStrategy = new MacdStrategy(ref CurContextValues, intervalValues);
+
+
+                        var gSettings = AppSettings.GetGeneralSettings();
+
+                        try
+                        {
+                            currentTradeStrategy = new MacdStrategy(ref CurContextValues, intervalValues);
+                            
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger.WriteLog("Cant initialize current strategy, please check settings json file... exiting");
+                            System.Environment.Exit(0);
+                            //throw ex;
+                        }
+
+                        
                         break;
 
                     case "F":
@@ -440,6 +461,9 @@ namespace Multiplier
 
                 CurContextValues.WaitingBuyFill = false;
                 CurContextValues.WaitingSellFill = true;
+
+                AppSettings.SaveUpdateStrategySetting("macd", "last_buy_price", filledOrder.filledAtPrice);
+                AppSettings.Reloadsettings();
             }
             else if (filledOrder.side == "sell")
             {
@@ -448,6 +472,9 @@ namespace Multiplier
 
                 CurContextValues.WaitingSellFill = false;
                 CurContextValues.WaitingBuyFill = true;
+
+                AppSettings.SaveUpdateStrategySetting("macd", "last_sell_price", filledOrder.filledAtPrice);
+                AppSettings.Reloadsettings();
             }
 
 
