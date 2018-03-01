@@ -61,6 +61,8 @@ namespace Multiplier
 
             InitializeComponent();
 
+            StartWindow a = new StartWindow();
+            a.Show();
             
             //var d = x.Where((f)=>f.ToString() == "Value1");
             //var s = x["Value1"].ToString();

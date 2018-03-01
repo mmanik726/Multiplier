@@ -223,8 +223,8 @@ namespace Multiplier
 
             if (stopLossCounter % 3 == 0)
             {
-                var msg = string.Format("Price change since last buy: {0}-{1} = {2} ({3})",
-                    Math.Round(LastBuyAtPrice, 4).ToString(), Math.Round(curPrice, 4).ToString(), curDiff.ToString(), diffPercentage.ToString());
+                var msg = string.Format("Price change since last buy: {0}-{1} = {2} ({3}%)",
+                    Math.Round(curPrice, 4).ToString(), Math.Round(LastBuyAtPrice, 4).ToString(), curDiff.ToString(), diffPercentage.ToString());
                 Logger.WriteLog(msg);
             }
 
@@ -254,11 +254,11 @@ namespace Multiplier
             Logger.WriteLog("Udating MACD strategy values");
 
 
-            if (StopLossInEffect)
-            {
-                Logger.WriteLog("Stop loss in effect");
-                return;
-            }
+            //if (StopLossInEffect)
+            //{
+            //    Logger.WriteLog("Stop loss in effect");
+            //    return;
+            //}
 
             var largeSmaDataPoints = BigSma.SmaDataPoints;
             var smallSmaDataPoints = SmallSma.SmaDataPoints;
@@ -307,6 +307,15 @@ namespace Multiplier
             {
                 if (curSmaDiff > bigSmaOfMacd && curSmaDiff > smallSmaOfMacd)
                 {
+
+
+                    //if stop loss in effect -> no need to indicate to buy since stop loss already sold and graph suggests buy 
+                    if (StopLossInEffect)
+                    {
+                        Logger.WriteLog("Stop Loss in effect, cant buy again now");
+                        return;
+                    }
+
                     //buy condition 
                     Logger.WriteLog("BUY = true");
                     Buy = true;
@@ -314,6 +323,24 @@ namespace Multiplier
                 }
                 else
                 {
+
+
+                    //if stop loss in effect (and graph saying sell)-> then turn it off and signal to sell if not already sold
+                    if (StopLossInEffect)
+                    {
+                        StopLossInEffect = false;
+                        //set last buy price (value will be overridden in buy func) to 0
+                        //this stops dterimeStopLoss to return false and
+                        //so that stop loss does not get set to on again
+                        AppSettings.SaveUpdateStrategySetting("macd", "last_buy_price", "0.01");
+                        Logger.WriteLog("Stop Loss in effect, resetting stoploss flag to false.");
+
+                        //reload the settings to get 0.00 for last_buy_price
+                        //which disables stopLoss flag
+                        AppSettings.Reloadsettings();
+                        return;
+                    }
+
                     //sell
                     Logger.WriteLog("Sell = true");
                     Sell = true;
@@ -325,12 +352,37 @@ namespace Multiplier
             {
                 if (curSmaDiff > smallSmaOfMacd)
                 {
+
+                    //if stop loss in effect -> no need to indicate to buy since stop loss already sold and graph suggests buy 
+                    if (StopLossInEffect)
+                    {
+                        Logger.WriteLog("Stop Loss in effect, cant buy again now");
+                        return;
+                    }
+
                     //buy condition 
                     Buy = true;
                     Sell = false;
                 }
                 else
                 {
+
+                    //if stop loss in effect (and graph saying sell)-> then turn it off and signal to sell if not already sold
+                    if (StopLossInEffect)
+                    {
+                        StopLossInEffect = false;
+                        //set last buy price (value will be overridden in buy func) to 0
+                        //this stops dterimeStopLoss to return false and
+                        //so that stop loss does not get set to on again
+                        AppSettings.SaveUpdateStrategySetting("macd", "last_buy_price", "0.00");
+                        Logger.WriteLog("Stop Loss in effect, resetting stoploss flag to false.");
+
+                        //reload the settings to get 0.00 for last_buy_price
+                        //which disables stopLoss flag
+                        AppSettings.Reloadsettings();
+                        return;
+                    }
+
                     //sell
                     Sell = true;
                     Buy = false;
