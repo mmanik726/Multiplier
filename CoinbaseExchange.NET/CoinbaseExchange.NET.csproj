@@ -79,6 +79,7 @@
     <Compile Include="Endpoints\Account\ListAccountsResponse.cs" />
     <Compile Include="Core\ExchangeClientBase.cs" />
     <Compile Include="Endpoints\Fills\FillsClient.cs" />
+    <Compile Include="Endpoints\Funds\Funds.cs" />
     <Compile Include="Endpoints\MyOrders\MyOrderBook.cs" />
     <Compile Include="Endpoints\OrderBook\BidAskOrder.cs" />
     <Compile Include="Endpoints\OrderBook\GetProductOrderBookRequest.cs" />

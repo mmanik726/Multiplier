@@ -248,7 +248,7 @@ namespace CoinbaseExchange.NET.Endpoints.Fills
                 //add the list of filled sizes to fill list if the filledList does not already contain it
                 foreach (var f in FillList)
                 {
-                    if (!(FillWatchList[orderIndex].FilledList.Any((e)=>e.OrderId == f.OrderId))) //if list does not already contain item then add
+                    if (!(FillWatchList[orderIndex].FilledList.Any((e)=>e.OrderId == f.OrderId && e.Side == f.Side && e.Fee == f.Fee))) //if list does not already contain item then add
                     {
                         FillWatchList[orderIndex].FilledList.Add(f);
                     }
@@ -319,7 +319,7 @@ namespace CoinbaseExchange.NET.Endpoints.Fills
                     //add the list of filled sizes to fill list if the filledList does not already contain it
                     foreach (var f in FillList)
                     {
-                        if (!(FillWatchList[orderIndex].FilledList.Any((e) => e.OrderId == f.OrderId))) //if list does not already contain item then add
+                        if (!(FillWatchList[orderIndex].FilledList.Any((e) => e.OrderId == f.OrderId && e.Side == f.Side && e.Fee == f.Fee))) //if list does not already contain item then add
                         {
                             FillWatchList[orderIndex].FilledList.Add(f);
                         }

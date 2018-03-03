@@ -9,7 +9,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-
+using CoinbaseExchange.NET.Endpoints.Funds;
 
 
 
@@ -43,6 +43,8 @@ namespace Multiplier
         //private bool userStartedTrading;
 
         public EventHandler CurrentActionChangedEvent;
+
+        public EventHandler FundsUpdatedEvent;
 
         public EventHandler TickerPriceUpdateEvent;
         public EventHandler OrderFilledEvent;
@@ -142,8 +144,13 @@ namespace Multiplier
             MyProductOrderBook = new MyOrderBook(MyAuth, ProductName, ref ProductTickerClient);
             MyProductOrderBook.OrderUpdateEvent += FillUpdateEventHandler;
 
+
+
+
             CurContextValues = new ContextValues(ref MyProductOrderBook, ref ProductTickerClient);
             CurContextValues.ProductName = ProductName;
+
+            CurContextValues.Auth = MyAuth;
 
             CurContextValues.AutoTradingStartEvent += autoTradeStartEventHandler;
             CurContextValues.AutoTradingStopEvent += autoTradeStopEventHandler; 
@@ -195,6 +202,7 @@ namespace Multiplier
             UpdateBuySellAmount(0.01m); //default
             //UpdateBuySellBuffer(0.03m); //default 
 
+            UpdateFunds();
 
             //writeCurrentStrategySmaValues();
 
@@ -510,6 +518,8 @@ namespace Multiplier
 
             OrderFilledEvent?.Invoke(this, filledOrder);
 
+            //update the funds
+            UpdateFunds();
 
             //this.Dispatcher.Invoke(() => updateListView(filledOrder));
         }
@@ -781,6 +791,25 @@ namespace Multiplier
         }
 
 
+        private void UpdateFunds()
+        {
+
+            Funds f = new Funds(MyAuth, CurContextValues.ProductName);
+            var af = f.GetAvailableFunds();
+
+            if (af == null)
+            {
+                Logger.WriteLog("An error occured in getting funds");
+                return;
+            }
+
+            Logger.WriteLog(String.Format("Funds Updated: \n\tavailable {0}: {1}\n\tavailable {2}: {3}",
+                "USD $", af.AvailableDollars.ToString(), f.ProductName, af.AvailableProduct));
+
+            FundsUpdatedEvent?.Invoke(this, new FundsEventArgs { AvaFunds = af});
+        }
+
+
 
         public void UpdateBuySellBuffer(decimal newPriceBuffer, bool useInverse = false)
         {
@@ -848,6 +877,7 @@ namespace Multiplier
 
     public class BuySellBufferUpdateArgs : EventArgs { public decimal NewBuySellBuffer { get; set; } }
     public class BuySellAmountUpdateArgs : EventArgs { public decimal NewBuySellAmount { get; set; } }
+    public class FundsEventArgs : EventArgs { public AvailableFunds AvaFunds { get; set; } }
 
     public class ActionChangedArgs : EventArgs
     {
@@ -953,6 +983,7 @@ namespace Multiplier
         public bool WaitingBuyFill { get; set; }
         public bool WaitingBuyOrSell { get; set; }
 
+        public CBAuthenticationContainer Auth { get; set; }
 
         public DateTime LastTickerUpdateTime { get; set; }
         public DateTime LastBuySellTime { get; set; }

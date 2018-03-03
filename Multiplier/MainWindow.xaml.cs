@@ -26,6 +26,9 @@ using static Multiplier.Manager;
 
 using Newtonsoft.Json.Linq;
 
+
+using CoinbaseExchange.NET.Endpoints.Funds;
+
 namespace Multiplier
 {
     /// <summary>
@@ -63,7 +66,11 @@ namespace Multiplier
 
             StartWindow a = new StartWindow();
             a.Show();
-            
+
+
+
+
+
             //var d = x.Where((f)=>f.ToString() == "Value1");
             //var s = x["Value1"].ToString();
 
@@ -401,6 +408,19 @@ namespace Multiplier
 
 
         //}
+
+
+        public void FundsUpdatedHandler(object sender, EventArgs args)
+        {
+            AvailableFunds af = ((FundsEventArgs)args).AvaFunds ;
+
+            this.Dispatcher.Invoke(()=> 
+            {
+                lblAvailableProduct.Content = af.AvailableProduct;
+                lblAvailableUSD.Content = af.AvailableDollars;
+            });
+        }
+
 
         public void TickerPriceUpdateEventHandler(object sender, EventArgs args)
         {
@@ -857,6 +877,8 @@ namespace Multiplier
             //LTCManager.SmaParametersUpdatedEvent += SmaParametersUpdatedEventHandler;
             ProductManager.DisplaySmaUpdateEvent += SmaLargeUpdateEventHandler;
             //ProductManager.SmaSmallUpdateEvent += SmaSmallUpdateEventHandler;
+
+            ProductManager.FundsUpdatedEvent += FundsUpdatedHandler;
 
             ProductManager.TickerPriceUpdateEvent += TickerPriceUpdateEventHandler;
             ProductManager.AutoTradingStartedEvent += AutoTradingStartedEventHandler;

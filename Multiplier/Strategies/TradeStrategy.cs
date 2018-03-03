@@ -8,6 +8,8 @@ using CoinbaseExchange.NET.Utilities;
 
 using CoinbaseExchange.NET.Data;
 
+using CoinbaseExchange.NET.Endpoints.Funds;
+
 namespace Multiplier
 {
     public abstract class TradeStrategyBase : IDisposable
@@ -249,6 +251,38 @@ namespace Multiplier
 
                 Logger.WriteLog("Error buying: \n" + msg);
                 Logger.WriteLog("Retrying to buy on next price tick...");
+
+                if (msg.ToLower().Contains("Insufficient funds".ToLower()))
+                {
+                    var f = new Funds(CurrentValues.Auth, CurrentValues.ProductName);
+                    var af = f.GetAvailableFunds();
+
+                    if (af != null)
+                    {
+                        var usd = af.AvailableDollars;
+                        var prod = af.AvailableProduct;
+
+                        var prodBuyCapacity = Math.Round(usd / CurrentValues.CurrentBufferedPrice, 4);
+
+                        Logger.WriteLog(string.Format("You can only buy {0} {1} with the available ${2} ", prodBuyCapacity.ToString(),
+                            CurrentValues.ProductName, usd.ToString()));
+
+                        if (prodBuyCapacity - 0.001m < 0.1m)
+                        {
+                            Logger.WriteLog("Not enogh USD to buy minimum amount!");
+                        }
+                        else
+                        {
+                            Logger.WriteLog("Setting max buy amount to: " + (prodBuyCapacity - 0.001m).ToString() + " " + CurrentValues.ProductName);
+
+                            CurrentValues.BuySellAmount = (prodBuyCapacity - 0.001m);
+                        }
+
+
+                    }
+                }
+
+
                 SetNextActionTo_Buy();
 
                 CurrentValues.WaitingBuyFill = false;

@@ -60,6 +60,10 @@
         <CheckBox x:Name="chkAvoidFees" Content="Avoid fees (Post Only)" Margin="0,338,195,0" VerticalAlignment="Top" Click="chkAvoidFees_Click" IsChecked="True" HorizontalAlignment="Right" Width="136"/>
         <CheckBox x:Name="chkBuyMarketOrder" Content="Buy via Market Order" HorizontalAlignment="Left" Margin="12,363,0,0" VerticalAlignment="Top" Click="chkMarketOrder_Click"/>
         <CheckBox x:Name="chkSellMarketOrder" Content="Sell via Market Order " HorizontalAlignment="Right" Margin="0,362,10,0" VerticalAlignment="Top" Click="chkMarketOrder_Click" Width="145"/>
+        <Label Content="Product:" HorizontalAlignment="Left" Margin="755,125,0,0" VerticalAlignment="Top"/>
+        <Label Content="USD:" HorizontalAlignment="Left" Margin="755,154,0,0" VerticalAlignment="Top"/>
+        <Label x:Name="lblAvailableProduct" Content="" HorizontalAlignment="Left" Margin="814,125,0,0" VerticalAlignment="Top" Width="191"/>
+        <Label x:Name="lblAvailableUSD" Content="" HorizontalAlignment="Left" Margin="814,151,0,0" VerticalAlignment="Top" Width="191"/>
 
     </Grid>
 </Window>
