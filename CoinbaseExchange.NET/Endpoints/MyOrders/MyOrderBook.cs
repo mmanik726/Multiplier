@@ -378,6 +378,45 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
             Logger.WriteLog("Orders is active order list after syncing:");
             printActiveOrderList();
 
+            if (MyChaseOrderList.Count == 0)
+            {
+                UpdateLastBuySellPrices();
+            }
+
+
+        }
+
+
+        void UpdateLastBuySellPrices()
+        {
+            Logger.WriteLog("Updating last buy and sell prices in settings file");
+
+            var allFills = fillsClient.GetFills().Result;
+            //allFills.Wait();
+
+
+
+            var orderedFills = allFills.Fills.OrderByDescending((f)=>Convert.ToDateTime(f.Time)).ToList();
+
+
+
+
+            var lastBuyFill = orderedFills.Where((g)=>g.Side == "buy" && g.ProductId == ProductName).First();
+
+            var lastSellFill = orderedFills.Where((g) => g.Side == "sell" & g.ProductId == ProductName).First();
+
+            //lastBuyFill.Price
+            var allStrategies = AppSettings.GetAllStrategies();
+
+            foreach (var s in allStrategies)
+            {
+                AppSettings.SaveUpdateStrategySetting(s.StrategyName, "last_buy_price", lastBuyFill.Price);
+
+                AppSettings.SaveUpdateStrategySetting(s.StrategyName, "last_sell_price", lastSellFill.Price);
+
+            }
+
+
         }
 
         void printActiveOrderList()

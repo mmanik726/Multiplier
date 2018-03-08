@@ -335,6 +335,12 @@ namespace CoinbaseExchange.NET.Endpoints.Fills
                     try
                     {
                         Logger.WriteLog("Cancelling remainder of partially filled order: " + myCurrentOrder.OrderId);
+
+
+                        if (myCurrentOrder.OrderType == "market")
+                        {
+                            Logger.WriteLog("market order! cant cancel");
+                        }
                         var cancelledOrder = myActiveOrderBook.CancelSingleOrder(myCurrentOrder.OrderId).Result;
                         if (cancelledOrder.Count > 0)
                             FillWatchList[orderIndex].Status = "PARTIALLY_FILLED";

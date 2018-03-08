@@ -34,7 +34,7 @@
         <Label x:Name="lblSd" Content="0" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="480,76,0,0" Width="160" Height="23"/>
         <Label Content="Buy / Sell size:" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="284,302,0,0" Width="92"/>
         <Label x:Name="lblBuySellAmount" Content="0" HorizontalAlignment="Left" Margin="382,302,0,0" VerticalAlignment="Top" Height="26" RenderTransformOrigin="0.522,-0.196" Width="40"/>
-        <TextBox x:Name="txtBuySellAmount" HorizontalAlignment="Left" Height="20" Margin="428,302,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="70"/>
+        <TextBox x:Name="txtBuySellAmount" HorizontalAlignment="Left" Height="20" Margin="428,302,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="70" LostFocus="txtBuySellAmount_LostFocus"/>
         <Button Content="Update buy/sell Size" HorizontalAlignment="Left" Margin="502,302,0,0" VerticalAlignment="Top" Width="151" Click="Button_Click_1"/>
         <Label Content="Product" HorizontalAlignment="Left" Margin="166,27,0,0" VerticalAlignment="Top"/>
         <ComboBox x:Name="cmbProduct" HorizontalAlignment="Left" Margin="166,53,0,0" VerticalAlignment="Top" Width="120" SelectionChanged="cmbProduct_SelectionChanged"/>

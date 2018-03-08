@@ -418,6 +418,12 @@ namespace Multiplier
             {
                 lblAvailableProduct.Content = af.AvailableProduct;
                 lblAvailableUSD.Content = af.AvailableDollars;
+
+
+                var maxProd = Math.Round(Math.Max(af.AvailableProduct, af.AvailableDollars / Convert.ToDecimal(lblCurPrice.Content)), 4);
+
+                txtBuySellAmount.Text = maxProd.ToString();//af.AvailableProduct.ToString();
+                Button_Click_1(null, null);
             });
         }
 
@@ -486,19 +492,71 @@ namespace Multiplier
         private void btnStartBySelling_Click(object sender, RoutedEventArgs e)
         {
 
-            ProductManager.StartTrading_BySelling();
 
-            btnStartByBuying.IsEnabled = false;
-            btnStartBySelling.IsEnabled = false;
+            if (isNumeric(txtBuySellAmount.Text))
+            {
+                var amount = Math.Round(Convert.ToDecimal(txtBuySellAmount.Text), 4);
+                if (MessageBox.Show("Is the buy/sell amount of " + amount.ToString() + " correct?", "Confirm start by selling", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+                {
+
+                    ProductManager.StartTrading_BySelling();
+                    btnStartByBuying.IsEnabled = false;
+                    btnStartBySelling.IsEnabled = false;
+                }
+                else
+                {
+                    txtBuySellAmount.Focus();
+                }
+            }
+            else
+            {
+                MessageBox.Show("Incorrect buy / sell amount");
+                txtBuySellAmount.Focus();
+            }
+
+
         }
 
 
+        private bool isNumeric(string inputStr)
+        {
+            double myNum = 0;
+
+            if (Double.TryParse(inputStr, out myNum))
+            {
+                return true;
+            }
+            else
+            {
+                // it is not a number
+                return false;
+            }
+        }
+
         private void btnStartByBuying_Click(object sender, RoutedEventArgs e)
         {
+            if (isNumeric(txtBuySellAmount.Text))
+            {
 
-            ProductManager.StartTrading_ByBuying();
-            btnStartByBuying.IsEnabled = false;
-            btnStartBySelling.IsEnabled = false;
+                var amount = Math.Round(Convert.ToDecimal(txtBuySellAmount.Text), 4);
+                if (MessageBox.Show("Is the buy/sell amount of " + amount.ToString() + " correct?", "Confirm start by buying", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+                {
+                    ProductManager.StartTrading_ByBuying();
+                    btnStartByBuying.IsEnabled = false;
+                    btnStartBySelling.IsEnabled = false;
+                }
+                else
+                {
+                    txtBuySellAmount.Focus();
+                }
+            }
+            else
+            {
+                MessageBox.Show("Incorrect buy / sell amount");
+                txtBuySellAmount.Focus();
+            }
+
+
 
         }
 
@@ -1107,6 +1165,19 @@ namespace Multiplier
             {
                 chkAvoidFees.IsChecked = false;
                 chkAvoidFees_Click(this, null);
+            }
+        }
+
+        private void txtBuySellAmount_LostFocus(object sender, RoutedEventArgs e)
+        {
+            if (isNumeric(txtBuySellAmount.Text))
+            {
+                Button_Click_1(null, null);
+            }
+            else
+            {
+                MessageBox.Show("Incorrect buy/sell amount");
+                //txtBuySellAmount.Focus();
             }
         }
 

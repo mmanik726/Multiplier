@@ -267,15 +267,15 @@ namespace Multiplier
                         Logger.WriteLog(string.Format("You can only buy {0} {1} with the available ${2} ", prodBuyCapacity.ToString(),
                             CurrentValues.ProductName, usd.ToString()));
 
-                        if (prodBuyCapacity - 0.001m < 0.1m)
+                        if (prodBuyCapacity - 0.1m < 0.1m)
                         {
                             Logger.WriteLog("Not enogh USD to buy minimum amount!");
                         }
                         else
                         {
-                            Logger.WriteLog("Setting max buy amount to: " + (prodBuyCapacity - 0.001m).ToString() + " " + CurrentValues.ProductName);
+                            Logger.WriteLog("Setting max buy amount to: " + (prodBuyCapacity - 0.1m).ToString() + " " + CurrentValues.ProductName);
 
-                            CurrentValues.BuySellAmount = (prodBuyCapacity - 0.001m);
+                            CurrentValues.BuySellAmount = (prodBuyCapacity - 0.1m);
                         }
 
 
@@ -329,6 +329,32 @@ namespace Multiplier
 
                 Logger.WriteLog("Error Selling: \n" + msg);
                 Logger.WriteLog("Retrying to sell on next price tick...");
+
+
+                if (msg.ToLower().Contains("Insufficient funds".ToLower()))
+                {
+                    var f = new Funds(CurrentValues.Auth, CurrentValues.ProductName);
+                    var af = f.GetAvailableFunds();
+
+                    if (af != null)
+                    {
+                        var usd = af.AvailableDollars;
+                        var prod = af.AvailableProduct;
+
+                        var prodBuyCapacity = Math.Round(usd / CurrentValues.CurrentBufferedPrice, 4);
+
+                        Logger.WriteLog(string.Format("You only have {0} {1} available to sell ", 
+                            prod.ToString(), CurrentValues.ProductName ));
+
+                        Logger.WriteLog("Setting max sell amount to: " + prod.ToString() + " " + CurrentValues.ProductName);
+
+                        CurrentValues.BuySellAmount = (prod - 0.1m);
+
+                    }
+                }
+
+
+
                 SetNextActionTo_Sell();
 
 

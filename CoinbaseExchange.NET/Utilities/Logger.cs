@@ -6,6 +6,8 @@ using System.Threading.Tasks;
 using System.IO;
 using System.Diagnostics;
 
+using System.Timers;
+
 namespace CoinbaseExchange.NET.Utilities
 {
     public class LoggerEventArgs : EventArgs
@@ -20,42 +22,44 @@ namespace CoinbaseExchange.NET.Utilities
         //public STATIC eventhandler 
         public static EventHandler<LoggerEventArgs> Logupdated;
 
-        private static string filePath;
-        private static string fileName;
-        private static string fileNamePath;
+        private static string _filePath;
+        private static string _fileName;
+        private static string _fileNamePath;
 
-        private static Logger LoggerInstance;
+        private static Logger _LoggerInstance;
+
+        public static Timer _aTimer;
 
         //private static Queue<string> writeQue;
 
-        private static object WriteLock = new object();
+        private static object _WriteLock = new object();
 
         private static void InitLogger(string logFileName = "")
         {
 
-            filePath = AppDomain.CurrentDomain.BaseDirectory;//System.Reflection.Assembly.GetExecutingAssembly().Location;
+            _filePath = AppDomain.CurrentDomain.BaseDirectory;//System.Reflection.Assembly.GetExecutingAssembly().Location;
 
             if (logFileName == "")
             {
                 var dateName = DateTime.UtcNow.ToLocalTime().ToString("yyyy_MMM_dd");
-                fileName = "Multiplier_Log_" + dateName + ".txt";
+                _fileName = "Multiplier_Log_" + dateName + ".txt";
             }
 
             else
-                fileName = logFileName;
+                _fileName = logFileName;
 
-            fileNamePath = filePath +  fileName;
+            _fileNamePath = _filePath +  _fileName;
 
 
             string existingLogContent = ""; 
 
-            if (File.Exists(fileNamePath))
+            if (File.Exists(_fileNamePath))
             {
                 WriteLog("\n\n\tMultiplier Logging started\n\n");
 
                 try
                 {
-                    existingLogContent = File.ReadAllText(fileNamePath);
+                    existingLogContent = File.ReadAllText(_fileNamePath);
                     onLogUpdate(existingLogContent);
                 }
                 catch (Exception ex)
@@ -70,15 +74,52 @@ namespace CoinbaseExchange.NET.Utilities
                 WriteLog("\n\n\tMultiplier Logging started\n\n");
             }
 
+
+
+
+            if (_aTimer != null) //timer already in place
+            {
+                _aTimer.Elapsed -= CheckLogFileName;
+                _aTimer.Stop();
+                _aTimer = null;
+            }
+
+
+            _aTimer = new Timer();
+            _aTimer.Elapsed += CheckLogFileName;
+            _aTimer.Interval = 30 * 60 * 1000; // every 30 min
+            _aTimer.Enabled = true;
+            _aTimer.Start();
+
+
+            Logger.WriteLog("starting log file monitor");
+            CheckLogFileName(null, null);
+
+
         }
 
 
-        public static void WriteLog(string message, string fileName = "")
+        private static void CheckLogFileName(object sender, ElapsedEventArgs e)
+        {
+            var curDay = DateTime.UtcNow.ToLocalTime().ToString("yyyy_MMM_dd");
+
+            if (!_fileName.Contains(curDay)) //if file name does not contains today date then rename file and create new one
+            {
+                Logger.WriteLog("End of log file " + _fileName);
+                var dateName = DateTime.UtcNow.ToLocalTime().ToString("yyyy_MMM_dd");
+                _fileNamePath = _filePath + "Multiplier_Log_" + dateName + ".txt";
+            }
+
+        }
+
+
+
+            public static void WriteLog(string message, string fileName = "")
         {
 
-            if (LoggerInstance == null)
+            if (_LoggerInstance == null)
             {
-                LoggerInstance = new Logger();
+                _LoggerInstance = new Logger();
                 InitLogger(fileName);
             }
 
@@ -109,13 +150,13 @@ namespace CoinbaseExchange.NET.Utilities
                 //    writeQue.Dequeue();
                 //}
 
-                if (string.IsNullOrWhiteSpace(fileNamePath))
+                if (string.IsNullOrWhiteSpace(_fileNamePath))
                     return;
 
 
-                lock (WriteLock)
+                lock (_WriteLock)
                 {
-                    File.AppendAllText(fileNamePath, logMsg);
+                    File.AppendAllText(_fileNamePath, logMsg);
                     Debug.WriteLine(logMsg);
                 }
 
@@ -123,7 +164,7 @@ namespace CoinbaseExchange.NET.Utilities
             }
             catch (Exception ex)
             {
-                Console.WriteLine(string.Format("Error writing to log file {0}\n {1}", fileNamePath, ex.Message));
+                Console.WriteLine(string.Format("Error writing to log file {0}\n {1}", _fileNamePath, ex.Message));
                 onLogUpdate(dt + " Error writing to log file");
                 return;
                 //throw;

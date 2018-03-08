@@ -294,6 +294,9 @@ namespace Multiplier
             }
 
             TickerConnectedEvent?.Invoke(this, EventArgs.Empty);
+
+            UpdateFunds();
+
         }
 
         public async Task<bool> CreateUpdateStrategyInstance(IntervalValues intervalValues, bool CreateNewInstance = false)
@@ -470,7 +473,14 @@ namespace Multiplier
                 CurContextValues.WaitingBuyFill = false;
                 CurContextValues.WaitingSellFill = true;
 
-                AppSettings.SaveUpdateStrategySetting("macd", "last_buy_price", filledOrder.filledAtPrice);
+                //AppSettings.SaveUpdateStrategySetting("macd", "last_buy_price", filledOrder.filledAtPrice);
+
+                var allStrategies = AppSettings.GetAllStrategies();
+                foreach (var s in allStrategies)
+                {
+                    AppSettings.SaveUpdateStrategySetting(s.StrategyName, "last_buy_price", filledOrder.filledAtPrice);
+                }
+
                 AppSettings.Reloadsettings();
             }
             else if (filledOrder.side == "sell")
@@ -481,7 +491,14 @@ namespace Multiplier
                 CurContextValues.WaitingSellFill = false;
                 CurContextValues.WaitingBuyFill = true;
 
-                AppSettings.SaveUpdateStrategySetting("macd", "last_sell_price", filledOrder.filledAtPrice);
+                //AppSettings.SaveUpdateStrategySetting("macd", "last_sell_price", filledOrder.filledAtPrice);
+
+                var allStrategies = AppSettings.GetAllStrategies();
+                foreach (var s in allStrategies)
+                {
+                    AppSettings.SaveUpdateStrategySetting(s.StrategyName, "last_sell_price", filledOrder.filledAtPrice);
+                }
+
                 AppSettings.Reloadsettings();
             }
 

@@ -15,12 +15,23 @@ namespace Multiplier
     internal class MacdStrategy : TradeStrategyBase //TradeStrategyE
     {
 
-        Macd myMacdStrategy;
+        //Macd myMacdStrategy_Large;
+        Macd myMacdStrategy_Small;
+
+        decimal percent_for_using_smallmacd;
 
         public MacdStrategy(ref ContextValues inputContextValues, IntervalValues intervalValues) : base(ref inputContextValues)
         {
-            myMacdStrategy = new Macd(ref inputContextValues);
+            //myMacdStrategy_Large = new Macd(ref inputContextValues, "macd_large");
+
+            myMacdStrategy_Small = new Macd(ref inputContextValues, "macd_small");
+
+            var genSettings = AppSettings.GetGeneralSettings();
+
+            percent_for_using_smallmacd = genSettings.price_inc_percent_for_using_smallmacd;
+
         }
+
 
 
         public override void Trade()
@@ -31,64 +42,110 @@ namespace Multiplier
 
             var curPrice = CurrentValues.CurrentBufferedPrice;
 
+            //var percentIncreaseSinceLastBuy = ((curPrice - myMacdStrategy_Large.LastBuyAtPrice) / myMacdStrategy_Large.LastBuyAtPrice) * 100;
+
+            //if (percentIncreaseSinceLastBuy > percent_for_using_smallmacd)
+            //{
+            //    TradeUsing(myMacdStrategy_Small);
+            //}
+            //else
+            //{
+            //    TradeUsing(myMacdStrategy_Large);
+            //}
+
+            TradeUsing(myMacdStrategy_Small);
+
+
+        }
+
+        private void TradeUsing(Macd strategy)
+        {
             if (!CurrentValues.BuyOrderFilled) // not bought yet
             {
-                //if (SmallIntervalSmaValues.Buy && BigIntervalSmaValues.Buy)
-                if (myMacdStrategy.Buy)
+                if (strategy.Buy)
                 {
+                    bool alreadyBought = AppSettings.GetGeneralSettings().already_bought;
 
-                    //save the last buy init price 
+                    if (alreadyBought)
+                    {
+                        Logger.WriteLog("Already bought detected in settings, setting next actino to Sell");
+                        SetNextActionTo_Sell();
 
-                    //AppSettings.SaveUpdateStrategySetting("macd", "last_buy_price", curPrice.ToString());
+                        //simulate buy complete 
+                        CurrentValues.WaitingBuyFill = false;
+                        CurrentValues.WaitingBuyOrSell = false;
+                        AppSettings.SaveUpdateGeneralSetting("already_bought", false.ToString());
 
-                    Buy();
+                    }
+                    else
+                    {
+                        Buy();
+                    }
 
-                    ////////simulation
-                    //////CurrentValues.WaitingBuyOrSell = true;
-                    //////CurrentValues.WaitingSellFill = false;
-                    //////CurrentValues.WaitingBuyFill = true;
-                    //////SetNextActionTo_Sell();
-                    //////Logger.WriteLog("\t\tsimulating Buying at " + curPrice);
-                    //////CurrentValues.WaitingBuyOrSell = false;
-
-
-
+                    
                 }
 
             }
 
             if (!CurrentValues.SellOrderFilled) // not sold yet
             {
-                if (myMacdStrategy.Sell)
+                if (strategy.Sell)
                 {
-                    //AppSettings.SaveUpdateStrategySetting("macd", "last_sell_price", curPrice.ToString());
 
-                    Sell();
+                    bool alreadySold = AppSettings.GetGeneralSettings().already_sold;
 
-                    ////////simulation
-                    //////CurrentValues.WaitingBuyOrSell = true;
-                    //////CurrentValues.WaitingSellFill = true;
-                    //////CurrentValues.WaitingBuyFill = false;
-                    //////SetNextActionTo_Buy();
-                    //////Logger.WriteLog("\t\tsimulating Selling at " + curPrice);
-                    //////CurrentValues.WaitingBuyOrSell = false;
+                    if (alreadySold)
+                    {
+                        Logger.WriteLog("Already sold detected in settings, setting next actino to Buy");
+                        SetNextActionTo_Buy();
+
+                        //simulate buy complete 
+                        CurrentValues.WaitingSellFill = false;
+                        CurrentValues.WaitingBuyOrSell = false;
+                        AppSettings.SaveUpdateGeneralSetting("already_sold", false.ToString());
+
+                    }
+                    else
+                    {
+                        Sell();
+                    }
+
                 }
 
             }
         }
 
+
+
+        public override void Dispose()
+        {
+
+            Logger.WriteLog("dipose method in macdStrategy class ");
+            //throw new NotImplementedException();
+
+            //dispose the existing timers, new ones get created in constructor
+            //myMacdStrategy_Large?.Dispose();
+            myMacdStrategy_Small?.Dispose();
+
+        }
+
+
     }
 
 
-    class Macd
+
+
+
+
+    class Macd : IDisposable
     {
         MovingAverage SmallSma;
         MovingAverage BigSma;
 
         //only one instance per class object
-        public static System.Timers.Timer aTimer;
+        public System.Timers.Timer aTimer;
 
-        public static System.Timers.Timer StopLossTimer;
+        public System.Timers.Timer StopLossTimer;
 
         private int CommonINTERVAL; 
         private int updateInterval;
@@ -101,12 +158,15 @@ namespace Multiplier
 
         public bool StopLossInEffect;
 
-        private JArray settings;
+        //private JArray settings;
+        private StrategySettings settings;
         private ContextValues contextVals;
+
+        private string _StategyName;
 
         private double stopLossCounter;
 
-        public Macd(ref ContextValues inputContextValues)
+        public Macd(ref ContextValues inputContextValues, string macdStrategyName)
         {
             Buy = false;
             Sell = false;
@@ -115,26 +175,27 @@ namespace Multiplier
 
             StopLossInEffect = false;
 
-            settings = AppSettings.GetStrategySettings("macd");
+            _StategyName = macdStrategyName;
 
-            if (settings.Count == 0 )
+            settings = AppSettings.GetStrategySettings2(_StategyName);
+
+            
+
+            if (settings == null)
             {
                 throw new Exception("CantInitSettingsError");
             }
 
-            Logger.WriteLog("macd settings found: \n" + settings.ToString());
-            var intervalTime = Convert.ToInt16(settings[0]["time_interval"].ToString());
-            var slowSma = Convert.ToInt16(settings[0]["slow_sma"].ToString());
-            var fastSma = Convert.ToInt16(settings[0]["fast_sma"].ToString());
-            var signal = Convert.ToInt16(settings[0]["signal"].ToString());
-            var mySma = Convert.ToInt16(settings[0]["my_sma"].ToString());
+            Logger.WriteLog("macd settings found: ");
+            AppSettings.PrintStrategySetting( settings.StrategyName );
 
-            LastBuyAtPrice = Convert.ToDecimal(settings[0]["last_buy_price"].ToString());
-            LastSellAtPrice = Convert.ToDecimal(settings[0]["last_sell_price"].ToString());
 
-            CommonINTERVAL = intervalTime;//30;//30; //min
-            int largeSmaLENGTH = slowSma;//100;
-            int smallSmaLENGTH = fastSma;//15;
+            LastBuyAtPrice = settings.last_buy_price; //Convert.ToDecimal(settings[0]["last_buy_price"].ToString());
+            LastSellAtPrice = settings.last_sell_price; //Convert.ToDecimal(settings[0]["last_sell_price"].ToString());
+
+            CommonINTERVAL = settings.time_interval;//30;//30; //min
+            int largeSmaLENGTH = settings.slow_sma;//100;
+            int smallSmaLENGTH = settings.fast_sma;//15;
             updateInterval = CommonINTERVAL; //update values every 1 min to keep sma data updated
 
             BigSma = new MovingAverage(ref inputContextValues.CurrentTicker, inputContextValues.ProductName, CommonINTERVAL, largeSmaLENGTH);
@@ -142,41 +203,22 @@ namespace Multiplier
 
 
             contextVals = inputContextValues;
-            //// Create a thread
-            //System.Threading.Thread newWindowThread = new System.Threading.Thread(new System.Threading.ThreadStart(() =>
-            //{
-            //    // Create and show the Window
-            //    GraphWindow v = new GraphWindow();
-            //    v.Show();
-            //    v.ShowData(MovingAverage.SharedRawExchangeData.Select((d) => (double)d.Close).Take(1000).ToList());
-            //    // Start the Dispatcher Processing
-            //    System.Windows.Threading.Dispatcher.Run();
-                
-            //}));
-            //// Set the apartment state
-            //newWindowThread.SetApartmentState(System.Threading.ApartmentState.STA);
-            //// Make the thread a background thread
-            //newWindowThread.IsBackground = true;
-            //// Start the thread
-            //newWindowThread.Start();
-
-
 
             if (aTimer != null) //timer already in place
             {
-                aTimer.Elapsed -= UpdateSMA;
+                aTimer.Elapsed -= UpdateMacdValues;
                 aTimer.Stop();
                 aTimer = null;
             }
 
 
             aTimer = new System.Timers.Timer();
-            aTimer.Elapsed += UpdateSMA;
+            aTimer.Elapsed += UpdateMacdValues;
             aTimer.Interval = updateInterval * 60 * 1000;
             aTimer.Enabled = true;
             aTimer.Start();
 
-            UpdateSMA(this, null);
+            UpdateMacdValues(this, null);
 
 
 
@@ -185,7 +227,7 @@ namespace Multiplier
             
             if (StopLossTimer != null) //timer already in place
             {
-                StopLossTimer.Elapsed -= UpdateSMA;
+                StopLossTimer.Elapsed -= DetermineStopLoss;
                 StopLossTimer.Stop();
                 StopLossTimer = null;
             }
@@ -195,6 +237,7 @@ namespace Multiplier
             StopLossTimer.Enabled = true;
             StopLossTimer.Start();
 
+
             DetermineStopLoss(this, null);
 
         }
@@ -202,16 +245,16 @@ namespace Multiplier
 
         private void DetermineStopLoss(object sender, ElapsedEventArgs e)
         {
-            settings = AppSettings.GetStrategySettings("macd");
-            LastBuyAtPrice = Convert.ToDecimal(settings[0]["last_buy_price"].ToString());
-            LastSellAtPrice = Convert.ToDecimal(settings[0]["last_sell_price"].ToString());
+            settings = AppSettings.GetStrategySettings2(_StategyName); //AppSettings.GetStrategySettings("macd");
+            LastBuyAtPrice = settings.last_buy_price; //Convert.ToDecimal(settings[0]["last_buy_price"].ToString());
+            LastSellAtPrice = settings.last_sell_price; //Convert.ToDecimal(settings[0]["last_sell_price"].ToString());
 
             if (LastBuyAtPrice == 0)
                 return;
 
 
 
-            var stopLossPercent = Convert.ToDecimal(settings[0]["stop_loss_percent"].ToString());
+            var stopLossPercent = settings.stop_loss_percent; //Convert.ToDecimal(settings[0]["stop_loss_percent"].ToString());
 
             var curPrice = contextVals.CurrentBufferedPrice;
 
@@ -223,7 +266,7 @@ namespace Multiplier
 
             if (stopLossCounter % 3 == 0)
             {
-                var msg = string.Format("Price change since last buy: {0}-{1} = {2} ({3}%)",
+                var msg = string.Format(_StategyName +  ": Price change since last buy: {0}-{1} = {2} ({3}%)",
                     Math.Round(curPrice, 4).ToString(), Math.Round(LastBuyAtPrice, 4).ToString(), curDiff.ToString(), diffPercentage.ToString());
                 Logger.WriteLog(msg);
             }
@@ -249,9 +292,9 @@ namespace Multiplier
 
 
 
-        private void UpdateSMA(object sender, ElapsedEventArgs e)
+        private void UpdateMacdValues(object sender, ElapsedEventArgs e)
         {
-            Logger.WriteLog("Udating MACD strategy values");
+            Logger.WriteLog(String.Format("Udating {0} strategy values", _StategyName));
 
 
             //if (StopLossInEffect)
@@ -278,10 +321,10 @@ namespace Multiplier
 
             var curSmaDiff = smaDiff.First();
 
-            var settings = AppSettings.GetStrategySettings("macd");
-            
-            var largeSignal = Convert.ToInt16(settings[0]["signal"].ToString());
-            var smallSignal = Convert.ToInt16(settings[0]["my_sma"].ToString());
+            settings = AppSettings.GetStrategySettings2(_StategyName);
+
+            var largeSignal = settings.signal; //Convert.ToInt16(settings[0]["signal"].ToString());
+            var smallSignal = settings.my_sma; //Convert.ToInt16(settings[0]["my_sma"].ToString());
 
             var L_SIGNAL_LEN = largeSignal;//14;
             var S_SIGNAL_LEN = smallSignal;//5;
@@ -301,7 +344,7 @@ namespace Multiplier
                 "\tsmall sma of macd: {4}\n", smallSmaDataPoints.First(), largeSmaDataPoints.First(), curSmaDiff, bigSmaOfMacd, smallSmaOfMacd));
 
 
-            var useBothSma = Convert.ToBoolean(settings[0]["use_two_sma"].ToString());
+            var useBothSma = settings.use_two_sma; //Convert.ToBoolean(settings[0]["use_two_sma"].ToString());
 
             if (useBothSma)
             {
@@ -312,7 +355,7 @@ namespace Multiplier
                     //if stop loss in effect -> no need to indicate to buy since stop loss already sold and graph suggests buy 
                     if (StopLossInEffect)
                     {
-                        Logger.WriteLog("Stop Loss in effect, cant buy again now");
+                        Logger.WriteLog("Stop Loss in effect (BUY = True), cant buy again now");
                         return;
                     }
 
@@ -332,8 +375,16 @@ namespace Multiplier
                         //set last buy price (value will be overridden in buy func) to 0
                         //this stops dterimeStopLoss to return false and
                         //so that stop loss does not get set to on again
-                        AppSettings.SaveUpdateStrategySetting("macd", "last_buy_price", "0.01");
-                        Logger.WriteLog("Stop Loss in effect, resetting stoploss flag to false.");
+                        //AppSettings.SaveUpdateStrategySetting("macd", "last_buy_price", "0.01");
+
+                        //update all strategies with last buy price to 0.01
+                        var allStrategies = AppSettings.GetAllStrategies();
+                        foreach (var s in allStrategies)
+                        {
+                            AppSettings.SaveUpdateStrategySetting(s.StrategyName, "last_buy_price", "0.01");
+                        }
+
+                        Logger.WriteLog("Stop Loss in effect (SELL = True), resetting stoploss flag to false.");
 
                         //reload the settings to get 0.00 for last_buy_price
                         //which disables stopLoss flag
@@ -374,7 +425,12 @@ namespace Multiplier
                         //set last buy price (value will be overridden in buy func) to 0
                         //this stops dterimeStopLoss to return false and
                         //so that stop loss does not get set to on again
-                        AppSettings.SaveUpdateStrategySetting("macd", "last_buy_price", "0.00");
+                        //AppSettings.SaveUpdateStrategySetting("macd", "last_buy_price", "0.00");
+                        var allStrategies = AppSettings.GetAllStrategies();
+                        foreach (var s in allStrategies)
+                        {
+                            AppSettings.SaveUpdateStrategySetting(s.StrategyName, "last_buy_price", "0.01");
+                        }
                         Logger.WriteLog("Stop Loss in effect, resetting stoploss flag to false.");
 
                         //reload the settings to get 0.00 for last_buy_price
@@ -394,6 +450,28 @@ namespace Multiplier
 
 
             //throw new NotImplementedException();
+        }
+
+        public void Dispose()
+        {
+
+
+            if (StopLossTimer != null) //timer already in place
+            {
+                StopLossTimer.Elapsed -= DetermineStopLoss;
+                StopLossTimer.Stop();
+                StopLossTimer = null;
+            }
+
+            if (aTimer != null) //timer already in place
+            {
+                aTimer.Elapsed -= UpdateMacdValues;
+                aTimer.Stop();
+                aTimer = null;
+            }
+
+            //throw new NotImplementedException();
+
         }
     }
 
