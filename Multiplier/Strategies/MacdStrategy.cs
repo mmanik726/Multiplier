@@ -264,7 +264,7 @@ namespace Multiplier
 
             var diffPercentage = Math.Round((curDiff / LastBuyAtPrice) * 100, 4);
 
-            if (stopLossCounter % 3 == 0)
+            if (stopLossCounter % 3 == 0 || stopLossCounter == 0)
             {
                 var msg = string.Format(_StategyName +  ": Price change since last buy: {0}-{1} = {2} ({3}%)",
                     Math.Round(curPrice, 4).ToString(), Math.Round(LastBuyAtPrice, 4).ToString(), curDiff.ToString(), diffPercentage.ToString());
@@ -277,7 +277,12 @@ namespace Multiplier
             {
                 StopLossInEffect = true;
 
-                Sell = true;
+                if (stopLossCounter % 2 == 0 || stopLossCounter == 0)
+                {
+                    Logger.WriteLog("Stop Loss in effect");
+                }
+
+                    Sell = true;
                 Buy = false;
             }
             else
@@ -319,7 +324,7 @@ namespace Multiplier
                 select smallSmaDataPoints.ElementAtOrDefault(i) - largeSmaDataPoints.ElementAtOrDefault(i);
 
 
-            var curSmaDiff = smaDiff.First();
+            var curSmaDiff = Math.Round(smaDiff.First(), 4);
 
             settings = AppSettings.GetStrategySettings2(_StategyName);
 
@@ -329,28 +334,34 @@ namespace Multiplier
             var L_SIGNAL_LEN = largeSignal;//14;
             var S_SIGNAL_LEN = smallSignal;//5;
 
-            var bigSmaOfMacd =  smaDiff.ToList().SMA(L_SIGNAL_LEN).First();
-            var smallSmaOfMacd = smaDiff.ToList().SMA(S_SIGNAL_LEN).First();
+            var bigSmaOfMacd = Math.Round(smaDiff.ToList().SMA(L_SIGNAL_LEN).First(), 4);
+            var smallSmaOfMacd = Math.Round(smaDiff.ToList().SMA(S_SIGNAL_LEN).First(), 4);
 
             //todo:
             //Logger.WriteLog("current large ema " + MovingAverage.SharedRawExchangeData.Select((d) => (double)d.Close).ToList().EMA(100).First());
             //Logger.WriteLog("current small ema " + MovingAverage.SharedRawExchangeData.Select((d) => (double)d.Close).ToList().EMA(15).First()); //largeSmaDataPoints.EMA(15));
 
-            Logger.WriteLog(string.Format("macd values: \n" + 
+            Logger.WriteLog(string.Format("macd values: \n" +
                 "\tcurent small sma: {0}\n" +
                 "\tcurent large sma: {1}\n" +
                 "\tsmall - large = macd: {2}\n" +
                 "\tbig sma of macd: {3}\n" +
-                "\tsmall sma of macd: {4}\n", smallSmaDataPoints.First(), largeSmaDataPoints.First(), curSmaDiff, bigSmaOfMacd, smallSmaOfMacd));
+                "\tsmall sma of macd: {4}\n", Math.Round(smallSmaDataPoints.First(), 4), Math.Round(largeSmaDataPoints.First(), 4), curSmaDiff, bigSmaOfMacd, smallSmaOfMacd));
 
 
             var useBothSma = settings.use_two_sma; //Convert.ToBoolean(settings[0]["use_two_sma"].ToString());
+
+            if (IsValuesToClose(curSmaDiff, smallSmaOfMacd))
+            {
+                Logger.WriteLog("values to close to each other, skipping buy / sell. \n" +
+                    "macd: " + curSmaDiff.ToString() + " smallSmaMacd: " + smallSmaOfMacd.ToString());
+                return;
+            }
 
             if (useBothSma)
             {
                 if (curSmaDiff > bigSmaOfMacd && curSmaDiff > smallSmaOfMacd)
                 {
-
 
                     //if stop loss in effect -> no need to indicate to buy since stop loss already sold and graph suggests buy 
                     if (StopLossInEffect)
@@ -366,7 +377,6 @@ namespace Multiplier
                 }
                 else
                 {
-
 
                     //if stop loss in effect (and graph saying sell)-> then turn it off and signal to sell if not already sold
                     if (StopLossInEffect)
@@ -451,6 +461,46 @@ namespace Multiplier
 
             //throw new NotImplementedException();
         }
+
+
+        private bool IsValuesToClose(double macd, double smallSmaMacd)
+        {
+
+            macd = Math.Round(macd, 2);
+            smallSmaMacd = Math.Round(smallSmaMacd, 2);
+            //largeSmaMacd = Math.Round(largeSmaMacd, 2);
+
+            if (macd == smallSmaMacd)
+            {
+                return true;
+            }
+
+            //double difference = 0.00;
+
+            //if (Math.Abs(smallSmaMacd) == 0)
+            //{
+            //    smallSmaMacd = 0.01;
+            //}
+
+            const double THRESHOLD = 0.03;
+
+            //difference = Math.Abs((Math.Abs(macd * macd) - Math.Abs(smallSmaMacd * smallSmaMacd)) / Math.Abs(smallSmaMacd * smallSmaMacd)) * 100;
+            double dist = Math.Abs(Math.Abs(macd) - Math.Abs(smallSmaMacd));
+
+
+
+            if (dist <= THRESHOLD)
+            {
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+
+
+        }
+
 
         public void Dispose()
         {

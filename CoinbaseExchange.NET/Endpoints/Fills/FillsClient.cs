@@ -28,6 +28,7 @@ namespace CoinbaseExchange.NET.Endpoints.Fills
         public string Side { get; set; }
         public string Liquidity { get; set; }
 
+        public string OrderStatus { get; set; }
         public Fill() { }
 
         public Fill(Order order)
@@ -41,6 +42,7 @@ namespace CoinbaseExchange.NET.Endpoints.Fills
             Fee = order.Fill_fees; //unknonw fee since order doesnt contain fee info
             Settled = true;
             Side = order.Side;
+            OrderStatus = order.Status;
             Liquidity = "UNKNOWN";
 
         } //empty ocn
@@ -100,7 +102,7 @@ namespace CoinbaseExchange.NET.Endpoints.Fills
 
         private MyOrderBook myActiveOrderBook; 
 
-        private static bool IsBusy_TrackIngOrder;
+        public static bool IsBusy_TrackIngOrder;
 
         public bool BusyCheckingOrder; 
 
@@ -309,8 +311,10 @@ namespace CoinbaseExchange.NET.Endpoints.Fills
 
                 //when checking the same order after the first time
                 //if not (partially filled or Cancel_error)
+                //skip if market order
                 if (!(FillWatchList[orderIndex].Status == "PARTIALLY_FILLED" 
-                    || FillWatchList[orderIndex].Status == "CANCEL_ERROR"))
+                    || FillWatchList[orderIndex].Status == "CANCEL_ERROR" 
+                    || FillWatchList[orderIndex].OrderType == "market"))
                 {
 
                     ////add the list of filled sizes to fill list
@@ -378,7 +382,11 @@ namespace CoinbaseExchange.NET.Endpoints.Fills
 
 
             if (IsBusy_TrackIngOrder)
+            {
+                Logger.WriteLog("already busy tracking orders");
                 return;
+            }
+                
 
 
             Logger.WriteLog("Checking fill status...");
@@ -473,12 +481,58 @@ namespace CoinbaseExchange.NET.Endpoints.Fills
 
                     if (orderStat != null)
                     {
-                        if (Convert.ToDecimal(orderStat.Size) > 0)
+
+                        if (currentOrder.OrderType != "market")
                         {
-                            var tempList = new List<Fill>();
-                            tempList.Add(orderStat);
-                            OrderFilledEvent(tempList);
+                            //for limit order
+                            if (Convert.ToDecimal(orderStat.Size) > 0)
+                            {
+                                var tempList = new List<Fill>();
+                                tempList.Add(orderStat);
+                                OrderFilledEvent(tempList);
+                            }
                         }
+                        else
+                        {
+                            if (orderStat.OrderStatus != "done")
+                            {
+                                //check the market order status 2 times 
+                                int checkCount = 0;
+                                while (orderStat.OrderStatus != "done")
+                                {
+                                    if (checkCount > 2)
+                                        break;
+
+                                    try
+                                    {
+                                        orderStat = GetOrderStatus(currentOrder?.OrderId).Result;
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        Logger.WriteLog("Error getting order status response for current market order");
+                                    }
+
+                                    Thread.Sleep(200);
+                                    checkCount++;
+                                }
+
+                                if (orderStat.OrderStatus == "done")
+                                {
+                                    var tempList = new List<Fill>();
+                                    tempList.Add(orderStat);
+                                    OrderFilledEvent(tempList);
+                                }
+
+                            }
+                            else
+                            {
+                                var tempList = new List<Fill>();
+                                tempList.Add(orderStat);
+                                OrderFilledEvent(tempList);
+                            }
+                        }
+
+
                     }
 
 

@@ -117,9 +117,9 @@ namespace Multiplier
 
             //try to get ticker first
 
-            
 
-            
+
+            //Logger.WriteLog("Init Manager Thread ID: " + Thread.CurrentThread.ManagedThreadId.ToString());
 
             try
             {
@@ -204,6 +204,8 @@ namespace Multiplier
 
             UpdateFunds();
 
+            AppSettings.MajorSettingsChangEvent += MajorSettingsChangedEventHandler;
+
             //writeCurrentStrategySmaValues();
 
         }
@@ -250,6 +252,35 @@ namespace Multiplier
 
         }
 
+
+
+
+        public void MajorSettingsChangedEventHandler(object sender, EventArgs args)
+        {
+            Logger.WriteLog("Settings change detected by manager");
+
+
+            Task.Run(()=> 
+            {
+                if (CurContextValues.WaitingBuyOrSell)
+                {
+                    Logger.WriteLog("waiting for buy/sell to complete bewfore updating settings");
+                    Thread.Sleep(5000);
+                }
+            }).Wait();
+
+            if (!CurContextValues.WaitingBuyOrSell)
+            {
+                //update strategy settings
+
+                var updateIntervalResult = CreateUpdateStrategyInstance(CurContextValues.CurrentIntervalValues);
+                updateIntervalResult.Wait();
+            }
+
+        }
+
+
+
         public void TickerConnectedHandler(object sender, EventArgs args)
         {
 
@@ -257,6 +288,17 @@ namespace Multiplier
             {
                 Logger.WriteLog("Already busy updating intervals after reconnect, waiting for current operation to complete...");
                 return;
+            }
+
+
+            //check open orders 
+
+            MyProductOrderBook.SyncOpenOrders();
+
+            if (MyProductOrderBook.MyChaseOrderList.Count == 0)
+            {
+                Logger.WriteLog("Resetting WaitingBuySell flag to False since no more active orders in list");
+                CurContextValues.WaitingBuyOrSell = false;
             }
 
 
@@ -296,6 +338,8 @@ namespace Multiplier
             TickerConnectedEvent?.Invoke(this, EventArgs.Empty);
 
             UpdateFunds();
+
+            
 
         }
 
@@ -808,7 +852,7 @@ namespace Multiplier
         }
 
 
-        private void UpdateFunds()
+        public void UpdateFunds()
         {
 
             Funds f = new Funds(MyAuth, CurContextValues.ProductName);

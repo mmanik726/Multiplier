@@ -22,6 +22,10 @@ namespace CoinbaseExchange.NET.Utilities //Multiplier
         private static AppSettings _AppSettingsInstance;
         private static byte[] _SettingsFileHash;
 
+        public  static EventHandler MajorSettingsChangEvent;
+
+        private static string _TimeInterval; 
+
         private static Timer aTimer;
 
         private static void InnitSettings()
@@ -83,6 +87,7 @@ namespace CoinbaseExchange.NET.Utilities //Multiplier
 
             byte[] newHash;
 
+            //var oldTimeInterval = _TimeInterval;
 
             try
             {
@@ -109,9 +114,17 @@ namespace CoinbaseExchange.NET.Utilities //Multiplier
                     {
                         Logger.WriteLog("New Settings detected");
                         //set to new hash
+
+
+
                         _SettingsFileHash = newHash;
                         Reloadsettings();
 
+                        PrintFullSettings();
+
+
+
+                        //MajorSettingsChangEvent?.Invoke(null, null);
                     }
                 }
             }
@@ -360,6 +373,14 @@ namespace CoinbaseExchange.NET.Utilities //Multiplier
 
             return settingsList;
 
+        }
+
+        public static void PrintFullSettings()
+        {
+            if (_ReadJson != "")
+            {
+                Logger.WriteLog(_ReadJson);
+            }
         }
 
         public static void PrintStrategySetting(string sName)

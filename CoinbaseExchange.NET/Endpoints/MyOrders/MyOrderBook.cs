@@ -366,6 +366,31 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
             //get all pending orders from server and update the watch list
 
 
+            //Logger.WriteLog("Syncing open orders with server, after reconnect");
+            //Logger.WriteLog("Orders is active order list before syncing:");
+
+            //printActiveOrderList();
+
+            //var allOpenOrders = GetAllOpenOrders();
+            //allOpenOrders.Wait();
+            //UpdateOrderListWithServer(allOpenOrders.Result);
+
+            //Logger.WriteLog("Orders is active order list after syncing:");
+            //printActiveOrderList();
+
+            //if (MyChaseOrderList.Count == 0)
+            //{
+            //    UpdateLastBuySellPrices();
+            //}
+
+            Logger.WriteLog("In old TickerConnectedEventHandler in MyOrderBook. Ticker connecected event will be handled by Manger");
+
+        }
+
+
+
+        public void SyncOpenOrders()
+        {
             Logger.WriteLog("Syncing open orders with server, after reconnect");
             Logger.WriteLog("Orders is active order list before syncing:");
 
@@ -378,12 +403,23 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
             Logger.WriteLog("Orders is active order list after syncing:");
             printActiveOrderList();
 
+
+            Logger.WriteLog("BusyCheckingOrder = " +  fillsClient.BusyCheckingOrder.ToString());
+            Logger.WriteLog("IsBusy_TrackIngOrder = " + FillsClient.IsBusy_TrackIngOrder.ToString());
+
+
             if (MyChaseOrderList.Count == 0)
             {
+
+                Logger.WriteLog("No orders in order list setting BusyCheckingOrder to False");
+                fillsClient.BusyCheckingOrder = false;
+
+
+                Logger.WriteLog("No orders in order list setting IsBusy_TrackIngOrder to False");
+                FillsClient.IsBusy_TrackIngOrder = false;
+
                 UpdateLastBuySellPrices();
             }
-
-
         }
 
 
@@ -600,6 +636,16 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
                 MyOrder myCurrentOrder = MyChaseOrderList.FirstOrDefault();
 
 
+                //// skip to the next order if current order is market order, since market orders cant be cancelled
+                //if (myCurrentOrder.OrderType == "market")
+                //{
+                //    Logger.WriteLog(String.Format("market {0} order ({1}) of {2} {3} detected, skipping cancel and reorder",
+                //        myCurrentOrder.Side, myCurrentOrder.OrderId, myCurrentOrder.ProductSize, myCurrentOrder.Productname));
+                //    continue;
+                //}
+
+                //if market order -> will error out when trying to cancel and will be notified filled
+
 
                 //if order has been partially filled, move to next order in list
                 if (myCurrentOrder.Status == "PARTIALLY_FILLED")
@@ -704,10 +750,14 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
                 //var priceChangePercent = PriceTicker.CurrentPrice * 10.00m;//0.0025m; //for testing
                 decimal priceChangePercent = 0.0m;
                 if (AvoidExFees)
-                    priceChangePercent = PriceTicker.CurrentPrice * 0.0025m; // 0.0025m
+                    priceChangePercent = PriceTicker.CurrentPrice * 0.0020m; // 0.0025m
                 else
                     priceChangePercent = PriceTicker.CurrentPrice * 0.0010m; // 0.0025m
 
+
+
+                //test!!
+                //priceChangePercent = 0.00001m;
 
                 if (OrderRetriedCount <= 13 && curPriceDifference <= priceChangePercent) // retry a total of 15 times or while less than a "big jump"
                 {
@@ -892,7 +942,9 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
 
 
             Logger.WriteLog(string.Format("placing new {0} {1} order @{2}", orderType, oSide, oPrice));
-            var newOrder = await limitOrder.PlaceOrder(orderBodyObj);
+
+            //changed from await to .Result: neworder should wait for the new order to finish formulating
+            var newOrder = limitOrder.PlaceOrder(orderBodyObj).Result;
 
             if (newOrder != null)
             {
@@ -912,10 +964,28 @@ namespace CoinbaseExchange.NET.Endpoints.MyOrders
 
                 if (newOrder.Status != "rejected")
                 {
+                    //if there are no orders in order list then set 
+                    //already tracking order variables to false
+                    if (MyChaseOrderList.Count == 0)
+                    {
+                        if (fillsClient.BusyCheckingOrder)
+                        {
+                            fillsClient.BusyCheckingOrder = false;
+                        }
+
+                        if (FillsClient.IsBusy_TrackIngOrder)
+                        {
+                            FillsClient.IsBusy_TrackIngOrder = false;
+                        }
+
+                    }
+
                     AddToOrderList(myCurOrder);
 
-                    if (chaseBestPrice && MyChaseOrderList.Count == 1)
+                    //if (chaseBestPrice && MyChaseOrderList.Count == 1)
+                    if (chaseBestPrice && MyChaseOrderList.Count > 0)
                     {
+                        Logger.WriteLog("Order list contains 1 or more order, starting order tracker");
                         fillsClient.startTracker();
                     }
                 }

@@ -71,9 +71,15 @@ namespace CoinbaseExchange.NET.Endpoints.PublicData
             }
 
             TickerConnectedEvent?.Invoke(this, EventArgs.Empty);
+
             tickerConnectedNotified = true;
 
-            Subscribe(ProductName, onTickerUpdateReceived);
+            //Logger.WriteLog("construtor thread ID: " + Thread.CurrentThread.ManagedThreadId.ToString());
+            Task.Factory.StartNew(()=> { Subscribe(ProductName, onTickerUpdateReceived); },TaskCreationOptions.LongRunning);
+
+            
+
+            //Subscribe(ProductName, onTickerUpdateReceived);
         }
 
 
@@ -128,6 +134,9 @@ namespace CoinbaseExchange.NET.Endpoints.PublicData
 
         private  async void Subscribe(string product, Action<RealtimeMessage> onMessageReceived)
         {
+
+            //Logger.WriteLog("Subscribe method thread ID: " + Thread.CurrentThread.ManagedThreadId.ToString());
+
             if (String.IsNullOrWhiteSpace(product))
                 throw new ArgumentNullException("product");
 
@@ -169,10 +178,19 @@ namespace CoinbaseExchange.NET.Endpoints.PublicData
                     var sendCancellationToken = new CancellationToken();
                     await webSocketClient.SendAsync(subscribeRequest, WebSocketMessageType.Text, true, sendCancellationToken);
 
+
+                    
+
                     if (!tickerConnectedNotified)
                     {
                         tickerConnectedNotified = true;
-                        TickerConnectedEvent?.Invoke(null, EventArgs.Empty);
+
+                        //TickerConnectedEvent?.Invoke(null, EventArgs.Empty);
+                        await Task.Run(()=>
+                        {
+                            TickerConnectedEvent?.Invoke(null, EventArgs.Empty);
+                        });
+
                     }
                     TickerClientConnected = true;
                     tickerDisconnectNotified = false;
@@ -212,6 +230,7 @@ namespace CoinbaseExchange.NET.Endpoints.PublicData
                         if (type == "match")
                         {
                             realtimeMessage = new RealtimeMatch(jToken);
+                            //Logger.WriteLog("Ticker thread ID: " + Thread.CurrentThread.ManagedThreadId.ToString());
                         }
 
 
@@ -236,7 +255,14 @@ namespace CoinbaseExchange.NET.Endpoints.PublicData
                 if (!tickerDisconnectNotified)
                 {
                     tickerDisconnectNotified = true;
-                    TickerDisconnectedEvent?.Invoke(null,EventArgs.Empty);
+                    //TickerDisconnectedEvent?.Invoke(null,EventArgs.Empty);
+
+                    //notify ticker connected on a new thread
+                    await Task.Run(()=> 
+                    {
+                        TickerDisconnectedEvent?.Invoke(null, EventArgs.Empty);
+                    });
+
                 }
             }
 

@@ -883,6 +883,7 @@ namespace Multiplier
             var productSelected = (cmbProduct.SelectedItem as string);
             cmbProduct.IsEnabled = false;
 
+            SelectedProduct = productSelected;
 
             //await this.Dispatcher.Invoke(() => startApp(productSelected));
             await Task.Run(() => { this.Dispatcher.Invoke(() => StartApp(productSelected)); });
@@ -1005,11 +1006,11 @@ namespace Multiplier
 
 
             var msg = "";
-
+            
             if ((bool)chkSellMarketOrder.IsChecked)
-                msg = string.Format("confirm MARKET ORDER sell?");
+                msg = string.Format("confirm MARKET ORDER sell of "+ lblBuySellAmount.Content + " " + SelectedProduct + "?");
             else
-                msg = string.Format("confirm limit sell?");
+                msg = string.Format("confirm limit sell of " + lblBuySellAmount.Content + " " + SelectedProduct + "?");
 
             var response = MessageBox.Show(msg, "Confirm sell", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No);
 
@@ -1042,9 +1043,9 @@ namespace Multiplier
             var msg = "";
 
             if ((bool)chkBuyMarketOrder.IsChecked)
-                msg = string.Format("confirm MARKET ORDER buy?");
+                msg = string.Format("confirm MARKET ORDER buy of " + lblBuySellAmount.Content + " " + SelectedProduct + "?");
             else
-                msg = string.Format("confirm limit buy?");
+                msg = string.Format("confirm limit buy of " + lblBuySellAmount.Content + " " + SelectedProduct + "?");
 
             var response = MessageBox.Show(msg, "Confirm buy", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No);
 
@@ -1179,6 +1180,28 @@ namespace Multiplier
                 MessageBox.Show("Incorrect buy/sell amount");
                 //txtBuySellAmount.Focus();
             }
+        }
+
+        private void btnUpdateFunds_Click(object sender, RoutedEventArgs e)
+        {
+            Logger.WriteLog("Updating funds");
+            Task.Factory.StartNew(()=> ProductManager?.UpdateFunds());
+        }
+
+        private void Button_Click(object sender, RoutedEventArgs e)
+        {
+
+            Task.Factory.StartNew(
+                ()=>
+                {
+                    ProductManager.TickerDisconnectedHandler(null, null);
+
+                    System.Threading.Thread.Sleep(500);
+
+                    ProductManager.TickerConnectedHandler(null, null);
+
+                });
+
         }
 
         //private void btnShowGraph1_Click(object sender, RoutedEventArgs e)
