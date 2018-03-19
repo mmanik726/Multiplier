@@ -41,6 +41,8 @@ namespace CoinbaseExchange.NET.Data
 
         public List<double> SmaDataPoints { get; set; }
 
+        public List<CandleData> SmaDataPts_Candle { get; set; }
+
         public List<double> EmaDataPoints { get; set; }
 
         public EventHandler<MAUpdateEventArgs> MovingAverageUpdatedEvent;
@@ -354,7 +356,7 @@ namespace CoinbaseExchange.NET.Data
             var takeCount = intervalData.Count - (intervalData.Count() % SLICES);
             var requiredIntervalData = intervalData.Take(takeCount).ToList();
 
-
+            SmaDataPts_Candle = new List<CandleData>(requiredIntervalData);
 
             var priceDataPoints = requiredIntervalData.Select((d) => (double)d.Close).ToList(); //transfer candle data close values to pure list of doubles
 

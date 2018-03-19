@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CoinbaseExchange.NET", "Coi
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Multiplier", "Multiplier\Multiplier.csproj", "{00F46C4E-F8AD-419D-AEB6-8261C8D65513}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Simulator", "Simulator\Simulator.csproj", "{788DE77C-0667-4EBF-92FF-441E75169018}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -39,6 +41,18 @@ Global
 		{00F46C4E-F8AD-419D-AEB6-8261C8D65513}.Release|x64.Build.0 = Release|x64
 		{00F46C4E-F8AD-419D-AEB6-8261C8D65513}.Release|x86.ActiveCfg = Release|x86
 		{00F46C4E-F8AD-419D-AEB6-8261C8D65513}.Release|x86.Build.0 = Release|x86
+		{788DE77C-0667-4EBF-92FF-441E75169018}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{788DE77C-0667-4EBF-92FF-441E75169018}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{788DE77C-0667-4EBF-92FF-441E75169018}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{788DE77C-0667-4EBF-92FF-441E75169018}.Debug|x64.Build.0 = Debug|Any CPU
+		{788DE77C-0667-4EBF-92FF-441E75169018}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{788DE77C-0667-4EBF-92FF-441E75169018}.Debug|x86.Build.0 = Debug|Any CPU
+		{788DE77C-0667-4EBF-92FF-441E75169018}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{788DE77C-0667-4EBF-92FF-441E75169018}.Release|Any CPU.Build.0 = Release|Any CPU
+		{788DE77C-0667-4EBF-92FF-441E75169018}.Release|x64.ActiveCfg = Release|Any CPU
+		{788DE77C-0667-4EBF-92FF-441E75169018}.Release|x64.Build.0 = Release|Any CPU
+		{788DE77C-0667-4EBF-92FF-441E75169018}.Release|x86.ActiveCfg = Release|Any CPU
+		{788DE77C-0667-4EBF-92FF-441E75169018}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
