@@ -100,12 +100,191 @@ namespace CoinbaseExchange.NET
 
         }
 
+
+        private bool IsDbCorrupt()
+        {
+            var mDt = RawExchangeData;//.OrderByDescending((d) => d.Time).ToList();
+
+
+            var mDt2 = new List<CandleData>(mDt).ToList();
+
+
+
+            mDt2.RemoveAt(0);
+
+            var comparedList = mDt.Zip(mDt2, (lstA, lstB) => new MissingData { Difference = (lstA.Time - lstB.Time), LastCandle = lstA });
+
+            //var comparedList = mDt.Zip(mDt2, (lstA, lstB) => (lstA.Time - lstB.Time));
+
+
+
+            var invalidData = comparedList.Where((a) => a.Difference > TimeSpan.FromMinutes(1));//ToList();
+
+            FillMissingData(invalidData.ToList());
+
+
+            if (invalidData.Count() > 0)
+            {
+                Logger.WriteLog("Inconsistencies in database found at:");
+
+                //foreach (var d in invalidData)
+                //{
+                //    Logger.WriteLog(d.LastCandle.Time.ToString());
+                //}
+
+                return true;
+            }
+
+            return false;
+
+
+        }
+
+
+        private void FillMissingData(List<MissingData> missingDataList)
+        {
+
+            foreach (var missingData in missingDataList)
+            {
+                var endDt = missingData.LastCandle.Time.AddMinutes(-1); //data is in reverse order and so -1
+
+                var startDt = missingData.LastCandle.Time - missingData.Difference.Add(TimeSpan.FromMinutes(-1));
+
+                DownloadDataSegment(startDt, endDt);
+            }
+
+            //for (int i = 0; i < missingDataList.Count(); i++)
+            //{
+
+            //}
+
+        }
+
+
+        private void DownloadDataSegment(DateTime startDate, DateTime endDate)
+        {
+
+            const int HOURS = 5;
+
+            List<CandleData> extraData = new List<CandleData>();
+
+
+            var todownloadList = new List<StartEndTimes>();
+
+            if ((endDate - startDate) > TimeSpan.FromHours(HOURS))
+            {
+                var t = (endDate - startDate).Hours % HOURS;
+
+                for (int i = 0; i < t; i++)
+                {
+                    var newEnd = startDate.AddHours(HOURS);
+
+                    todownloadList.Add(new StartEndTimes { Start = startDate, End = newEnd });
+
+                    startDate = startDate.AddHours(HOURS).AddMinutes(1);
+
+                    //todownloadList.Add
+                }
+
+                if ((endDate - startDate).Minutes > 0)
+                {
+                    todownloadList.Add(new StartEndTimes { Start = startDate, End = endDate });
+                }
+
+
+            }
+            else
+            {
+                todownloadList.Add(new StartEndTimes { Start = startDate, End = endDate });
+            }
+
+
+
+            foreach (var segment in todownloadList)
+            {
+
+                var result = downloadSegment(segment);
+
+                while (result == null)
+                {
+                    System.Threading.Thread.Sleep(delayTime);
+                    result = downloadSegment(segment);
+                }
+
+
+                if (result.Count() > 0)
+                    extraData.AddRange(result);
+
+            }
+
+
+
+
+
+
+        }
+
+        private IEnumerable<CandleData> downloadSegment(StartEndTimes segment)
+        {
+
+            HistoricPrices historicData = new HistoricPrices();
+
+            try
+            {
+                //Logger.WriteLog(string.Format("downloading data: {0} - {1}", segment.Start.ToString(), segment.End.ToString()));
+
+                //var temp = historicData.GetPrices(
+                //            product: ProductName,
+                //            granularity: "60",
+                //            startTime: segment.Start.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ"),
+                //            endTime: segment.End.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")).Result;
+
+
+                var temp = historicData.GetPrices(
+                            product: ProductName,
+                            granularity: "60",
+                            startTime: segment.Start.ToUniversalTime().ToString("s", System.Globalization.CultureInfo.InvariantCulture),
+                            endTime: segment.End.ToUniversalTime().ToString("s", System.Globalization.CultureInfo.InvariantCulture)).Result;
+
+
+                //("s", System.Globalization.CultureInfo.InvariantCulture)
+
+                if (temp != null)
+                {
+                    //if (temp.Count() > 0)
+                    //    extraData.AddRange(temp);
+
+                    return temp;
+                }
+                else
+                {
+                    return null;
+                }
+            }
+            catch (Exception ex)
+            {
+                delayTime += 200;
+
+                Logger.WriteLog("Error downloading additional data, retrying with " + delayTime.ToString() + " ms delay. (" + ex.Message + ")");
+                return null;
+            }
+        }
+
+
         //update database
         private void Update()
         {
             Logger.WriteLog("Updating price DB file " + jsonDBNamePath);
 
             ReadFromFile();
+
+
+            //////if (IsDbCorrupt())
+            //////{
+            //////    //CreateNew();
+
+            //////    //return;
+            //////}
 
             //Logger.WriteLog(RawExchangeData.First().Time.ToShortDateString());
             //Logger.WriteLog(RawExchangeData.Last().Time.ToShortDateString());
@@ -240,7 +419,7 @@ namespace CoinbaseExchange.NET
         //            if (DownloadAdditionalData() == true)
         //                break;
         //        }
-                    
+
         //    }
 
         //}
@@ -276,7 +455,7 @@ namespace CoinbaseExchange.NET
 
         //    var doneDownloadingExtraData = false;
 
-            
+
 
         //    while (!doneDownloadingExtraData)
         //    {
@@ -340,5 +519,21 @@ namespace CoinbaseExchange.NET
         //}
 
 
+        private class StartEndTimes
+        {
+            public DateTime Start { get; set; }
+            public DateTime End { get; set; }
+        }
+
+        private class MissingData
+        {
+            public TimeSpan Difference { get; set; }
+            public CandleData LastCandle { get; set; }
+        }
+
     }
+
+
+
+
 }

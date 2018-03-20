@@ -19,13 +19,13 @@ namespace Simulator
     public class Utilities
     {
 
-        public static List<CrossData> Getcrossings(IEnumerable<DataPoint> smaDtPts)
+        public static List<CrossData> Getcrossings(IEnumerable<DataPoint> smaDtPts, DateTime simStartDate, int smaOfSmaLen = 2)
         {
-            const int L_SIGNAL_LEN = 10;// 2;//5;//10;
+            int L_SIGNAL_LEN = smaOfSmaLen;// 2;//5;//10;
             //const int S_SIGNAL_LEN = 5;
 
             //Console.WriteLine(smaDtPts.Count());
-            smaDtPts = smaDtPts.Where(a => a.dt > new DateTime(2017,12, 1));
+            smaDtPts = smaDtPts.Where(a => a.dt > simStartDate);
             //Console.WriteLine(smaDtPts.Count());
 
 
