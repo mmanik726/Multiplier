@@ -11,6 +11,7 @@ namespace Simulator
 
     public class CrossData
     {
+        public int sl; 
         public DateTime dt { get; set; }
         public decimal CrossingPrice { get; set; }
         public string Action { get; set; }
@@ -18,18 +19,23 @@ namespace Simulator
 
     public class Utilities
     {
+        
 
-        public static List<CrossData> Getcrossings(IEnumerable<DataPoint> smaDtPts, DateTime simStartDate, int smaOfSmaLen = 2)
+        public static async Task<List<CrossData>> Getcrossings(IEnumerable<DataPoint> macdDtPts, DateTime simStartDate, DateTime simEndDate, int smaOfSmaLen = 2, int counter = 0)
         {
             int L_SIGNAL_LEN = smaOfSmaLen;// 2;//5;//10;
             //const int S_SIGNAL_LEN = 5;
 
+            var strt = macdDtPts.First().dt;
+            var end = macdDtPts.Last().dt;
+
             //Console.WriteLine(smaDtPts.Count());
-            smaDtPts = smaDtPts.Where(a => a.dt > simStartDate);
+            macdDtPts = macdDtPts.Where(a => a.dt >= simStartDate && a.dt < simEndDate);
             //Console.WriteLine(smaDtPts.Count());
 
+            
 
-            var bigSmaOfMacd = smaDtPts.Select(d => d.diff).ToList().SMA(L_SIGNAL_LEN);
+            var bigSmaOfMacd = macdDtPts.Select(d => d.diff).ToList().SMA(L_SIGNAL_LEN);
             //var smallSmaOfMacd = smaDtPts.Select(d => d.diff).ToList().SMA(S_SIGNAL_LEN);
 
             
@@ -47,20 +53,21 @@ namespace Simulator
                 var p1 = new Vector(i, bigSmaOfMacd.ElementAt(i - 1));
                 var p2 = new Vector(i + 1, bigSmaOfMacd.ElementAt(i));
 
-                var q1 = new Vector(i, smaDtPts.ElementAt(i - 1).diff);
-                var q2 = new Vector(i + 1, smaDtPts.ElementAt(i).diff);
+                var q1 = new Vector(i, macdDtPts.ElementAt(i - 1).diff);
+                var q2 = new Vector(i + 1, macdDtPts.ElementAt(i).diff);
 
 
                 if ((LineSegementsIntersect(p1, p2, q1, q2, out intersection)))
                 {
                     var a = (p2.Y > q2.Y) ?  "buy" : "sell" ;
-                    
 
+                    counter++;
                     crossList.Add(new CrossData
                     {
-                        dt = smaDtPts.ElementAt(i).dt,
-                        CrossingPrice = smaDtPts.ElementAt(i).ActualPrice,
+                        dt = macdDtPts.ElementAt(i).dt,
+                        CrossingPrice = macdDtPts.ElementAt(i).ActualPrice,
                         Action = a
+                        //sl = counter
                     });
                 }
 
