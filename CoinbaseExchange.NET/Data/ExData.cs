@@ -26,10 +26,13 @@ namespace CoinbaseExchange.NET
         //initialize database
         private string jsonDBNamePath;
 
-        private int retriedCount; 
+        private int retriedCount;
 
-        public ExData(string productName)
+        private bool UpdateJsonDb;
+
+        public ExData(string productName, bool updateDbToLatest = true)
         {
+            UpdateJsonDb = updateDbToLatest;
             ProductName = productName;
             retriedCount = 0;
             //check if data exists if so update accordingly
@@ -37,7 +40,12 @@ namespace CoinbaseExchange.NET
 
             if (File.Exists(jsonDBNamePath))
             {
-                Update();
+                ReadFromFile();
+
+                if (UpdateJsonDb)
+                {
+                    Update();
+                }
             }
             else
             {
@@ -276,8 +284,14 @@ namespace CoinbaseExchange.NET
         {
             Logger.WriteLog("Updating price DB file " + jsonDBNamePath);
 
-            ReadFromFile();
+            //ReadFromFile();
 
+
+
+            //if (UpdateJsonDb == false)
+            //{
+            //    return;
+            //}
 
             //////if (IsDbCorrupt())
             //////{

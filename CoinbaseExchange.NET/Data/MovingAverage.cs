@@ -56,15 +56,20 @@ namespace CoinbaseExchange.NET.Data
 
         //private bool ForceRedownloadData;
 
-        private int AmountOfDataToDownload; 
-        
+        private int AmountOfDataToDownload;
 
+        private bool UpdateJasonDB;
+
+        private bool clearSharedExDataOnDispose;
 
         private bool isBusyCalculatingSMA; 
 
-        public MovingAverage(ref TickerClient tickerClient, string ProductName, int timeInterValInMin = 3, int smaSlices = 40, int serverDownloadAmount = 10)
+        public MovingAverage(ref TickerClient tickerClient, string ProductName, int timeInterValInMin = 3, int smaSlices = 40, int serverDownloadAmount = 10, bool updateDb = true, bool clearDataOnDispose = true)
         {
             //var a = tickerClient.CurrentPrice;
+            clearSharedExDataOnDispose = clearDataOnDispose;
+
+            UpdateJasonDB = updateDb;
 
             AmountOfDataToDownload = serverDownloadAmount;
 
@@ -263,7 +268,7 @@ namespace CoinbaseExchange.NET.Data
 
             Logger.WriteLog("Additional data is being downloaded ");
 
-            ExData DataManager = new ExData(Product);
+            ExData DataManager = new ExData(Product, UpdateJasonDB);
 
             SharedRawExchangeData.AddRange(DataManager.RawExchangeData);
 
@@ -403,7 +408,12 @@ namespace CoinbaseExchange.NET.Data
             finally
             {
                 this.aTimer = null;
-                SharedRawExchangeData = null;
+
+                if (clearSharedExDataOnDispose)
+                {
+                    SharedRawExchangeData = null;
+                }
+                
 
             }
 

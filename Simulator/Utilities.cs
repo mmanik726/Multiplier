@@ -59,7 +59,7 @@ namespace Simulator
 
                 if ((LineSegementsIntersect(p1, p2, q1, q2, out intersection)))
                 {
-                    var a = (p2.Y > q2.Y) ?  "buy" : "sell" ;
+                    var a = (p2.Y >= q2.Y) ?  "buy" : "sell" ;
 
                     counter++;
                     crossList.Add(new CrossData
