@@ -21,21 +21,21 @@ namespace Simulator
     {
         
 
-        public static async Task<List<CrossData>> Getcrossings(IEnumerable<DataPoint> macdDtPts, DateTime simStartDate, DateTime simEndDate, int smaOfSmaLen = 2, int counter = 0)
+        public static async Task<List<CrossData>> Getcrossings(IEnumerable<SmaData> macdDtPts, DateTime simStartDate, DateTime simEndDate, int smaOfSmaLen = 2, int counter = 0)
         {
             int L_SIGNAL_LEN = smaOfSmaLen;// 2;//5;//10;
             //const int S_SIGNAL_LEN = 5;
 
-            var strt = macdDtPts.First().dt;
-            var end = macdDtPts.Last().dt;
+            var strt = macdDtPts.First().Time;
+            var end = macdDtPts.Last().Time;
 
             //Console.WriteLine(smaDtPts.Count());
-            macdDtPts = macdDtPts.Where(a => a.dt >= simStartDate && a.dt < simEndDate);
+            macdDtPts = macdDtPts.Where(a => a.Time >= simStartDate && a.Time < simEndDate);
             //Console.WriteLine(smaDtPts.Count());
 
             
 
-            var bigSmaOfMacd = macdDtPts.Select(d => d.diff).ToList().SMA(L_SIGNAL_LEN);
+            var bigSmaOfMacd = macdDtPts.Select(d => d.SmaValue).ToList().SMA(L_SIGNAL_LEN);
             //var smallSmaOfMacd = smaDtPts.Select(d => d.diff).ToList().SMA(S_SIGNAL_LEN);
 
             
@@ -53,8 +53,8 @@ namespace Simulator
                 var p1 = new Vector(i, bigSmaOfMacd.ElementAt(i - 1));
                 var p2 = new Vector(i + 1, bigSmaOfMacd.ElementAt(i));
 
-                var q1 = new Vector(i, macdDtPts.ElementAt(i - 1).diff);
-                var q2 = new Vector(i + 1, macdDtPts.ElementAt(i).diff);
+                var q1 = new Vector(i, macdDtPts.ElementAt(i - 1).SmaValue);
+                var q2 = new Vector(i + 1, macdDtPts.ElementAt(i).SmaValue);
 
 
                 if ((LineSegementsIntersect(p1, p2, q1, q2, out intersection)))
@@ -64,7 +64,7 @@ namespace Simulator
                     counter++;
                     crossList.Add(new CrossData
                     {
-                        dt = macdDtPts.ElementAt(i).dt,
+                        dt = macdDtPts.ElementAt(i).Time,
                         CrossingPrice = macdDtPts.ElementAt(i).ActualPrice,
                         Action = a
                         //sl = counter

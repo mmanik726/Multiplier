@@ -137,7 +137,7 @@ namespace Simulator
             Thread.Sleep(2 * 1000);
 
             DateTime autoStartDate = new DateTime(2017, 10, 1);
-            var autoInterval = Enumerable.Range(15, 90).Where(i => i % 5 == 0);//30;
+            var autoInterval = Enumerable.Range(30, 90).Where(i => i % 5 == 0);//30;
             var autoBigsmaLen = 100;
             var autoSmallSmaLen = 35; //Enumerable.Range(15, 50).Where(i => i % 5 == 0); //every five
             var autoSignalLen = 5;
@@ -152,7 +152,7 @@ namespace Simulator
 
                     if (S == null)
                     {
-                        S = new Simulator(ref Ticker, ProductName, curInterval, autoBigsmaLen, autoSmallSmaLen, true);
+                        S = new Simulator(ref Ticker, ProductName, curInterval, autoBigsmaLen, autoSmallSmaLen, false);
                     }
                     else
                     {
@@ -198,7 +198,7 @@ namespace Simulator
         private int SMALL_SMA_LEN;
 
 
-        private IEnumerable<DataPoint> SmaDiff;
+        private IEnumerable<SmaData> SmaDiff;
 
         private int SignalLen; 
 
@@ -218,26 +218,111 @@ namespace Simulator
             var largeSmaDataPoints = BigSma.SmaDataPoints;
             var smallSmaDataPoints = SmallSma.SmaDataPoints;
 
-
             //var x = BigSma.SmaDataPts_Candle;
             //var y = SmallSma.SmaDataPts_Candle;
 
-            SmaDiff =
-                from i in
-                Enumerable.Range(0, Math.Max(largeSmaDataPoints.Count, smallSmaDataPoints.Count))
-                select new DataPoint
-                {
-                    diff = smallSmaDataPoints.ElementAtOrDefault(i) - largeSmaDataPoints.ElementAtOrDefault(i),
-                    ActualPrice = MovingAverage.SharedRawExchangeData.ElementAt(i * COMMON_INTERVAL).Close,
-                    dt = MovingAverage.SharedRawExchangeData.ElementAt(i * COMMON_INTERVAL).Time
+            //SmaDiff =
+            //    from i in
+            //    Enumerable.Range(0, Math.Max(largeSmaDataPoints.Count, smallSmaDataPoints.Count))
+            //    select new SmaData
+            //    {
+            //        SmaValue = smallSmaDataPoints.ElementAtOrDefault(i) - largeSmaDataPoints.ElementAtOrDefault(i),
+            //        ActualPrice = MovingAverage.SharedRawExchangeData.ElementAt(i * COMMON_INTERVAL).Close,
+            //        Time = MovingAverage.SharedRawExchangeData.ElementAt(i * COMMON_INTERVAL).Time
 
-                    //////BigSma.SmaDataPts_Candle is equal to SmallSma.SmaDataPts_Candle since common interval is the same 
-                    ////ActualPrice = BigSma.SmaDataPts_Candle.ElementAtOrDefault(i).Close,
-                    ////dt = BigSma.SmaDataPts_Candle.ElementAtOrDefault(i).Time
+            //        //////BigSma.SmaDataPts_Candle is equal to SmallSma.SmaDataPts_Candle since common interval is the same 
+            //        ////ActualPrice = BigSma.SmaDataPts_Candle.ElementAtOrDefault(i).Close,
+            //        ////dt = BigSma.SmaDataPts_Candle.ElementAtOrDefault(i).Time
 
-                };
+            //    };
+
+
+
+
+            var smaDtPtsReversedBig = BigSma.SmaDataPts_Candle.OrderBy((d)=>d.Time);
+
+            var smaPointsBig = smaDtPtsReversedBig.Select((d) => (double)d.Close).ToList().SMA(LARGE_SMA_LEN).ToList();
+
+            var requiredSmadtptsBig = smaDtPtsReversedBig.Skip(LARGE_SMA_LEN - 1).ToList();
+
+
+            //for (int i = 0; i < 200; i++)
+            //{
+            //    System.Diagnostics.Debug.Write(BigSma.SmaDataPts_Candle.ElementAt(i).Time.ToString() + "\t");
+            //    System.Diagnostics.Debug.Write(BigSma.SmaDataPts_Candle.ElementAt(i).Close + "\t");
+
+            //    if (i < LARGE_SMA_LEN - 1)
+            //    {
+            //        System.Diagnostics.Debug.Write("\n");
+            //        continue;
+            //    }
+
+            //    System.Diagnostics.Debug.Write(smaPointsBig.ElementAt(i - LARGE_SMA_LEN + 1) + "\n");
+            //}
+
+            //Console.WriteLine(requiredSmadtpts.Count());
+
+            var smaWithDataPtsBig = smaPointsBig.Select((d, i) => new SmaData
+            {
+                SmaValue = d,
+                ActualPrice = requiredSmadtptsBig.ElementAt(i).Close,
+                Time = requiredSmadtptsBig.ElementAt(i).Time
+            }).ToList();
+
+
+
+
+
+
+            var smaDtPtsReversedSmall = SmallSma.SmaDataPts_Candle.OrderBy((d) => d.Time);
+            var smaPointsSmall = smaDtPtsReversedSmall.Select((d) => (double)d.Close).ToList().SMA(SMALL_SMA_LEN).ToList();
+            var requiredSmadtptsSmall = smaDtPtsReversedSmall.Skip(SMALL_SMA_LEN - 1).ToList();
+            var smaWithDataPtsSmall = smaPointsSmall.Select((d, i) => new SmaData
+            {
+                SmaValue = d,
+                ActualPrice = requiredSmadtptsSmall.ElementAt(i).Close,
+                Time = requiredSmadtptsSmall.ElementAt(i).Time
+            }).ToList();
+
+
+
+            //for (int i = 0; i < 150; i++)
+            //{
+            //    System.Diagnostics.Debug.WriteLine(smaWithDataPtsBig[i].Time.ToString() + "\t" + smaWithDataPtsBig[i].ActualPrice + "\t" + smaWithDataPtsBig[i].SmaValue);
+            //}
+
+            //System.Diagnostics.Debug.WriteLine("\n\n");
+
+            //for (int i = 0; i < 150; i++)
+            //{
+            //    System.Diagnostics.Debug.WriteLine(smaWithDataPtsSmall[i].Time.ToString() + "\t" + smaWithDataPtsSmall[i].ActualPrice + "\t" + smaWithDataPtsSmall[i].SmaValue);
+            //}
+
+
+            DateTime bigSmaFirst = smaWithDataPtsBig.First().Time;
+
+            var sameTime_smaWithDataPtsSmall = smaWithDataPtsSmall.Where(f => f.Time >= bigSmaFirst);
+
+
+            var smaD = smaWithDataPtsBig.Zip(sameTime_smaWithDataPtsSmall, (bd, sd) => sd.SmaValue - bd.SmaValue);
+
+            SmaDiff = smaD.Select((d, i) => new SmaData
+            {
+                SmaValue = d,
+                ActualPrice = smaWithDataPtsBig.ElementAt(i).ActualPrice,
+                Time = smaWithDataPtsBig.ElementAt(i).Time
+            });
+
 
         }
+
+
+        //private class SmaDetails
+        //{
+        //    public double SmaValue { get; set; }
+        //    public decimal ActualPrice { get; set; }
+        //    public DateTime Time { get; set; }
+        //}
 
 
         private class DateLst
@@ -360,7 +445,7 @@ namespace Simulator
 
         void CalculatePl_Compounding(List<CrossData> allCrossings, bool printTrade = true)
         {
-            if (allCrossings.Count()==0)
+            if (allCrossings.Count() == 0) 
             {
                 Console.WriteLine("No crossing data!");
                 return;
@@ -394,7 +479,7 @@ namespace Simulator
             var buyFee = 0.0m;
             var sellFee = 0.0m;
 
-            const decimal BUFFER = 0.60m;//1.50m;//1.0m; //0.75m;
+            const decimal BUFFER = 1.20m;//1.50m;//1.0m; //0.75m;
 
 
             const decimal STOP_LOSS_PERCENTAGE = 0.02m;
@@ -597,11 +682,11 @@ namespace Simulator
 
 
 
-    public class DataPoint
+    public class SmaData
     {
-        public double diff { get; set; }
+        public double SmaValue { get; set; }
         public decimal ActualPrice { get; set; }
-        public DateTime dt { get; set; }
+        public DateTime Time { get; set; }
     }
 
 
