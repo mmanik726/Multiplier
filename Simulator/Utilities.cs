@@ -15,64 +15,162 @@ namespace Simulator
         public DateTime dt { get; set; }
         public decimal CrossingPrice { get; set; }
         public string Action { get; set; }
+        public double cossDiff { get; set; }
+        public string comment { get; set; }
     }
 
     public class Utilities
     {
-        
+        static object cwWriteLock = new object();
 
-        public static async Task<List<CrossData>> Getcrossings(IEnumerable<SmaData> macdDtPts, DateTime simStartDate, DateTime simEndDate, int smaOfSmaLen = 2, int counter = 0)
+        static string lastAction = ""; 
+
+        public List<CrossData> Getcrossings(IEnumerable<SmaData> macdDtPts, IEnumerable<SmaData> signalDtPts, DateTime simStartDate, DateTime simEndDate, int smaOfSmaLen = 2, int counter = 0)
         {
+
             int L_SIGNAL_LEN = smaOfSmaLen;// 2;//5;//10;
             //const int S_SIGNAL_LEN = 5;
 
             var strt = macdDtPts.First().Time;
             var end = macdDtPts.Last().Time;
 
+            var sigstrt = signalDtPts.First().Time;
+            var sigend = signalDtPts.Last().Time;
+
+            var macdptsCount = macdDtPts.Count();
+            var signalPtCounts = signalDtPts.Count();
+
+            //Console.WriteLine("\t\t" + strt.ToString() + "\t" + end.ToString() + "\n");
+
             //Console.WriteLine(smaDtPts.Count());
-            macdDtPts = macdDtPts.Where(a => a.Time >= simStartDate && a.Time < simEndDate);
+            ///macdDtPts = macdDtPts.Where(a => a.Time >= simStartDate && a.Time < simEndDate);
             //Console.WriteLine(smaDtPts.Count());
 
-            
 
-            var bigSmaOfMacd = macdDtPts.Select(d => d.SmaValue).ToList().SMA(L_SIGNAL_LEN);
+
+            var bigSmaOfMacd = signalDtPts;//macdDtPts.Select(d => d.SmaValue).ToList().SMA(L_SIGNAL_LEN);
             //var smallSmaOfMacd = smaDtPts.Select(d => d.diff).ToList().SMA(S_SIGNAL_LEN);
 
-            
+
             var crossList = new List<CrossData>();
 
-            for (int i = 0; i < bigSmaOfMacd.Count(); i++)
+
+
+            //////var buySells = macdDtPts.Zip(signalDtPts, (macd, signal) => (Math.Abs(macd.SmaValue) - Math.Abs(signal.SmaValue)) ).Select((bs,i) => new SmaData
+            //////{
+            //////    SmaValue = bs,
+            //////    ActualPrice = macdDtPts.ElementAt(i).ActualPrice,
+            //////    Time = macdDtPts.ElementAt(i).Time
+            //////});
+
+
+            //////var sells = buySells.Where((bs) => bs.SmaValue > 0).ToList();
+            //////var sellWithData = sells.Select((s, i) => new CrossData
+            //////{
+            //////    dt = buySells.ElementAt(i).Time,
+            //////    CrossingPrice = buySells.ElementAt(i).ActualPrice,
+            //////    Action = "sell",
+            //////    sl = i
+            //////}).ToList() ;
+
+
+
+            //////var buys = buySells.Where((bs) => bs.SmaValue < 0).Select((b, i) => new CrossData
+            //////{
+            //////    dt = buySells.ElementAt(i).Time,
+            //////    CrossingPrice = buySells.ElementAt(i).ActualPrice,
+            //////    Action = "buy",
+            //////    sl = i
+            //////}).ToList();
+
+
+            //////var unknowns = buySells.Where((bs) => bs.SmaValue == 0).Select((u, i) => new CrossData
+            //////{
+            //////    dt = buySells.ElementAt(i).Time,
+            //////    CrossingPrice = buySells.ElementAt(i).ActualPrice,
+            //////    Action = "unknown",
+            //////    sl = i
+            //////}).ToList();
+
+
+            for (int i = 1; i < bigSmaOfMacd.Count(); i++)
             {
-                if (i < L_SIGNAL_LEN)
-                {
-                    continue;
-                }
+                //if (i < L_SIGNAL_LEN)
+                //{
+                //    continue;
+                //}
 
                 Vector intersection;
 
-                var p1 = new Vector(i, bigSmaOfMacd.ElementAt(i - 1));
-                var p2 = new Vector(i + 1, bigSmaOfMacd.ElementAt(i));
+                var signal_p1 = new Vector(i, Math.Round(bigSmaOfMacd.ElementAt(i - 1).SmaValue, 4));
+                var signal_p2 = new Vector(i + 1, Math.Round(bigSmaOfMacd.ElementAt(i).SmaValue, 4));
 
-                var q1 = new Vector(i, macdDtPts.ElementAt(i - 1).SmaValue);
-                var q2 = new Vector(i + 1, macdDtPts.ElementAt(i).SmaValue);
+                var macd_q1 = new Vector(i, Math.Round(macdDtPts.ElementAt(i - 1).SmaValue, 4));
+                var macd_q2 = new Vector(i + 1, Math.Round(macdDtPts.ElementAt(i).SmaValue, 4));
 
 
-                if ((LineSegementsIntersect(p1, p2, q1, q2, out intersection)))
+                if ((LineSegementsIntersect(signal_p1, signal_p2, macd_q1, macd_q2, out intersection)))
                 {
-                    var a = (p2.Y >= q2.Y) ?  "buy" : "sell" ;
+
+
+
+                    var currentAction = (macd_q2.Y > signal_p2.Y) ?  "buy" : "sell" ;
+
+                    var yDiff = Math.Abs(macd_q2.Y) - Math.Abs(signal_p2.Y);
+
+                    //var thisPoint = string.Format("{0} \tsignal_p1({1}) -> signla_p2({2}), macd_q1({3}) -> macd_q2({4} ({5} by {6}))",
+                    //    macdDtPts.ElementAt(i).Time,
+                    //    Math.Round(bigSmaOfMacd.ElementAt(i - 1).SmaValue, 4),
+                    //    Math.Round(bigSmaOfMacd.ElementAt(i).SmaValue, 4),
+                    //    Math.Round(macdDtPts.ElementAt(i - 1).SmaValue, 4),
+                    //    Math.Round(macdDtPts.ElementAt(i).SmaValue, 4),
+                    //    a,
+                    //    Math.Round(yDiff, 6));
+                    //Console.WriteLine(thisPoint);
+
+                    if (lastAction == currentAction)
+                    {
+                        var manualEntry = (currentAction == "sell") ? "buy" : "sell";
+
+                        //Console.WriteLine("same last action");
+                        counter++;
+                        crossList.Add(new CrossData
+                        {
+                            dt = macdDtPts.ElementAt(i).Time.AddMinutes(-1),
+                            CrossingPrice = macdDtPts.ElementAt(i).ActualPrice,
+                            Action = manualEntry,
+                            sl = counter,
+                            cossDiff = Math.Abs(macd_q2.Y) - Math.Abs(signal_p2.Y),
+                            comment = "MANUAL_ENTRY"
+
+                        });
+
+                        
+                    }
 
                     counter++;
                     crossList.Add(new CrossData
                     {
                         dt = macdDtPts.ElementAt(i).Time,
                         CrossingPrice = macdDtPts.ElementAt(i).ActualPrice,
-                        Action = a
-                        //sl = counter
+                        Action = currentAction,
+                        sl = counter,
+                        cossDiff = Math.Abs(macd_q2.Y) - Math.Abs(signal_p2.Y)
+                        
                     });
+
+                    lastAction = currentAction;
+
                 }
 
 
 
+            }
+
+
+            lock (cwWriteLock)
+            {
+                Console.WriteLine("\t\t" + simStartDate.ToString() + "\t" + simEndDate.ToString() + "(" + crossList.Count() +  ")\n");
             }
 
 
@@ -85,7 +183,101 @@ namespace Simulator
         }
 
 
-        public static bool LineSegementsIntersect(Vector p, Vector p2, Vector q, Vector q2,
+
+        public List<CrossData> Getcrossings_Parallel(IEnumerable<SmaData> macdDtPts, IEnumerable<SmaData> signalDtPts, DateTime simStartDate, DateTime simEndDate, int smaOfSmaLen = 2, int counter = 0)
+        {
+
+            int L_SIGNAL_LEN = smaOfSmaLen;// 2;//5;//10;
+            //const int S_SIGNAL_LEN = 5;
+
+            var strt = macdDtPts.First().Time;
+            var end = macdDtPts.Last().Time;
+
+            var sigstrt = signalDtPts.First().Time;
+            var sigend = signalDtPts.Last().Time;
+
+            var macdptsCount = macdDtPts.Count();
+            var signalPtCounts = signalDtPts.Count();
+
+            //Console.WriteLine("\t\t" + strt.ToString() + "\t" + end.ToString() + "\n");
+
+            //Console.WriteLine(smaDtPts.Count());
+            ///macdDtPts = macdDtPts.Where(a => a.Time >= simStartDate && a.Time < simEndDate);
+            //Console.WriteLine(smaDtPts.Count());
+
+
+
+            var bigSmaOfMacd = signalDtPts;//macdDtPts.Select(d => d.SmaValue).ToList().SMA(L_SIGNAL_LEN);
+            //var smallSmaOfMacd = smaDtPts.Select(d => d.diff).ToList().SMA(S_SIGNAL_LEN);
+
+
+            var crossList = new List<CrossData>();
+
+
+
+
+            for (int i = 1; i < bigSmaOfMacd.Count(); i++)
+            {
+                //if (i < L_SIGNAL_LEN)
+                //{
+                //    continue;
+                //}
+
+                Vector intersection;
+
+                var signal_p1 = new Vector(i, Math.Round(bigSmaOfMacd.ElementAt(i - 1).SmaValue, 4));
+                var signal_p2 = new Vector(i + 1, Math.Round(bigSmaOfMacd.ElementAt(i).SmaValue, 4));
+
+                var macd_q1 = new Vector(i, Math.Round(macdDtPts.ElementAt(i - 1).SmaValue, 4));
+                var macd_q2 = new Vector(i + 1, Math.Round(macdDtPts.ElementAt(i).SmaValue, 4));
+
+
+                if ((LineSegementsIntersect(signal_p1, signal_p2, macd_q1, macd_q2, out intersection)))
+                {
+
+
+
+                    var currentAction = (macd_q2.Y > signal_p2.Y) ? "buy" : "sell";
+
+                    var yDiff = Math.Abs(macd_q2.Y) - Math.Abs(signal_p2.Y);
+
+
+                    counter++;
+                    crossList.Add(new CrossData
+                    {
+                        dt = macdDtPts.ElementAt(i).Time,
+                        CrossingPrice = macdDtPts.ElementAt(i).ActualPrice,
+                        Action = currentAction,
+                        sl = counter,
+                        cossDiff = Math.Abs(macd_q2.Y) - Math.Abs(signal_p2.Y)
+
+                    });
+
+                    lastAction = currentAction;
+
+                }
+
+
+
+            }
+
+
+            lock (cwWriteLock)
+            {
+                Console.WriteLine("\t\t" + simStartDate.ToString() + "\t" + simEndDate.ToString() + "(" + crossList.Count() + ")\n");
+            }
+
+
+            return crossList;
+
+
+
+
+
+        }
+
+
+        public bool LineSegementsIntersect(Vector p, Vector p2, Vector q, Vector q2,
             out Vector intersection, bool considerCollinearOverlapAsIntersect = false)
         {
             intersection = new Vector();

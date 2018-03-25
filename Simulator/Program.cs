@@ -9,7 +9,7 @@ using CoinbaseExchange.NET.Endpoints.PublicData;
 
 using CoinbaseExchange.NET.Utilities;
 using System.Threading;
-
+using CoinbaseExchange.NET;
 
 namespace Simulator
 {
@@ -20,8 +20,11 @@ namespace Simulator
 
         static void Main(string[] args)
         {
-
             Logger.Logupdated += (object sender, LoggerEventArgs largs) => { Console.WriteLine(largs.LogMessage); };
+
+            //ExData DataManager = new ExData("LTC-USD", true);
+
+            
 
             ManualSimulate();
 
@@ -137,13 +140,13 @@ namespace Simulator
             Thread.Sleep(2 * 1000);
 
             DateTime autoStartDate = new DateTime(2017, 10, 1);
-            var autoInterval = Enumerable.Range(30, 90).Where(i => i % 5 == 0);//30;
+            var autoInterval = 30;//Enumerable.Range(20, 60).Where(i => i % 5 == 0);//30;
             var autoBigsmaLen = 100;
-            var autoSmallSmaLen = 35; //Enumerable.Range(15, 50).Where(i => i % 5 == 0); //every five
+            var autoSmallSmaLen = Enumerable.Range(35, 60).Where(i => i % 5 == 0); //every five
             var autoSignalLen = 5;
 
 
-            foreach (var curInterval in autoInterval)
+            foreach (var curVar in autoSmallSmaLen)
             {
                 try
                 {
@@ -152,23 +155,26 @@ namespace Simulator
 
                     if (S == null)
                     {
-                        S = new Simulator(ref Ticker, ProductName, curInterval, autoBigsmaLen, autoSmallSmaLen, false);
+                        S = new Simulator(ref Ticker, ProductName, autoInterval, autoBigsmaLen, curVar, false);
                     }
                     else
                     {
-                        if (!(lastCommonInterval == curInterval && lastBigSma == autoBigsmaLen && lastSmallSma == autoSmallSmaLen))
+                        if (!(lastCommonInterval == autoInterval && lastBigSma == autoBigsmaLen && lastSmallSma == curVar))
                         {
                             S.Dispose();
                             S = null;
-                            S = new Simulator(ref Ticker, ProductName, curInterval, autoBigsmaLen, autoSmallSmaLen);
+                            S = new Simulator(ref Ticker, ProductName, autoInterval, autoBigsmaLen, curVar);
                         }
                     }
 
-                    S.Calculate(autoStartDate, autoSignalLen, false);
+                    S.Calculate(autoStartDate, autoSignalLen, true);
 
-                    lastCommonInterval = curInterval;
+                    lastCommonInterval = autoInterval;
                     lastBigSma = autoBigsmaLen;
-                    lastSmallSma = autoSmallSmaLen;
+                    lastSmallSma = curVar;
+
+                    Console.WriteLine("Enter to continue");
+                    Console.ReadLine();
 
                 }
                 catch (Exception)
@@ -246,18 +252,48 @@ namespace Simulator
             var requiredSmadtptsBig = smaDtPtsReversedBig.Skip(LARGE_SMA_LEN - 1).ToList();
 
 
+            ////var cntr = smaDtPtsReversedBig.Count() - 1;
+            ////var running = 0;
+
+            ////while (cntr >= 0 )
+            ////{
+                
+
+            ////    System.Diagnostics.Debug.Write(smaDtPtsReversedBig.ElementAt(cntr).Time.ToString() + "\t");
+            ////    System.Diagnostics.Debug.Write(smaDtPtsReversedBig.ElementAt(cntr).Close + "\t");
+
+            ////    if (running >= 100)
+            ////    {
+            ////        var innerCtr = cntr  + 1;
+            ////        System.Diagnostics.Debug.Write(smaPointsBig.ElementAt(innerCtr));
+            ////    }
+
+            ////    System.Diagnostics.Debug.Write("\n");
+            ////    running++;
+            ////    cntr--;
+
+
+            ////    if (running > 200)
+            ////    {
+            ////        break;
+            ////    }
+            ////}
+
+            //System.Diagnostics.Debug.Write("\n");
+            //System.Diagnostics.Debug.Write("\n");
+
             //for (int i = 0; i < 200; i++)
             //{
-            //    System.Diagnostics.Debug.Write(BigSma.SmaDataPts_Candle.ElementAt(i).Time.ToString() + "\t");
-            //    System.Diagnostics.Debug.Write(BigSma.SmaDataPts_Candle.ElementAt(i).Close + "\t");
+            //    System.Diagnostics.Debug.Write(smaDtPtsReversedBig.ElementAt(i).Time.ToString() + "\t");
+            //    System.Diagnostics.Debug.Write(smaDtPtsReversedBig.ElementAt(i).Close + "\t");
 
-            //    if (i < LARGE_SMA_LEN - 1)
+            //    if (i >= LARGE_SMA_LEN - 1)
             //    {
-            //        System.Diagnostics.Debug.Write("\n");
-            //        continue;
+            //        System.Diagnostics.Debug.Write(smaPointsBig.ElementAt(i - (LARGE_SMA_LEN - 1)));
+            //        //continue;
             //    }
+            //    System.Diagnostics.Debug.Write("\n");
 
-            //    System.Diagnostics.Debug.Write(smaPointsBig.ElementAt(i - LARGE_SMA_LEN + 1) + "\n");
             //}
 
             //Console.WriteLine(requiredSmadtpts.Count());
@@ -303,8 +339,16 @@ namespace Simulator
 
             var sameTime_smaWithDataPtsSmall = smaWithDataPtsSmall.Where(f => f.Time >= bigSmaFirst);
 
+            //for (int i = 0; i < 100; i++)
+            //{
+            //    System.Diagnostics.Debug.WriteLine(sameTime_smaWithDataPtsSmall.ElementAt(i).Time + "\t" 
+            //        + +sameTime_smaWithDataPtsSmall.ElementAt(i).ActualPrice + "\t"
+            //        + sameTime_smaWithDataPtsSmall.ElementAt(i).SmaValue);
+            //}
+
 
             var smaD = smaWithDataPtsBig.Zip(sameTime_smaWithDataPtsSmall, (bd, sd) => sd.SmaValue - bd.SmaValue);
+
 
             SmaDiff = smaD.Select((d, i) => new SmaData
             {
@@ -313,6 +357,13 @@ namespace Simulator
                 Time = smaWithDataPtsBig.ElementAt(i).Time
             });
 
+
+            //for (int i = 0; i < 100; i++)
+            //{
+            //    System.Diagnostics.Debug.WriteLine(SmaDiff.ElementAt(i).Time + "\t"
+            //        + +SmaDiff.ElementAt(i).ActualPrice + "\t"
+            //        + SmaDiff.ElementAt(i).SmaValue);
+            //}
 
         }
 
@@ -325,6 +376,12 @@ namespace Simulator
         //}
 
 
+        private class DLst
+        {
+            public int start { get; set; }
+            public int end { get; set; }
+        }
+
         private class DateLst
         {
             public int groupNo { get; set; }
@@ -333,7 +390,9 @@ namespace Simulator
 
         }
 
-        public async void Calculate(DateTime simStartDate, int inputSmaOfMacdLen = 2, bool printTrades = true)
+        static Object addLock = new object();
+
+        public void Calculate(DateTime simStartDate, int inputSmaOfMacdLen = 2, bool printTrades = true)
         {
 
             SignalLen = inputSmaOfMacdLen;
@@ -342,95 +401,230 @@ namespace Simulator
 
             Console.WriteLine("Calculating buy / sell actions...");
 
-            var timePeriod = Math.Floor((DateTime.Now - simStartDate).TotalHours / 24) + 1;
 
-            //////List<DateLst> dLst = new List<DateLst>();
+            var simStartTime = simStartDate; //new DateTime(2017, 10, 1);//.AddHours(19);//simStartDate;
+            var simEndTime = DateTime.Now; //new DateTime(2017, 10, 5);//DateTime.Now;
 
+            var timePeriod = Math.Floor((simEndTime - simStartTime).TotalHours / 24) + 1;
 
-            //////var endTime = simStartDate.AddHours(24);
-
-            //////for (int i = 0; i < timePeriod; i++)
-            //////{
-            //////    dLst.Add(new DateLst
-            //////    {
-            //////        groupNo = i * 10000,
-            //////        start = simStartDate,
-            //////        end = endTime
-            //////    });
-
-            //////    simStartDate = endTime;
-            //////    endTime = endTime.AddHours(24);
-            //////}
+            List<DateLst> dLst = new List<DateLst>();
 
 
+            var endTime = simStartTime.AddHours(24);
 
+            for (int i = 0; i < timePeriod; i++)
+            {
+                dLst.Add(new DateLst
+                {
+                    groupNo = i * 10000,
+                    start = simStartTime,
+                    end = endTime
+                });
+
+                simStartTime = endTime;
+                endTime = endTime.AddHours(24);
+            }
+
+
+
+            
+
+            //Object addLock = new object();
+
+
+            var SmaOfMacd = SmaDiff.Select(d => d.SmaValue).ToList().SMA(inputSmaOfMacdLen);
+
+
+            var requiredSignalDtPts = SmaDiff.Skip(inputSmaOfMacdLen - 1).ToList();
+
+
+            //for (int i = 0; i < 200; i++)
+            //{
+            //    System.Diagnostics.Debug.Write(BigSma.SmaDataPts_Candle.ElementAt(i).Time.ToString() + "\t");
+            //    System.Diagnostics.Debug.Write(BigSma.SmaDataPts_Candle.ElementAt(i).Close + "\t");
+
+            //    if (i < LARGE_SMA_LEN - 1)
+            //    {
+            //        System.Diagnostics.Debug.Write("\n");
+            //        continue;
+            //    }
+
+            //    System.Diagnostics.Debug.Write(smaPointsBig.ElementAt(i - LARGE_SMA_LEN + 1) + "\n");
+            //}
+
+            //Console.WriteLine(requiredSmadtpts.Count());
+
+            var SignalWithDataPtsBig = SmaOfMacd.Select((d, i) => new SmaData
+            {
+                SmaValue = d,
+                ActualPrice = requiredSignalDtPts.ElementAt(i).ActualPrice,
+                Time = requiredSignalDtPts.ElementAt(i).Time
+            }).ToList();
+
+
+            //this ensures the time lines are the same for signal and sma
+            SmaDiff = requiredSignalDtPts; //SmaDiff.Skip(inputSmaOfMacdLen);
+
+            //for (int i = 0; i < 100; i++)
+            //{
+            //    System.Diagnostics.Debug.WriteLine(SignalWithDataPtsBig.ElementAt(i).Time + "\t"
+            //        + SignalWithDataPtsBig.ElementAt(i).ActualPrice + "\t"
+            //        + SignalWithDataPtsBig.ElementAt(i).SmaValue);
+            //}
+
+            //for (int i = 0; i < 50; i++)
+            //{
+            //    System.Diagnostics.Debug.Write(SmaDiff.ElementAt(i).Time.ToString() + "\t");
+            //    System.Diagnostics.Debug.Write(SmaDiff.ElementAt(i).SmaValue + "\t");
+
+            //    if (i < inputSmaOfMacdLen - 1)
+            //    {
+            //        System.Diagnostics.Debug.Write("\n");
+            //        continue;
+            //    }
+
+            //    System.Diagnostics.Debug.Write(SmaOfMacd.ElementAt(i - inputSmaOfMacdLen + 1) + "\n");
+            //}
+
+
+
+
+            ////////for runnung sequestially 
             //////List<CrossData> allCrossings = new List<CrossData>();
-
-            //////Object addLock = new object();
-
-            //////Parallel.ForEach(dLst, item => 
+            //////foreach (var item in dLst)
             //////{
-            //////    var res = Utilities.Getcrossings(SmaDiff, item.start, item.end, inputSmaOfMacdLen, item.groupNo);
+
+            //////    Utilities crossingCalculator = new Utilities();
+
+            //////    var requiredSmaDiffPts = SmaDiff.Where((s => s.Time >= item.start && s.Time < item.end));
+
+            //////    var requiredSignalPts = SignalWithDataPtsBig.Where((s => s.Time >= item.start && s.Time < item.end));
+
+            //////    var res = crossingCalculator.Getcrossings(requiredSmaDiffPts, requiredSignalPts, item.start, item.end, inputSmaOfMacdLen, item.groupNo);
+
+            //////    //allCrossings.AddRange(res.Result);
             //////    lock (addLock)
             //////    {
-            //////        allCrossings.AddRange(res.Result);
+            //////        allCrossings.AddRange(res);
             //////    }
 
-            //////});
+            //////}
+
+            //////allCrossings = allCrossings.OrderBy(s => s.dt).ToList();
+
+            //for (int i = 0; i < allCrossings.Count(); i++)
+            //{
+            //    System.Diagnostics.Debug.WriteLine(allCrossings[i].dt + "\t" + allCrossings[i].Action + "\t" + allCrossings[i].CrossingPrice);
+            //}
+
+            //System.Diagnostics.Debug.WriteLine("");
+
+            List<CrossData> allCrossings_Parallel = new List<CrossData>();
+
+            Parallel.ForEach(dLst, item =>
+            {
+                Utilities crossingCalculator = new Utilities();
+
+                var requiredSmaDiffPts = SmaDiff.Where((s => s.Time >= item.start && s.Time < item.end));
+
+                var requiredSignalPts = SignalWithDataPtsBig.Where((s => s.Time >= item.start && s.Time < item.end));
+
+                var res = crossingCalculator.Getcrossings_Parallel(requiredSmaDiffPts, requiredSignalPts, item.start, item.end, inputSmaOfMacdLen, item.groupNo);
+
+                //allCrossings.AddRange(res.Result);
+                lock (addLock)
+                {
+                    allCrossings_Parallel.AddRange(res);
+                }
+
+            });
+
+            allCrossings_Parallel = allCrossings_Parallel.OrderBy(s => s.dt).ToList();
 
 
-            
+            var lastAction = "";
+            List<CrossData> ManualEntries = new List<CrossData>();
+            for (int i = 0; i < allCrossings_Parallel.Count(); i++)
+            {
+
+                //if last action = current action 
+                if (lastAction == allCrossings_Parallel[i].Action)
+                {
+                    var manualEntry = (lastAction == "sell") ? "buy" : "sell";
+                    //add to list 
+                    ManualEntries.Add(new CrossData
+                    {
+                        dt = allCrossings_Parallel[i - 1].dt.AddMinutes(1),
+                        CrossingPrice = allCrossings_Parallel[i - 1].CrossingPrice,
+                        Action = manualEntry,
+                        sl = allCrossings_Parallel[i - 1].sl + 1,
+                        cossDiff = 0,
+                        comment = "MANUAL_ENTRY"
+                    });
+
+                    //lastAction = manualEntry;
+                    //continue;
+                }
+
+                lastAction = allCrossings_Parallel[i].Action;
+            }
+
+            allCrossings_Parallel.AddRange(ManualEntries);
+
+            allCrossings_Parallel = allCrossings_Parallel.OrderBy(s => s.dt).ToList();
+
+            //for (int i = 0; i < allCrossings_Parallel.Count(); i++)
+            //{
+            //    System.Diagnostics.Debug.WriteLine(allCrossings_Parallel[i].dt + "\t" + allCrossings_Parallel[i].Action + "\t" + allCrossings_Parallel[i].CrossingPrice);
+            //}
 
 
-            
+            //List<Task> allTasks = new List<Task>();
+            //foreach (var item in dLst)
+            //{
 
+            //    allTasks.Add( Task.Run(()=> 
+            //    { 
+            //        Utilities crossingCalculator = new Utilities();
 
-            //Parallel.For(0, Convert.ToInt32(timePeriod),
-            //                   index =>
-            //                   {
-            //                       var res = Utilities.Getcrossings(SmaDiff, simStartDate, endTime, inputSmaOfMacdLen);
-            //                       res.Wait();
-            //                       allCrossings.AddRange(res.Result);
-            //                       simStartDate = endTime;
-            //                       endTime = endTime.AddHours(24);
-            //                   });
+            //        var requiredSmaDiffPts = SmaDiff.Where((s => s.Time >= item.start && s.Time < item.end));
 
+            //        var requiredSignalPts = SignalWithDataPtsBig.Where((s => s.Time >= item.start && s.Time < item.end));
 
+            //        var res = crossingCalculator.Getcrossings(requiredSmaDiffPts, requiredSignalPts, item.start, item.end, inputSmaOfMacdLen, item.groupNo);
 
+            //        //allCrossings.AddRange(res.Result);
+            //        lock (addLock)
+            //        {
+            //            allCrossings.AddRange(res);
+            //        }
 
+            //    }));
 
-            ////Object addLock = new object();
+            //}
 
-            ////for (int i = 0; i < timePeriod; i++)
-            ////{
-
-            ////    await Task.Run(() =>
-            ////    {
-            ////        var res = Utilities.Getcrossings(SmaDiff, simStartDate, endTime, inputSmaOfMacdLen);
-            ////        //res.Wait();
-
-            ////        lock (addLock)
-            ////        {
-            ////            allCrossings.AddRange(res.Result);
-            ////        }
-
-
-            ////    });
+            //Task.WaitAll(allTasks.ToArray());
 
 
 
-            ////    simStartDate = endTime;
-            ////    endTime = endTime.AddHours(24);
 
-            ////}
 
-            //System.Threading.Thread.Sleep(5 * 1 * 1000);
+            //////var start = dLst.First().start;
+            //////var smaDiffDtRange = SmaDiff.Where(d => d.Time >= start);
+            //////var reqSignals = SignalWithDataPtsBig.Where(d => d.Time >= start);
 
-            //allCrossings.OrderBy((d) => d.dt);
+            //////Utilities crossingCalculator = new Utilities();
+            //////var res = crossingCalculator.Getcrossings(smaDiffDtRange, reqSignals, start, DateTime.Now, inputSmaOfMacdLen, 100000);
 
-            var allCrossings = Utilities.Getcrossings(SmaDiff, simStartDate, DateTime.Now, inputSmaOfMacdLen);
+            //////allCrossings.AddRange(res);
+
             Console.WriteLine("done");
-            CalculatePl_Compounding(allCrossings.Result, printTrades);
+
+            ////Console.WriteLine("\tserial");
+            ////CalculatePl_Compounding(allCrossings, printTrades);
+
+            //Console.WriteLine("\n\tparallel\n");
+            CalculatePl_Compounding(allCrossings_Parallel, printTrades);
 
 
         }
@@ -479,7 +673,7 @@ namespace Simulator
             var buyFee = 0.0m;
             var sellFee = 0.0m;
 
-            const decimal BUFFER = 1.20m;//1.50m;//1.0m; //0.75m;
+            const decimal BUFFER = 0.60m;//1.20m;//1.50m;//1.0m; //0.75m;
 
 
             const decimal STOP_LOSS_PERCENTAGE = 0.02m;
@@ -511,8 +705,8 @@ namespace Simulator
                     if (printTrade)
                     {
                         Console.WriteLine(
-                            cross.dt.ToString() + "\t"
-                            + cross.Action + "\t\t"
+                            cross.dt.ToString(@"yyyy-MM-dd HH:mm:ss") + "\t"
+                            + cross.Action + ((cross.comment != null)? "_M" : "") + "\t\t"
                             + Math.Round(buyAtPrice, 2).ToString() + "\t\t"
                             + Math.Round(buyFee, 2).ToString() + "\t\t"
                             + Math.Round(curProdSize, 2).ToString() + "\t\t\t"
@@ -554,8 +748,8 @@ namespace Simulator
                     if (printTrade)
                     {
                         Console.WriteLine(
-                            cross.dt.ToString() + "\t"
-                            + cross.Action + "\t\t"
+                            cross.dt.ToString(@"yyyy-MM-dd HH:mm:ss") + "\t"
+                            + cross.Action + ((cross.comment != null) ? "_M" : "") + "\t\t"
                             + sellingPrice + "\t\t"
                             + Math.Round(sellFee, 2).ToString() + "\t\t"
                             + Math.Round(curProdSize, 2).ToString() + "\t"

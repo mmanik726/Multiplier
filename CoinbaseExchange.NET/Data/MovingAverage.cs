@@ -270,6 +270,10 @@ namespace CoinbaseExchange.NET.Data
 
             ExData DataManager = new ExData(Product, UpdateJasonDB);
 
+
+
+
+
             SharedRawExchangeData.AddRange(DataManager.RawExchangeData);
 
 

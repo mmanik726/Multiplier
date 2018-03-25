@@ -26,6 +26,8 @@ namespace CoinbaseExchange.NET
         //initialize database
         private string jsonDBNamePath;
 
+        private string missingDummyFileNamtPath; 
+
         private int retriedCount;
 
         private bool UpdateJsonDb;
@@ -36,7 +38,10 @@ namespace CoinbaseExchange.NET
             ProductName = productName;
             retriedCount = 0;
             //check if data exists if so update accordingly
-            jsonDBNamePath = Path.GetDirectoryName(System.Reflection.Assembly.GetEntryAssembly().Location) + @"\" +ProductName + "_PriceDB.json";
+            jsonDBNamePath = Path.GetDirectoryName(System.Reflection.Assembly.GetEntryAssembly().Location) + @"\" + ProductName + "_PriceDB.json";
+
+            missingDummyFileNamtPath = Path.GetDirectoryName(System.Reflection.Assembly.GetEntryAssembly().Location) + @"\" + ProductName + "_MissingDummyAvgData.json";
+
 
             if (File.Exists(jsonDBNamePath))
             {
@@ -72,17 +77,17 @@ namespace CoinbaseExchange.NET
                 throw new Exception("DataDownloadError");
             }
 
-            WriteToFile();
+            WriteToFile(jsonDBNamePath, RawExchangeData);
 
         }
 
-        private bool WriteToFile()
+        private bool WriteToFile(string fileNamePath, List<CandleData> CandleDataList)
         {
             //write to file 
             try
             {
-                RawExchangeData = RawExchangeData.OrderByDescending((x) => x.Time).ToList();
-                File.WriteAllText(jsonDBNamePath, JsonConvert.SerializeObject(RawExchangeData, Formatting.Indented));
+                var data = CandleDataList.OrderByDescending((x) => x.Time).ToList();
+                File.WriteAllText(fileNamePath, JsonConvert.SerializeObject(data, Formatting.Indented));
             }
             catch (Exception)
             {
@@ -120,7 +125,7 @@ namespace CoinbaseExchange.NET
 
             mDt2.RemoveAt(0);
 
-            var comparedList = mDt.Zip(mDt2, (lstA, lstB) => new MissingData { Difference = (lstA.Time - lstB.Time), LastCandle = lstA });
+            var comparedList = mDt.Zip(mDt2, (lstA, lstB) => new MissingData { Difference = (lstA.Time - lstB.Time), LastCandle = lstA, NextCandle = lstB });
 
             //var comparedList = mDt.Zip(mDt2, (lstA, lstB) => (lstA.Time - lstB.Time));
 
@@ -128,12 +133,21 @@ namespace CoinbaseExchange.NET
 
             var invalidData = comparedList.Where((a) => a.Difference > TimeSpan.FromMinutes(1));//ToList();
 
-            FillMissingData(invalidData.ToList());
 
+            var duplicateData = comparedList.Where((a) => a.Difference == TimeSpan.FromMinutes(0)).ToList();//ToList();
+
+            if (duplicateData.Count() > 0)
+            {
+                Logger.WriteLog("There may be duplicate data in Json DB");
+            }
+
+
+            //FillMissingData(invalidData.ToList());
+            FillMissingData_Dummy(invalidData.ToList());
 
             if (invalidData.Count() > 0)
             {
-                Logger.WriteLog("Inconsistencies in database found at:");
+                Logger.WriteLog("Inconsistencies in database found! Fixed with dummy data:");
 
                 //foreach (var d in invalidData)
                 //{
@@ -145,6 +159,95 @@ namespace CoinbaseExchange.NET
 
             return false;
 
+
+        }
+
+
+        private void FillMissingData_Dummy(List<MissingData> missingDataList)
+        {
+
+            List<CandleData> allMissingCandleList = new List<CandleData>();
+
+            foreach (var missingData in missingDataList)
+            {
+                var endDt = missingData.LastCandle.Time.AddMinutes(-1); //data is in reverse order and so -1
+
+                var startDt = missingData.NextCandle.Time.AddMinutes(1);//missingData.LastCandle.Time - missingData.Difference.Add(TimeSpan.FromMinutes(-1));
+
+                if (missingData.Difference > TimeSpan.FromMinutes(2))
+                {
+                    Console.WriteLine((missingData.Difference.ToString() + " of data missing in sequesnce"));
+                }
+
+                //DownloadDataSegment(startDt, endDt);
+                allMissingCandleList.AddRange( AddDummyData(startDt, endDt, missingData.LastCandle, missingData.NextCandle));
+            }
+
+
+            WriteToFile(missingDummyFileNamtPath , allMissingCandleList);
+
+            RawExchangeData.AddRange(allMissingCandleList);
+
+            RawExchangeData = RawExchangeData.OrderByDescending(d => d.Time).ToList();
+
+
+            if (allMissingCandleList.Count > 0)
+            {
+                
+
+                try
+                {
+                    WriteToFile(jsonDBNamePath, RawExchangeData);
+                }
+                catch (Exception ex)
+                {
+                    Logger.WriteLog("File copy / write error: " + ex.Message);
+                    throw new Exception("FileWriteCopyError");
+                }
+            }
+
+
+
+        }
+
+
+        private List<CandleData> AddDummyData(DateTime startDate, DateTime endDate, CandleData lastCandle, CandleData nextCandle)
+        {
+            List<CandleData> missingCandleList = new List<CandleData>();
+
+            var curDt = startDate;
+            var dtEnd = endDate;
+
+            DateTime curCandleTime;
+            string avgLow = ((Convert.ToDouble(lastCandle.Low) + Convert.ToDouble(nextCandle.Low)) / 2).ToString();
+            string avgHigh = ((Convert.ToDouble(lastCandle.High) + Convert.ToDouble(nextCandle.High)) / 2).ToString();
+            decimal avgLocalAvg = (lastCandle.LocalAvg + nextCandle.LocalAvg) / 2;
+            string avgOpen = ((Convert.ToDouble(lastCandle.Open) + Convert.ToDouble(nextCandle.Open)) / 2).ToString();
+            decimal avgClose = (lastCandle.Close + nextCandle.Close) / 2;
+            string avgVolume = ((Math.Round(Convert.ToDouble(lastCandle.Volume), 4) + Math.Round(Convert.ToDouble(nextCandle.Volume), 4))  / 2).ToString();
+
+
+
+            while (curDt <= dtEnd)
+            {
+                curCandleTime = curDt;
+
+                CandleData curDummyCandle = new CandleData
+                {
+                    Time = curCandleTime,
+                    Low = avgLow,
+                    High = avgHigh,
+                    LocalAvg = avgLocalAvg,
+                    Open = avgOpen,
+                    Close = avgClose,
+                    Volume = avgVolume
+                };
+
+                missingCandleList.Add(curDummyCandle);
+                curDt = curDt.AddMinutes(1);
+            }
+
+            return missingCandleList;
 
         }
 
@@ -287,6 +390,7 @@ namespace CoinbaseExchange.NET
             //ReadFromFile();
 
 
+            
 
             //if (UpdateJsonDb == false)
             //{
@@ -318,7 +422,7 @@ namespace CoinbaseExchange.NET
                 //no back up really required, wast of space
                 //File.Copy(jsonDBNamePath, jsonDBNamePath + ".bak", true);
 
-                WriteToFile();
+                WriteToFile(jsonDBNamePath, RawExchangeData);
 
                 //File.Copy(jsonDBNamePath, jsonDBNamePath + ".bak", true);
             }
@@ -329,6 +433,7 @@ namespace CoinbaseExchange.NET
             }
 
 
+            var dbDurrupt = IsDbCorrupt();
 
         }
 
@@ -543,6 +648,7 @@ namespace CoinbaseExchange.NET
         {
             public TimeSpan Difference { get; set; }
             public CandleData LastCandle { get; set; }
+            public CandleData NextCandle { get; set; }
         }
 
     }
