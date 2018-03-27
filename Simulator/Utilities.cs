@@ -16,6 +16,7 @@ namespace Simulator
         public decimal CrossingPrice { get; set; }
         public string Action { get; set; }
         public double cossDiff { get; set; }
+        public double smaValue { get; set; }
         public string comment { get; set; }
     }
 
@@ -141,7 +142,8 @@ namespace Simulator
                             Action = manualEntry,
                             sl = counter,
                             cossDiff = Math.Abs(macd_q2.Y) - Math.Abs(signal_p2.Y),
-                            comment = "MANUAL_ENTRY"
+                            comment = "MANUAL_ENTRY",
+                            smaValue = intersection.Y
 
                         });
 
@@ -155,8 +157,9 @@ namespace Simulator
                         CrossingPrice = macdDtPts.ElementAt(i).ActualPrice,
                         Action = currentAction,
                         sl = counter,
-                        cossDiff = Math.Abs(macd_q2.Y) - Math.Abs(signal_p2.Y)
-                        
+                        cossDiff = Math.Abs(macd_q2.Y) - Math.Abs(signal_p2.Y),
+                        smaValue = intersection.Y
+
                     });
 
                     lastAction = currentAction;
@@ -249,7 +252,9 @@ namespace Simulator
                         CrossingPrice = macdDtPts.ElementAt(i).ActualPrice,
                         Action = currentAction,
                         sl = counter,
-                        cossDiff = Math.Abs(macd_q2.Y) - Math.Abs(signal_p2.Y)
+                        cossDiff = Math.Abs(macd_q2.Y) - Math.Abs(signal_p2.Y),
+                        smaValue = intersection.Y
+                        
 
                     });
 

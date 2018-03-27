@@ -11,7 +11,6 @@ using CoinbaseExchange.NET.Utilities;
 using System.Threading;
 using CoinbaseExchange.NET;
 
-using System.Windows.Forms;
 
 
 namespace Simulator
@@ -19,8 +18,8 @@ namespace Simulator
     class Program
     {
 
+        static MyWindow _GraphingWindow;
 
-        [STAThread]
         static void Main(string[] args)
         {
             Logger.Logupdated += (object sender, LoggerEventArgs largs) => { Console.WriteLine(largs.LogMessage); };
@@ -29,11 +28,39 @@ namespace Simulator
 
             //Task.Run(()=> Application.Run(new WpfForm1()));
 
+            
+            ShowGraphingForm();
+
             ManualSimulate();
 
             //AutoSimulate();
 
 
+        }
+
+
+        private static void ShowGraphingForm()
+        {
+
+
+            //Run this Application by passing the window object 
+            //as the argument
+            Thread thread = new Thread(() => 
+            {
+
+                _GraphingWindow = new MyWindow();
+                System.Windows.Application _wpfApplication = new System.Windows.Application();
+                _wpfApplication.Run(_GraphingWindow);
+
+            });
+            thread.SetApartmentState(ApartmentState.STA);
+            thread.Start();
+
+
+            //Task.Run(() =>
+            //{
+
+            //});
         }
 
 
@@ -100,6 +127,7 @@ namespace Simulator
                     if (S == null)
                     {
                         S = new Simulator(ref Ticker, ProductName, inputCommonInterval, inputBigSmaLen, inputSmallSmaLen, true);
+                        S.GraphWindow = _GraphingWindow;
                     }
                     else
                     {
@@ -108,6 +136,7 @@ namespace Simulator
                             S.Dispose();
                             S = null;
                             S = new Simulator(ref Ticker, ProductName, inputCommonInterval, inputBigSmaLen, inputSmallSmaLen);
+                            S.GraphWindow = _GraphingWindow;
                         }
                     }
 
@@ -118,7 +147,7 @@ namespace Simulator
                     lastSmallSma = inputSmallSmaLen;
 
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
                     Console.WriteLine("invalid input / error in calc");
                 }
@@ -159,6 +188,7 @@ namespace Simulator
                     if (S == null)
                     {
                         S = new Simulator(ref Ticker, ProductName, curVar, autoBigsmaLen, autoSmallSmaLen, false);
+                        S.GraphWindow = _GraphingWindow;
                     }
                     else
                     {
@@ -167,6 +197,7 @@ namespace Simulator
                             S.Dispose();
                             S = null;
                             S = new Simulator(ref Ticker, ProductName, curVar, autoBigsmaLen, autoSmallSmaLen);
+                            S.GraphWindow = _GraphingWindow;
                         }
                     }
 
@@ -209,7 +240,9 @@ namespace Simulator
 
         private IEnumerable<SmaData> SmaDiff;
 
-        private int SignalLen; 
+        private int SignalLen;
+
+        internal MyWindow GraphWindow;
 
         public Simulator(ref TickerClient ticker, string productName, int CommonInterval = 30, int LargeSmaLen = 100, int SmallSmaLen = 35, bool downloadLatestData = false)
         {
@@ -522,6 +555,13 @@ namespace Simulator
 
             //System.Diagnostics.Debug.WriteLine("");
 
+
+
+            //show graph
+
+            
+
+
             List<CrossData> allCrossings_Parallel = new List<CrossData>();
 
             Parallel.ForEach(dLst, item =>
@@ -621,6 +661,9 @@ namespace Simulator
 
             //////allCrossings.AddRange(res);
 
+
+            ShowGraph(SmaDiff, SignalWithDataPtsBig, allCrossings_Parallel);
+
             Console.WriteLine("done");
 
             ////Console.WriteLine("\tserial");
@@ -630,6 +673,12 @@ namespace Simulator
             CalculatePl_Compounding(allCrossings_Parallel, printTrades);
 
 
+        }
+
+
+        private void ShowGraph(IEnumerable<SmaData> smadifPts, IEnumerable<SmaData> signalPts, IEnumerable<CrossData> allCrosses)
+        {
+            GraphWindow.ShowData(smadifPts, signalPts, allCrosses);
         }
 
         public void Dispose()
