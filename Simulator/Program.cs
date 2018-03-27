@@ -11,20 +11,23 @@ using CoinbaseExchange.NET.Utilities;
 using System.Threading;
 using CoinbaseExchange.NET;
 
+using System.Windows.Forms;
+
+
 namespace Simulator
 {
     class Program
     {
 
 
-
+        [STAThread]
         static void Main(string[] args)
         {
             Logger.Logupdated += (object sender, LoggerEventArgs largs) => { Console.WriteLine(largs.LogMessage); };
 
             //ExData DataManager = new ExData("LTC-USD", true);
 
-            
+            //Task.Run(()=> Application.Run(new WpfForm1()));
 
             ManualSimulate();
 
@@ -108,7 +111,7 @@ namespace Simulator
                         }
                     }
 
-                    S.Calculate(dt, inputSmaLen);
+                    S.Calculate(dt, inputSmaLen, true);
 
                     lastCommonInterval = inputCommonInterval;
                     lastBigSma = inputBigSmaLen;
@@ -139,14 +142,14 @@ namespace Simulator
             //wait for ticker to get ready
             Thread.Sleep(2 * 1000);
 
-            DateTime autoStartDate = new DateTime(2017, 10, 1);
-            var autoInterval = 30;//Enumerable.Range(20, 60).Where(i => i % 5 == 0);//30;
+            DateTime autoStartDate = new DateTime(2018, 3, 9);
+            var autoInterval = Enumerable.Range(30, 60).Where(i => i % 5 == 0);//30;
             var autoBigsmaLen = 100;
-            var autoSmallSmaLen = Enumerable.Range(35, 60).Where(i => i % 5 == 0); //every five
-            var autoSignalLen = 5;
+            var autoSmallSmaLen = 35;// Enumerable.Range(35, 60).Where(i => i % 5 == 0); //every five
+            var autoSignalLen = 7;
 
 
-            foreach (var curVar in autoSmallSmaLen)
+            foreach (var curVar in autoInterval)
             {
                 try
                 {
@@ -155,23 +158,23 @@ namespace Simulator
 
                     if (S == null)
                     {
-                        S = new Simulator(ref Ticker, ProductName, autoInterval, autoBigsmaLen, curVar, false);
+                        S = new Simulator(ref Ticker, ProductName, curVar, autoBigsmaLen, autoSmallSmaLen, false);
                     }
                     else
                     {
-                        if (!(lastCommonInterval == autoInterval && lastBigSma == autoBigsmaLen && lastSmallSma == curVar))
+                        if (!(lastCommonInterval == curVar && lastBigSma == autoBigsmaLen && lastSmallSma == autoSmallSmaLen))
                         {
                             S.Dispose();
                             S = null;
-                            S = new Simulator(ref Ticker, ProductName, autoInterval, autoBigsmaLen, curVar);
+                            S = new Simulator(ref Ticker, ProductName, curVar, autoBigsmaLen, autoSmallSmaLen);
                         }
                     }
 
                     S.Calculate(autoStartDate, autoSignalLen, true);
 
-                    lastCommonInterval = autoInterval;
+                    lastCommonInterval = curVar;
                     lastBigSma = autoBigsmaLen;
-                    lastSmallSma = curVar;
+                    lastSmallSma = autoSmallSmaLen;
 
                     Console.WriteLine("Enter to continue");
                     Console.ReadLine();
@@ -662,8 +665,17 @@ namespace Simulator
                 allCrossings.RemoveAt(allCrossings.IndexOf(allCrossings.Last()));
             }
 
+            StringBuilder trans = new StringBuilder();
+
+            StringBuilder transCsv = new StringBuilder();
+
             if (printTrade)
-                Console.WriteLine("Time\t\t\taction\t\tPrice\t\tFee\t\tSize\tPL\t\tBalance");
+            {
+                //Console.WriteLine("Time\t\t\taction\t\tPrice\t\tFee\t\tSize\tPL\t\tBalance");
+                trans.AppendLine("Time\t\t\t\taction\t\tPrice\t\tFee\t\t\tSize\tPL\t\t\tBalance");
+                transCsv.AppendLine("Time\tAction\tPrice\tFee\tSize\tPL\tBalance");
+            }
+                
 
             var plList = new List<decimal>();
 
@@ -681,6 +693,7 @@ namespace Simulator
             var lastAction = "";
 
             int stopLossSale = 0;
+
             
 
             for (int i = allCrossings.Count() - 1; i >= 0; i--)
@@ -704,13 +717,24 @@ namespace Simulator
 
                     if (printTrade)
                     {
-                        Console.WriteLine(
-                            cross.dt.ToString(@"yyyy-MM-dd HH:mm:ss") + "\t"
-                            + cross.Action + ((cross.comment != null)? "_M" : "") + "\t\t"
+                        var buyMsg = cross.dt.ToString(@"yyyy-MM-dd HH:mm:ss") + "\t"
+                            + cross.Action + ((cross.comment != null) ? "_M" : "") + "\t\t\t"
                             + Math.Round(buyAtPrice, 2).ToString() + "\t\t"
                             + Math.Round(buyFee, 2).ToString() + "\t\t"
-                            + Math.Round(curProdSize, 2).ToString() + "\t\t\t"
-                            + Math.Round(USDbalance, 2).ToString());
+                            + Math.Round(curProdSize, 2).ToString() + "\t\t\t\t"
+                            + Math.Round(USDbalance, 2).ToString();
+                        //Console.WriteLine(buyMsg);
+                        trans.AppendLine(buyMsg);
+
+
+                        var buyMsgCsv = cross.dt.ToString(@"yyyy-MM-dd HH:mm:ss") + "\t"
+                            + cross.Action + ((cross.comment != null) ? "_M" : "") + "\t"
+                            + Math.Round(buyAtPrice, 2).ToString() + "\t"
+                            + Math.Round(buyFee, 2).ToString() + "\t"
+                            + Math.Round(curProdSize, 2).ToString() + "\t"
+                            + Math.Round(USDbalance, 2).ToString();
+                        //Console.WriteLine(buyMsg);
+                        transCsv.AppendLine(buyMsgCsv);
                     }
 
                     lastAction = "buy";
@@ -747,14 +771,24 @@ namespace Simulator
 
                     if (printTrade)
                     {
-                        Console.WriteLine(
-                            cross.dt.ToString(@"yyyy-MM-dd HH:mm:ss") + "\t"
+                        var sellMsg = cross.dt.ToString(@"yyyy-MM-dd HH:mm:ss") + "\t"
                             + cross.Action + ((cross.comment != null) ? "_M" : "") + "\t\t"
                             + sellingPrice + "\t\t"
                             + Math.Round(sellFee, 2).ToString() + "\t\t"
                             + Math.Round(curProdSize, 2).ToString() + "\t"
                             + Math.Round(netpl, 2).ToString() + "\t\t"
-                            + Math.Round(USDbalance, 2).ToString());
+                            + Math.Round(USDbalance, 2).ToString();
+                        trans.AppendLine(sellMsg);
+
+
+                        var sellMsgCsv = cross.dt.ToString(@"yyyy-MM-dd HH:mm:ss") + "\t"
+                            + cross.Action + ((cross.comment != null) ? "_M" : "") + "\t"
+                            + sellingPrice + "\t"
+                            + Math.Round(sellFee, 2).ToString() + "\t"
+                            + Math.Round(curProdSize, 2).ToString() + "\t"
+                            + Math.Round(netpl, 2).ToString() + "\t"
+                            + Math.Round(USDbalance, 2).ToString();
+                        transCsv.AppendLine(sellMsgCsv);
                     }
 
 
@@ -781,7 +815,11 @@ namespace Simulator
                 "Stop Loss Count: " + stopLossSale.ToString() + "\n" +
                 "Avg. PL / Trade: " + Math.Round(plList.Average(), 2).ToString() + "\n\n";
 
-            Logger.WriteLog(msg);
+            trans.AppendLine(msg);
+
+            transCsv.AppendLine(msg);
+
+            Logger.WriteLog("\n" + transCsv.ToString());
 
             //Console.WriteLine("\nFrom: " + allCrossings.Last().dt.Date.ToString("yyyy-MMM-dd") + " To: " + allCrossings.First().dt.Date.ToString("yyyy-MMM-dd"));
             //Console.WriteLine("Interval: " + COMMON_INTERVAL.ToString());
