@@ -21,15 +21,14 @@ namespace Simulator
 
     class MyWindow : Window
     {
-        public PlotModel MyModel { get; private set; }
+        //public PlotModel SmaModel { get; private set; }
 
+        public PlotModel PriceModel { get; private set; }
         //Declare some UI controls to be placed inside the
         //window.
-        Button _searchButton;
-        TextBox _searchTextBox;
 
-        OxyPlot.Wpf.PlotView _oxyPV;
-        
+        OxyPlot.Wpf.PlotView _SmaPlotView;
+        OxyPlot.Wpf.PlotView _PricePlotView;
 
         //The controls can be placed only inside a panel.
         Grid _grid;
@@ -47,32 +46,24 @@ namespace Simulator
 
         public void ShowData(IEnumerable<SmaData> smadifPts, IEnumerable<SmaData> signalPts, IEnumerable<CrossData> allCrossData)
         {
-            MyModel = new PlotModel
-            {
-                Title = "Strategy 1",
-                PlotType = PlotType.Cartesian
 
+
+            PriceModel = new PlotModel
+            {
+                Title = "Prices"
             };
 
-            var samdiffSeries = new LineSeries
+            //var priceDt = smadifPts.Select(d => new DataPoint(Axis.ToDouble(d.Time), Convert.ToDouble(d.ActualPrice)));
+            var priceDt = smadifPts.Select(d => new DataPoint(Axis.ToDouble(d.Time), Convert.ToDouble(d.ActualPrice)));
+
+            var PriceSeries = new LineSeries
             {
-                Title = "macd"
-                
+                Title = "Price"
             };
+            PriceSeries.Points.AddRange(priceDt);
+            PriceModel.Series.Add(PriceSeries);
 
 
-            var dtpts1 = smadifPts.Select(d=> new DataPoint(Axis.ToDouble(d.Time) , d.SmaValue));
-            //var dtpts1 = smadifPts.Select((d,i) => new DataPoint(i, d.SmaValue));
-            samdiffSeries.Points.AddRange(dtpts1);
-
-
-
-            var signalSeries = new LineSeries
-            {
-                Title = "signal"
-                
-
-            };
 
 
             var BuyScatterSeries = new ScatterSeries
@@ -81,7 +72,7 @@ namespace Simulator
                 MarkerType = MarkerType.Circle
             };
 
-            var buyPoints = allCrossData.Where(a=>a.Action == "buy").Select((d) => new ScatterPoint(Axis.ToDouble(d.dt), Convert.ToDouble(d.smaValue)));
+            var buyPoints = allCrossData.Where(a => a.Action == "buy").Select((d) => new ScatterPoint(Axis.ToDouble(d.dt), Convert.ToDouble(d.CrossingPrice)));
             BuyScatterSeries.Points.AddRange(buyPoints);
 
 
@@ -90,24 +81,60 @@ namespace Simulator
                 Title = "sell",
                 MarkerType = MarkerType.Circle
             };
-            var SellPoints = allCrossData.Where(a => a.Action == "sell").Select((d) => new ScatterPoint(Axis.ToDouble(d.dt), Convert.ToDouble(d.smaValue)));
+            var SellPoints = allCrossData.Where(a => a.Action == "sell").Select((d) => new ScatterPoint(Axis.ToDouble(d.dt), Convert.ToDouble(d.CrossingPrice)));
             SellScatterSeries.Points.AddRange(SellPoints);
 
-            var dtpts2 = signalPts.Select(d => new DataPoint(Axis.ToDouble(d.Time), d.SmaValue));
-            //var dtpts2 = signalPts.Select((d,i) => new DataPoint(i, d.SmaValue));
-            signalSeries.Points.AddRange(dtpts2);
-
-            MyModel.Axes.Add(new DateTimeAxis { MajorGridlineThickness = 1, Position = AxisPosition.Bottom, Minimum = signalSeries.Points.First().X, Maximum = signalSeries.Points.Last().X });
-            MyModel.Axes.Add(new LinearAxis { MajorGridlineThickness = 1, Position = AxisPosition.Left, Minimum = -10, Maximum = 10 });
 
 
-            MyModel.Series.Add(samdiffSeries);
-            MyModel.Series.Add(signalSeries);
-            MyModel.Series.Add(BuyScatterSeries);
-            MyModel.Series.Add(SellScatterSeries);
+            PriceModel.Series.Add(BuyScatterSeries);
+            PriceModel.Series.Add(SellScatterSeries);
+
+            PriceModel.Axes.Add(new DateTimeAxis { MajorGridlineThickness = 1, Position = AxisPosition.Bottom, Minimum = PriceSeries.Points.First().X, Maximum = PriceSeries.Points.Last().X });
+            PriceModel.Axes.Add(new LinearAxis { MajorGridlineThickness = 1, Position = AxisPosition.Left, Minimum = 20, Maximum = 400 });
+
+            Dispatcher.Invoke(() => _PricePlotView.Model = PriceModel);
 
 
-            Dispatcher.Invoke(() => _oxyPV.Model = MyModel);
+
+            return;
+
+
+            //////SmaModel = new PlotModel
+            //////{
+            //////    Title = "Strategy 1",
+            //////    PlotType = PlotType.Cartesian
+            //////};
+
+            //////var samdiffSeries = new LineSeries
+            //////{
+            //////    Title = "macd"
+            //////};
+
+
+            //////var dtpts1 = smadifPts.Select(d=> new DataPoint(Axis.ToDouble(d.Time) , d.SmaValue));
+            //////samdiffSeries.Points.AddRange(dtpts1);
+
+
+
+            //////var signalSeries = new LineSeries
+            //////{
+            //////    Title = "signal"
+            //////};
+
+
+
+            //////var signalDtpts = signalPts.Select(d => new DataPoint(Axis.ToDouble(d.Time), d.SmaValue));
+            ////////var dtpts2 = signalPts.Select((d,i) => new DataPoint(i, d.SmaValue));
+            //////signalSeries.Points.AddRange(signalDtpts);
+
+            //////SmaModel.Axes.Add(new DateTimeAxis { MajorGridlineThickness = 1, Position = AxisPosition.Bottom, Minimum = signalSeries.Points.First().X, Maximum = signalSeries.Points.Last().X });
+            //////SmaModel.Axes.Add(new LinearAxis { MajorGridlineThickness = 1, Position = AxisPosition.Left, Minimum = -10, Maximum = 10 });
+
+
+            //////SmaModel.Series.Add(samdiffSeries);
+            //////SmaModel.Series.Add(signalSeries);
+
+            //////Dispatcher.Invoke(() => _SmaPlotView.Model = SmaModel);
             
 
 
@@ -119,8 +146,10 @@ namespace Simulator
         {
 
 
-            _oxyPV = new OxyPlot.Wpf.PlotView();
-            //_oxyPV.Height = 60;
+            //_SmaPlotView = new OxyPlot.Wpf.PlotView();
+
+            _PricePlotView = new OxyPlot.Wpf.PlotView();
+            //_SmaPlotView.Height = 100;
             //_oxyPV.Width = 200;
 
             //_searchButton = new Button { Height = 30, Width = 100, Content = "Search" };
@@ -131,7 +160,9 @@ namespace Simulator
             //Add the controls inside the panel.
             //_panel.Children.Add(_searchButton);
             //_panel.Children.Add(_searchTextBox);
-            _grid.Children.Add(_oxyPV);
+
+            _grid.Children.Add(_PricePlotView);
+            //_grid.Children.Add(_SmaPlotView);
 
             //Set this panel as the content for this window.
             this.Content = _grid;
@@ -140,72 +171,72 @@ namespace Simulator
 
         private void Start()
         {
-            MyModel = new PlotModel
-            {
-                Title = "Example 1"
-            };
+            ////SmaModel = new PlotModel
+            ////{
+            ////    Title = "Example 1"
+            ////};
 
-            MyModel.Series.Add(new FunctionSeries(Math.Cos, 0, 100, 0.1, "cos(x)"));
-
-
-
-            //var s1 = new LineSeries
-            //{
-            //    StrokeThickness = 0,
-            //    MarkerSize = 3,
-            //    MarkerStroke = OxyColors.ForestGreen,
-            //    MarkerType = MarkerType.Plus
-            //};
-
-            //foreach (var pt in Fern.Generate(2000))
-            //{
-            //    s1.Points.Add(new DataPoint(pt.X, -pt.Y));
-            //}
+            ////SmaModel.Series.Add(new FunctionSeries(Math.Cos, 0, 100, 0.1, "cos(x)"));
 
 
 
+            //////var s1 = new LineSeries
+            //////{
+            //////    StrokeThickness = 0,
+            //////    MarkerSize = 3,
+            //////    MarkerStroke = OxyColors.ForestGreen,
+            //////    MarkerType = MarkerType.Plus
+            //////};
 
-            // Create two line series (markers are hidden by default)
-            var series1 = new LineSeries
-            {
-                Title = "Series 1",
-                MarkerType = MarkerType.Circle
-            };
-            series1.Points.Add(new DataPoint(0, 0));
-            series1.Points.Add(new DataPoint(10, 18));
-            series1.Points.Add(new DataPoint(20, 12));
-            series1.Points.Add(new DataPoint(30, 8));
-            series1.Points.Add(new DataPoint(40, 15));
-
-            var series2 = new LineSeries { Title = "Series 2", MarkerType = MarkerType.Square };
-            series2.Points.Add(new DataPoint(0, 4));
-            series2.Points.Add(new DataPoint(10, 12));
-            series2.Points.Add(new DataPoint(20, 16));
-            series2.Points.Add(new DataPoint(30, 25));
-            series2.Points.Add(new DataPoint(40, 5));
-
-            // Add the series to the plot model
-            //MyModel.Series.Add(series1);
-
-
-            //MyModel.Series.Add(series2);
+            //////foreach (var pt in Fern.Generate(2000))
+            //////{
+            //////    s1.Points.Add(new DataPoint(pt.X, -pt.Y));
+            //////}
 
 
 
-            var xAxis = new LinearAxis();
-            xAxis.Position = AxisPosition.Bottom;
-            //xAxis.Maximum = 5;
 
-            MyModel.Axes.Add(xAxis);
+            ////// Create two line series (markers are hidden by default)
+            ////var series1 = new LineSeries
+            ////{
+            ////    Title = "Series 1",
+            ////    MarkerType = MarkerType.Circle
+            ////};
+            ////series1.Points.Add(new DataPoint(0, 0));
+            ////series1.Points.Add(new DataPoint(10, 18));
+            ////series1.Points.Add(new DataPoint(20, 12));
+            ////series1.Points.Add(new DataPoint(30, 8));
+            ////series1.Points.Add(new DataPoint(40, 15));
+
+            ////var series2 = new LineSeries { Title = "Series 2", MarkerType = MarkerType.Square };
+            ////series2.Points.Add(new DataPoint(0, 4));
+            ////series2.Points.Add(new DataPoint(10, 12));
+            ////series2.Points.Add(new DataPoint(20, 16));
+            ////series2.Points.Add(new DataPoint(30, 25));
+            ////series2.Points.Add(new DataPoint(40, 5));
+
+            ////// Add the series to the plot model
+            //////MyModel.Series.Add(series1);
 
 
-            _oxyPV.Model = MyModel;
+            //////MyModel.Series.Add(series2);
 
 
 
-            ///MyModel.InvalidatePlot(true);
+            ////var xAxis = new LinearAxis();
+            ////xAxis.Position = AxisPosition.Bottom;
+            //////xAxis.Maximum = 5;
 
-            //var x = oxyPV.MaxWidth = 5;
+            ////SmaModel.Axes.Add(xAxis);
+
+
+            ////_SmaPlotView.Model = SmaModel;
+
+
+
+            ///////MyModel.InvalidatePlot(true);
+
+            //////var x = oxyPV.MaxWidth = 5;
 
 
         }

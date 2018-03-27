@@ -31,9 +31,9 @@ namespace Simulator
             
             ShowGraphingForm();
 
-            ManualSimulate();
+            //ManualSimulate();
 
-            //AutoSimulate();
+            AutoSimulate();
 
 
         }
@@ -171,7 +171,7 @@ namespace Simulator
             //wait for ticker to get ready
             Thread.Sleep(2 * 1000);
 
-            DateTime autoStartDate = new DateTime(2018, 3, 9);
+            DateTime autoStartDate = new DateTime(2018, 1, 1);
             var autoInterval = Enumerable.Range(30, 60).Where(i => i % 5 == 0);//30;
             var autoBigsmaLen = 100;
             var autoSmallSmaLen = 35;// Enumerable.Range(35, 60).Where(i => i % 5 == 0); //every five
