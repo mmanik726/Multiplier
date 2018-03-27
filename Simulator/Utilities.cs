@@ -18,6 +18,8 @@ namespace Simulator
         public double cossDiff { get; set; }
         public double smaValue { get; set; }
         public string comment { get; set; }
+        public double CalculatedBalance { get; set; }
+        public double CalculatedNetPL { get; set; }
     }
 
     public class Utilities

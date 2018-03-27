@@ -12,6 +12,7 @@ using OxyPlot;
 using OxyPlot.Axes;
 using OxyPlot.Series;
 
+using CoinbaseExchange.NET.Data;
 //using OxyPlot.Wpf;
 namespace Simulator
 {
@@ -21,17 +22,17 @@ namespace Simulator
 
     class MyWindow : Window
     {
-        //public PlotModel SmaModel { get; private set; }
 
-        public PlotModel PriceModel { get; private set; }
         //Declare some UI controls to be placed inside the
         //window.
 
         OxyPlot.Wpf.PlotView _SmaPlotView;
         OxyPlot.Wpf.PlotView _PricePlotView;
 
+        OxyPlot.Wpf.PlotView _PLPlotView;
+
         //The controls can be placed only inside a panel.
-        Grid _grid;
+        StackPanel _stkPanel;
 
         public MyWindow()
         {
@@ -40,15 +41,88 @@ namespace Simulator
             //constructor.
             InitializeComponent();
             //Start();
+            this.SizeChanged += MyWindow_SizeChanged;
+
+
+            _PLPlotView.Margin = new Thickness(10);
+            _PLPlotView.Height = 300;
+
+            _SmaPlotView.Margin = new Thickness(10);// (10, 171, 10, 10);
+            _SmaPlotView.Height = 290; //MyWindow.Height / 2;
+
+            _PricePlotView.Margin = new Thickness(10);//(10,10,10,153);
+            _PricePlotView.Height = 290; // this.Height / 2;
+
+
+
+
 
         }
 
+        private void MyWindow_AxisChanged(object sender, AxisChangedEventArgs e)
+        {
+            //throw new NotImplementedException();
+
+            _PricePlotView.Model.Axes[0].Maximum = _SmaPlotView.Model.Axes[0].ActualMaximum;
+
+            _PricePlotView.Model.Axes[0].Minimum = _SmaPlotView.Model.Axes[0].ActualMinimum;
+
+            _PricePlotView.InvalidatePlot(false);
+
+
+        }
+
+
+        private void MyWindow_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            //throw new NotImplementedException();
+
+            System.Diagnostics.Debug.WriteLine(this.ActualHeight);
+
+
+            //_SmaPlotView.Margin = new Thickness(10, 0, 10, 10);
+            //_SmaPlotView.Height = 700;// 150; //MyWindow.Height / 2;
+
+            //_SmaPlotView.Margin = new Thickness(10, 10, 10, 10);
+            //_SmaPlotView.Height = 500; // this.Height / 2;
+
+
+        }
 
         public void ShowData(IEnumerable<SmaData> smadifPts, IEnumerable<SmaData> signalPts, IEnumerable<CrossData> allCrossData)
         {
 
 
-            PriceModel = new PlotModel
+            var PlModel = new PlotModel
+            {
+                Title = "PL"
+            };
+
+            var BalanceSeries = new LineSeries
+            {
+                Title = "Balance"
+            };
+            var BalanceDtpts = allCrossData.Where(c => c.Action == "sell").Select(s => new DataPoint(Axis.ToDouble(s.dt), s.CalculatedBalance));
+            BalanceSeries.Points.AddRange(BalanceDtpts);
+            PlModel.Series.Add(BalanceSeries);
+
+            var PlSeries = new LineSeries
+            {
+                Title = "PL"
+            };
+            var PlDtpts = allCrossData.Where(c => c.Action == "sell").Select(s => new DataPoint(Axis.ToDouble(s.dt), s.CalculatedNetPL));
+            PlSeries.Points.AddRange(PlDtpts);
+            PlModel.Series.Add(PlSeries);
+
+
+
+            PlModel.Axes.Add(new DateTimeAxis { MajorGridlineThickness = 1, Position = AxisPosition.Bottom, Minimum = BalanceSeries.Points.First().X, Maximum = BalanceSeries.Points.Last().X });
+            PlModel.Axes.Add(new LinearAxis { MajorGridlineThickness = 1, Position = AxisPosition.Left });
+
+            Dispatcher.Invoke(() => _PLPlotView.Model = PlModel);
+
+
+            var PriceModel = new PlotModel
             {
                 Title = "Prices"
             };
@@ -64,6 +138,22 @@ namespace Simulator
             PriceModel.Series.Add(PriceSeries);
 
 
+
+            //var SmaPrice_len100 = new LineSeries
+            //{
+            //    Title = "sma 100"
+            //};
+            //var smaDtpts100 = priceDt.Select((d) => d.Y).ToList().SMA(100).Select((s, i) => new DataPoint(priceDt.ElementAt(i).X, s));
+            //SmaPrice_len100.Points.AddRange(smaDtpts100);
+            //PriceModel.Series.Add(SmaPrice_len100);
+
+            //var SmaPrice_len35 = new LineSeries
+            //{
+            //    Title = "sma 35"
+            //};
+            //var smaDtpts35 = priceDt.Select((d) => d.Y).ToList().SMA(35).Select((s, i) => new DataPoint(priceDt.ElementAt(i).X, s));
+            //SmaPrice_len35.Points.AddRange(smaDtpts35);
+            //PriceModel.Series.Add(SmaPrice_len35);
 
 
             var BuyScatterSeries = new ScatterSeries
@@ -90,51 +180,65 @@ namespace Simulator
             PriceModel.Series.Add(SellScatterSeries);
 
             PriceModel.Axes.Add(new DateTimeAxis { MajorGridlineThickness = 1, Position = AxisPosition.Bottom, Minimum = PriceSeries.Points.First().X, Maximum = PriceSeries.Points.Last().X });
-            PriceModel.Axes.Add(new LinearAxis { MajorGridlineThickness = 1, Position = AxisPosition.Left, Minimum = 20, Maximum = 400 });
+            PriceModel.Axes.Add(new LinearAxis { MajorGridlineThickness = 1, Position = AxisPosition.Left});
 
             Dispatcher.Invoke(() => _PricePlotView.Model = PriceModel);
 
-
-
-            return;
-
-
-            //////SmaModel = new PlotModel
-            //////{
-            //////    Title = "Strategy 1",
-            //////    PlotType = PlotType.Cartesian
-            //////};
-
-            //////var samdiffSeries = new LineSeries
-            //////{
-            //////    Title = "macd"
-            //////};
-
-
-            //////var dtpts1 = smadifPts.Select(d=> new DataPoint(Axis.ToDouble(d.Time) , d.SmaValue));
-            //////samdiffSeries.Points.AddRange(dtpts1);
+            
 
 
 
-            //////var signalSeries = new LineSeries
-            //////{
-            //////    Title = "signal"
-            //////};
+            //return;
+
+
+            var SmaModel = new PlotModel
+            {
+                Title = "Strategy 1",
+                PlotType = PlotType.Cartesian
+            };
 
 
 
-            //////var signalDtpts = signalPts.Select(d => new DataPoint(Axis.ToDouble(d.Time), d.SmaValue));
-            ////////var dtpts2 = signalPts.Select((d,i) => new DataPoint(i, d.SmaValue));
-            //////signalSeries.Points.AddRange(signalDtpts);
 
-            //////SmaModel.Axes.Add(new DateTimeAxis { MajorGridlineThickness = 1, Position = AxisPosition.Bottom, Minimum = signalSeries.Points.First().X, Maximum = signalSeries.Points.Last().X });
-            //////SmaModel.Axes.Add(new LinearAxis { MajorGridlineThickness = 1, Position = AxisPosition.Left, Minimum = -10, Maximum = 10 });
+            var samdiffSeries = new LineSeries
+            {
+                Title = "macd"
+            };
 
 
-            //////SmaModel.Series.Add(samdiffSeries);
-            //////SmaModel.Series.Add(signalSeries);
+            var smaDataPts = smadifPts.Select(d => new DataPoint(Axis.ToDouble(d.Time), d.SmaValue));
+            samdiffSeries.Points.AddRange(smaDataPts);
 
-            //////Dispatcher.Invoke(() => _SmaPlotView.Model = SmaModel);
+
+
+            var signalSeries = new LineSeries
+            {
+                Title = "signal"
+            };
+
+
+            var signalDtpts = signalPts.Select(d => new DataPoint(Axis.ToDouble(d.Time), d.SmaValue));
+            //var dtpts2 = signalPts.Select((d,i) => new DataPoint(i, d.SmaValue));
+            signalSeries.Points.AddRange(signalDtpts);
+
+            
+
+
+            SmaModel.Series.Add(samdiffSeries);
+            SmaModel.Series.Add(signalSeries);
+
+
+            var smaXAxis = new DateTimeAxis { MajorGridlineThickness = 1, Position = AxisPosition.Bottom, Minimum = signalSeries.Points.First().X, Maximum = signalSeries.Points.Last().X };
+            smaXAxis.AxisChanged += MyWindow_AxisChanged;
+
+            SmaModel.Axes.Add(smaXAxis);
+            SmaModel.Axes.Add(new LinearAxis { MajorGridlineThickness = 1, Position = AxisPosition.Left, Minimum = -10, Maximum = 10 });
+
+            Dispatcher.Invoke(() => _SmaPlotView.Model = SmaModel);
+
+
+
+
             
 
 
@@ -145,27 +249,29 @@ namespace Simulator
         void InitializeComponent()
         {
 
+            _stkPanel = new StackPanel();
 
-            //_SmaPlotView = new OxyPlot.Wpf.PlotView();
+
+            _PLPlotView = new OxyPlot.Wpf.PlotView();
+            _stkPanel.Children.Add(_PLPlotView);
 
             _PricePlotView = new OxyPlot.Wpf.PlotView();
-            //_SmaPlotView.Height = 100;
-            //_oxyPV.Width = 200;
+            _stkPanel.Children.Add(_PricePlotView);
 
-            //_searchButton = new Button { Height = 30, Width = 100, Content = "Search" };
-            //_searchTextBox = new TextBox { Height = 30, Width = 100 };
+            _SmaPlotView = new OxyPlot.Wpf.PlotView();
+            _stkPanel.Children.Add(_SmaPlotView);
 
-            _grid = new Grid();
 
-            //Add the controls inside the panel.
-            //_panel.Children.Add(_searchButton);
-            //_panel.Children.Add(_searchTextBox);
 
-            _grid.Children.Add(_PricePlotView);
+
             //_grid.Children.Add(_SmaPlotView);
 
             //Set this panel as the content for this window.
-            this.Content = _grid;
+            this.Content = _stkPanel;
+
+
+
+
         }
 
 

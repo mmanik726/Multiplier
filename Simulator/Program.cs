@@ -187,7 +187,7 @@ namespace Simulator
 
                     if (S == null)
                     {
-                        S = new Simulator(ref Ticker, ProductName, curVar, autoBigsmaLen, autoSmallSmaLen, false);
+                        S = new Simulator(ref Ticker, ProductName, curVar, autoBigsmaLen, autoSmallSmaLen, true);
                         S.GraphWindow = _GraphingWindow;
                     }
                     else
@@ -662,7 +662,7 @@ namespace Simulator
             //////allCrossings.AddRange(res);
 
 
-            ShowGraph(SmaDiff, SignalWithDataPtsBig, allCrossings_Parallel);
+            
 
             Console.WriteLine("done");
 
@@ -672,6 +672,8 @@ namespace Simulator
             //Console.WriteLine("\n\tparallel\n");
             CalculatePl_Compounding(allCrossings_Parallel, printTrades);
 
+            //show graph after calculations
+            ShowGraph(SmaDiff, SignalWithDataPtsBig, allCrossings_Parallel);
 
         }
 
@@ -764,6 +766,8 @@ namespace Simulator
 
                     USDbalance = USDbalance - (curProdSize * buyAtPrice) - buyFee;
 
+                    cross.CalculatedBalance = Convert.ToDouble(USDbalance);
+
                     if (printTrade)
                     {
                         var buyMsg = cross.dt.ToString(@"yyyy-MM-dd HH:mm:ss") + "\t"
@@ -810,6 +814,10 @@ namespace Simulator
 
 
                     var netpl = ((sellAtPrice - buyAtPrice) * curProdSize ) - (buyFee + sellFee);
+
+
+                    cross.CalculatedBalance = Math.Round(Convert.ToDouble(USDbalance), 2);
+                    cross.CalculatedNetPL = Math.Round(Convert.ToDouble(netpl), 2);
 
                     var sellingPrice = Math.Round(sellAtPrice, 2).ToString();
 
