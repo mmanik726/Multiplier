@@ -188,6 +188,170 @@ namespace Simulator
         }
 
 
+        public static void EnterMissingActions(ref List<CrossData> allCrossings)
+        {
+            allCrossings = allCrossings.OrderBy(s => s.dt).ToList();
+
+            var lastAction = "";
+            List<CrossData> ManualEntries = new List<CrossData>();
+            for (int i = 0; i < allCrossings.Count(); i++)
+            {
+
+                //if last action = current action 
+                if (lastAction == allCrossings[i].Action)
+                {
+                    var manualEntry = (lastAction == "sell") ? "buy" : "sell";
+                    //add to list 
+                    ManualEntries.Add(new CrossData
+                    {
+                        dt = allCrossings[i - 1].dt.AddMinutes(1),
+                        CrossingPrice = allCrossings[i - 1].CrossingPrice,
+                        Action = manualEntry,
+                        sl = allCrossings[i - 1].sl + 1,
+                        cossDiff = 0,
+                        comment = "MANUAL_ENTRY"
+                    });
+
+                    //lastAction = manualEntry;
+                    //continue;
+                }
+
+                lastAction = allCrossings[i].Action;
+            }
+
+            allCrossings.AddRange(ManualEntries);
+
+            allCrossings = allCrossings.OrderBy(s => s.dt).ToList();
+
+        }
+
+
+        public List<CrossData> Getcrossings_Linq(IEnumerable<SmaData> macdDtPts, IEnumerable<SmaData> signalDtPts, DateTime simStartDate, DateTime simEndDate)
+        {
+
+            //int L_SIGNAL_LEN = smaOfSmaLen;// 2;//5;//10;
+            //const int S_SIGNAL_LEN = 5;
+
+            var strt = macdDtPts.First().Time;
+            var end = macdDtPts.Last().Time;
+
+            var sigstrt = signalDtPts.First().Time;
+            var sigend = signalDtPts.Last().Time;
+
+            var macdptsCount = macdDtPts.Count();
+            var signalPtCounts = signalDtPts.Count();
+
+            //Console.WriteLine("\t\t" + strt.ToString() + "\t" + end.ToString() + "\n");
+
+            //Console.WriteLine(smaDtPts.Count());
+            ///macdDtPts = macdDtPts.Where(a => a.Time >= simStartDate && a.Time < simEndDate);
+            //Console.WriteLine(smaDtPts.Count());
+
+
+
+            //var bigSmaOfMacd = signalDtPts;//macdDtPts.Select(d => d.SmaValue).ToList().SMA(L_SIGNAL_LEN);
+            //var smallSmaOfMacd = smaDtPts.Select(d => d.diff).ToList().SMA(S_SIGNAL_LEN);
+
+
+            var crossList = new List<CrossData>();
+
+
+
+            var allBuys = macdDtPts.Where((d, i) => d.SmaValue > signalDtPts.ElementAt(i).SmaValue).ToList();
+
+            var allSells = macdDtPts.Where((d, i) => d.SmaValue < signalDtPts.ElementAt(i).SmaValue).ToList();
+
+
+            while (allBuys.Count() > 0 || allSells.Count() > 0)
+            {
+
+                if (allBuys.Count() == 0)
+                {
+                    var tempSingleSell = allSells.First();
+                    var tempSingleSellData = new CrossData
+                    {
+                        Action = "sell",
+                        dt = tempSingleSell.Time,
+                        CrossingPrice = tempSingleSell.ActualPrice,
+                        smaValue = tempSingleSell.SmaValue
+                    };
+                    crossList.Add(tempSingleSellData);
+
+                    break;
+                }
+
+                if (allSells.Count() == 0)
+                {
+                    var tempSingleBuy = allBuys.First();
+                    var tempSingleBuyData = new CrossData
+                    {
+                        Action = "buy",
+                        dt = tempSingleBuy.Time,
+                        CrossingPrice = tempSingleBuy.ActualPrice,
+                        smaValue = tempSingleBuy.SmaValue
+                    };
+                    crossList.Add(tempSingleBuyData);
+
+                    break;
+                }
+
+
+
+                var curBuy = allBuys.First();
+                var tempBuyData = new CrossData
+                {
+                    Action = "buy",
+                    dt = curBuy.Time,
+                    CrossingPrice = curBuy.ActualPrice,
+                    smaValue = curBuy.SmaValue
+                };
+                crossList.Add(tempBuyData);
+
+                
+                var curSell = allSells.First();
+                var tempSellData = new CrossData
+                {
+                    Action = "sell",
+                    dt = curSell.Time,
+                    CrossingPrice = curSell.ActualPrice,
+                    smaValue = curSell.SmaValue
+                };
+                crossList.Add(tempSellData);
+
+
+
+                allBuys = allBuys.Where((d) => d.Time > curSell.Time).ToList();
+                if (allBuys.Count() > 0)
+                {
+                    allSells = allSells.Where((d) => d.Time > allBuys.First().Time).ToList();
+                }
+                else
+                {
+                    break;
+                }
+                
+            }
+
+
+
+
+            
+
+            lock (cwWriteLock)
+            {
+                Console.WriteLine("\t\t" + simStartDate.ToString() + "\t" + simEndDate.ToString() + "(" + crossList.Count() + ")\n");
+            }
+
+            if (crossList.First().Action == "buy")
+            {
+                crossList.RemoveAt(0);
+            }
+
+            return crossList;
+
+        }
+
+
 
         public List<CrossData> Getcrossings_Parallel(IEnumerable<SmaData> macdDtPts, IEnumerable<SmaData> signalDtPts, DateTime simStartDate, DateTime simEndDate, int smaOfSmaLen = 2, int counter = 0)
         {

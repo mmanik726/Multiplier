@@ -582,39 +582,43 @@ namespace Simulator
 
             });
 
-            allCrossings_Parallel = allCrossings_Parallel.OrderBy(s => s.dt).ToList();
+            Utilities.EnterMissingActions(ref allCrossings_Parallel);
 
 
-            var lastAction = "";
-            List<CrossData> ManualEntries = new List<CrossData>();
-            for (int i = 0; i < allCrossings_Parallel.Count(); i++)
-            {
 
-                //if last action = current action 
-                if (lastAction == allCrossings_Parallel[i].Action)
-                {
-                    var manualEntry = (lastAction == "sell") ? "buy" : "sell";
-                    //add to list 
-                    ManualEntries.Add(new CrossData
-                    {
-                        dt = allCrossings_Parallel[i - 1].dt.AddMinutes(1),
-                        CrossingPrice = allCrossings_Parallel[i - 1].CrossingPrice,
-                        Action = manualEntry,
-                        sl = allCrossings_Parallel[i - 1].sl + 1,
-                        cossDiff = 0,
-                        comment = "MANUAL_ENTRY"
-                    });
+            List<CrossData> allCrossings_Linq = new List<CrossData>();
+            Utilities crossingCal = new Utilities();
 
-                    //lastAction = manualEntry;
-                    //continue;
-                }
+            var requiredSmaDiffPtsLnq = SmaDiff.Where((s => s.Time >= simStartDate && s.Time < simEndTime));
 
-                lastAction = allCrossings_Parallel[i].Action;
-            }
+            var requiredSignalPtsLnq = SignalWithDataPtsBig.Where((s => s.Time >= simStartDate && s.Time < simEndTime));
 
-            allCrossings_Parallel.AddRange(ManualEntries);
+            var Linqres = crossingCal.Getcrossings_Linq(requiredSmaDiffPtsLnq, requiredSignalPtsLnq, SmaDiff.First().Time, SmaDiff.Last().Time);
+            allCrossings_Linq.AddRange(Linqres);
 
-            allCrossings_Parallel = allCrossings_Parallel.OrderBy(s => s.dt).ToList();
+            //Utilities.EnterMissingActions(ref Linqres);
+
+            //foreach (var item in dLst)
+            //{
+            //    Utilities crossingCalculator = new Utilities();
+
+            //    var requiredSmaDiffPts = SmaDiff.Where((s => s.Time >= item.start && s.Time < item.end));
+
+            //    var requiredSignalPts = SignalWithDataPtsBig.Where((s => s.Time >= item.start && s.Time < item.end));
+
+            //    var res = crossingCalculator.Getcrossings_Linq(requiredSmaDiffPts, requiredSignalPts, item.start, item.end);
+
+            //    //allCrossings.AddRange(res.Result);
+            //    lock (addLock)
+            //    {
+            //        allCrossings_Linq.AddRange(res);
+            //    }
+
+            //};
+
+
+
+
 
             //for (int i = 0; i < allCrossings_Parallel.Count(); i++)
             //{
@@ -662,7 +666,7 @@ namespace Simulator
             //////allCrossings.AddRange(res);
 
 
-            
+
 
             Console.WriteLine("done");
 
@@ -671,6 +675,12 @@ namespace Simulator
 
             //Console.WriteLine("\n\tparallel\n");
             CalculatePl_Compounding(allCrossings_Parallel, printTrades);
+
+
+            Console.WriteLine("\nLinq (press enter to continue):\n");
+            Console.ReadLine();
+            CalculatePl_Compounding(allCrossings_Linq, printTrades);
+
 
             //show graph after calculations
             ShowGraph(SmaDiff, SignalWithDataPtsBig, allCrossings_Parallel);
