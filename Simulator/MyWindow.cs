@@ -100,15 +100,17 @@ namespace Simulator
 
             var BalanceSeries = new LineSeries
             {
-                Title = "Balance"
+                Title = "Balance(x10K)",
+                StrokeThickness = 1
             };
-            var BalanceDtpts = allCrossData.Where(c => c.Action == "sell").Select(s => new DataPoint(Axis.ToDouble(s.dt), s.CalculatedBalance));
+            var BalanceDtpts = allCrossData.Where(c => c.Action == "sell").Select(s => new DataPoint(Axis.ToDouble(s.dt), s.CalculatedBalance / 10));
             BalanceSeries.Points.AddRange(BalanceDtpts);
             PlModel.Series.Add(BalanceSeries);
 
             var PlSeries = new LineSeries
             {
-                Title = "PL"
+                Title = "PL",
+                StrokeThickness = 1
             };
             var PlDtpts = allCrossData.Where(c => c.Action == "sell").Select(s => new DataPoint(Axis.ToDouble(s.dt), s.CalculatedNetPL));
             PlSeries.Points.AddRange(PlDtpts);
@@ -116,8 +118,21 @@ namespace Simulator
 
 
 
-            PlModel.Axes.Add(new DateTimeAxis { MajorGridlineThickness = 1, Position = AxisPosition.Bottom, Minimum = BalanceSeries.Points.First().X, Maximum = BalanceSeries.Points.Last().X });
-            PlModel.Axes.Add(new LinearAxis { MajorGridlineThickness = 1, Position = AxisPosition.Left });
+            PlModel.Axes.Add(new DateTimeAxis
+            {
+                MajorGridlineThickness = 1,
+                MajorGridlineStyle = LineStyle.Solid,
+                Position = AxisPosition.Bottom,
+                Minimum = BalanceSeries.Points.First().X,
+                Maximum = BalanceSeries.Points.Last().X
+            });
+
+            PlModel.Axes.Add(new LinearAxis
+            {
+                MajorGridlineThickness = 1,
+                MajorGridlineStyle = LineStyle.Solid,
+                Position = AxisPosition.Left
+            });
 
             Dispatcher.Invoke(() => _PLPlotView.Model = PlModel);
 
@@ -132,7 +147,8 @@ namespace Simulator
 
             var PriceSeries = new LineSeries
             {
-                Title = "Price"
+                Title = "Price",
+                StrokeThickness = 1
             };
             PriceSeries.Points.AddRange(priceDt);
             PriceModel.Series.Add(PriceSeries);
@@ -179,12 +195,25 @@ namespace Simulator
             PriceModel.Series.Add(BuyScatterSeries);
             PriceModel.Series.Add(SellScatterSeries);
 
-            PriceModel.Axes.Add(new DateTimeAxis { MajorGridlineThickness = 1, Position = AxisPosition.Bottom, Minimum = PriceSeries.Points.First().X, Maximum = PriceSeries.Points.Last().X });
-            PriceModel.Axes.Add(new LinearAxis { MajorGridlineThickness = 1, Position = AxisPosition.Left});
+            PriceModel.Axes.Add(new DateTimeAxis
+            {
+                MajorGridlineThickness = 1,
+                MajorGridlineStyle = LineStyle.Solid,
+                Position = AxisPosition.Bottom,
+                Minimum = BuyScatterSeries.Points.First().X,
+                Maximum = BuyScatterSeries.Points.Last().X
+            });
+            PriceModel.Axes.Add(new LinearAxis
+            {
+                MajorGridlineThickness = 1,
+                MajorGridlineStyle = LineStyle.Solid,
+                Position = AxisPosition.Left
+
+            });
 
             Dispatcher.Invoke(() => _PricePlotView.Model = PriceModel);
 
-            
+
 
 
 
@@ -202,7 +231,8 @@ namespace Simulator
 
             var samdiffSeries = new LineSeries
             {
-                Title = "macd"
+                Title = "macd",
+                StrokeThickness = 1
             };
 
 
@@ -213,7 +243,8 @@ namespace Simulator
 
             var signalSeries = new LineSeries
             {
-                Title = "signal"
+                Title = "signal",
+                StrokeThickness = 1
             };
 
 
@@ -221,25 +252,35 @@ namespace Simulator
             //var dtpts2 = signalPts.Select((d,i) => new DataPoint(i, d.SmaValue));
             signalSeries.Points.AddRange(signalDtpts);
 
-            
+
 
 
             SmaModel.Series.Add(samdiffSeries);
             SmaModel.Series.Add(signalSeries);
 
 
-            var smaXAxis = new DateTimeAxis { MajorGridlineThickness = 1, Position = AxisPosition.Bottom, Minimum = signalSeries.Points.First().X, Maximum = signalSeries.Points.Last().X };
+            var smaXAxis = new DateTimeAxis { MajorGridlineThickness = 1, Position = AxisPosition.Bottom, Minimum = BuyScatterSeries.Points.First().X, Maximum = BuyScatterSeries.Points.Last().X };
+
+            smaXAxis.MajorGridlineStyle = LineStyle.Solid;
+
             smaXAxis.AxisChanged += MyWindow_AxisChanged;
 
             SmaModel.Axes.Add(smaXAxis);
-            SmaModel.Axes.Add(new LinearAxis { MajorGridlineThickness = 1, Position = AxisPosition.Left, Minimum = -10, Maximum = 10 });
+            SmaModel.Axes.Add(new LinearAxis
+            {
+                MajorGridlineThickness = 1,
+                MajorGridlineStyle = LineStyle.Solid,
+                Position = AxisPosition.Left,
+                Minimum = -10,
+                Maximum = 10
+            });
 
             Dispatcher.Invoke(() => _SmaPlotView.Model = SmaModel);
 
 
 
 
-            
+
 
 
         }

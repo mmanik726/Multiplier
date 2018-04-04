@@ -226,6 +226,107 @@ namespace Simulator
         }
 
 
+        
+        public List<CrossData> Getcrossings_Linq(List<SmaData> AllBuys, List<SmaData> AllSells)
+        {
+
+          
+
+
+            var crossList = new List<CrossData>();
+
+            while (AllBuys.Count() > 0 || AllSells.Count() > 0)
+            {
+
+                if (AllBuys.Count() == 0)
+                {
+                    var tempSingleSell = AllSells.First();
+                    var tempSingleSellData = new CrossData
+                    {
+                        Action = "sell",
+                        dt = tempSingleSell.Time,
+                        CrossingPrice = tempSingleSell.ActualPrice,
+                        smaValue = tempSingleSell.SmaValue
+                    };
+                    crossList.Add(tempSingleSellData);
+
+                    break;
+                }
+
+                if (AllSells.Count() == 0)
+                {
+                    var tempSingleBuy = AllBuys.First();
+                    var tempSingleBuyData = new CrossData
+                    {
+                        Action = "buy",
+                        dt = tempSingleBuy.Time,
+                        CrossingPrice = tempSingleBuy.ActualPrice,
+                        smaValue = tempSingleBuy.SmaValue
+                    };
+                    crossList.Add(tempSingleBuyData);
+
+                    break;
+                }
+
+
+
+                var curBuy = AllBuys.First();
+                var tempBuyData = new CrossData
+                {
+                    Action = "buy",
+                    dt = curBuy.Time,
+                    CrossingPrice = curBuy.ActualPrice,
+                    smaValue = curBuy.SmaValue
+                };
+                crossList.Add(tempBuyData);
+
+                
+                var curSell = AllSells.First();
+                var tempSellData = new CrossData
+                {
+                    Action = "sell",
+                    dt = curSell.Time,
+                    CrossingPrice = curSell.ActualPrice,
+                    smaValue = curSell.SmaValue
+                };
+                crossList.Add(tempSellData);
+
+
+
+                AllBuys = AllBuys.Where((d) => d.Time > curSell.Time).ToList();
+                if (AllBuys.Count() > 0)
+                {
+                    AllSells = AllSells.Where((d) => d.Time > AllBuys.First().Time).ToList();
+                }
+                else
+                {
+                    break;
+                }
+                
+            }
+
+
+
+
+            
+
+            //lock (cwWriteLock)
+            //{
+            //    Console.WriteLine("\t\t" + simStartDate.ToString() + "\t" + simEndDate.ToString() + "(" + crossList.Count() + ")\n");
+            //}
+
+            if (crossList.First().Action == "buy")
+            {
+                crossList.RemoveAt(0);
+            }
+
+            return crossList;
+
+        }
+
+
+
+
         public List<CrossData> Getcrossings_Linq(IEnumerable<SmaData> macdDtPts, IEnumerable<SmaData> signalDtPts, DateTime simStartDate, DateTime simEndDate)
         {
 
@@ -433,10 +534,10 @@ namespace Simulator
             }
 
 
-            lock (cwWriteLock)
-            {
-                Console.WriteLine("\t\t" + simStartDate.ToString() + "\t" + simEndDate.ToString() + "(" + crossList.Count() + ")\n");
-            }
+            //lock (cwWriteLock)
+            //{
+            //    Console.WriteLine("\t\t" + simStartDate.ToString() + "\t" + simEndDate.ToString() + "(" + crossList.Count() + ")\n");
+            //}
 
 
             return crossList;

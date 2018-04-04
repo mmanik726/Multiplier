@@ -11,7 +11,7 @@ using CoinbaseExchange.NET.Utilities;
 using System.Threading;
 using CoinbaseExchange.NET;
 
-
+//using CoinbaseExchange.NET.Data;
 
 namespace Simulator
 {
@@ -35,7 +35,7 @@ namespace Simulator
 
             AutoSimulate();
 
-
+            //AutoSimulate2();
         }
 
 
@@ -171,8 +171,8 @@ namespace Simulator
             //wait for ticker to get ready
             Thread.Sleep(2 * 1000);
 
-            DateTime autoStartDate = new DateTime(2018, 1, 1);
-            var autoInterval = Enumerable.Range(30, 60).Where(i => i % 5 == 0);//30;
+            DateTime autoStartDate = new DateTime(2018, 02, 17);
+            var autoInterval = Enumerable.Range(15, 60).Where(i => i % 5 == 0);//30;
             var autoBigsmaLen = 100;
             var autoSmallSmaLen = 35;// Enumerable.Range(35, 60).Where(i => i % 5 == 0); //every five
             var autoSignalLen = 7;
@@ -201,7 +201,7 @@ namespace Simulator
                         }
                     }
 
-                    S.Calculate(autoStartDate, autoSignalLen, true);
+                    S.Calculate(autoStartDate, autoSignalLen, false);
 
                     lastCommonInterval = curVar;
                     lastBigSma = autoBigsmaLen;
@@ -221,9 +221,386 @@ namespace Simulator
         }
 
 
+        private static void AutoSimulate2()
+        {
+
+            int lastCommonInterval = 0;
+            int lastBigSma = 0;
+            int lastSmallSma = 0;
+
+            Simulator2 S = null;
+
+            var ProductName = "LTC-USD";
+            TickerClient Ticker = new TickerClient(ProductName);
+
+            //wait for ticker to get ready
+            Thread.Sleep(2 * 1000);
+
+            DateTime autoStartDate = new DateTime(2018, 1, 1);
+            var autoInterval = Enumerable.Range(30, 60).Where(i => i % 5 == 0);//30;
+            var autoBigsmaLen = 50;
+            var autoSmallSmaLen = 30;// Enumerable.Range(35, 60).Where(i => i % 5 == 0); //every five
+            var autoBasePriceSmaLen = 4;
+            
+
+
+            foreach (var curVar in autoInterval)
+            {
+                try
+                {
+
+
+
+                    if (S == null)
+                    {
+                        S = new Simulator2(ref Ticker, ProductName, curVar, autoBigsmaLen, autoSmallSmaLen, autoBasePriceSmaLen, true);
+                        
+                    }
+                    else
+                    {
+                        if (!(lastCommonInterval == curVar && lastBigSma == autoBigsmaLen && lastSmallSma == autoSmallSmaLen))
+                        {
+                            S.Dispose();
+                            S = null;
+                            S = new Simulator2(ref Ticker, ProductName, curVar, autoBigsmaLen, autoSmallSmaLen, autoBasePriceSmaLen);
+                            
+                        }
+                    }
+
+                    S.Calculate(autoStartDate, DateTime.Now, true);
+
+                    lastCommonInterval = curVar;
+                    lastBigSma = autoBigsmaLen;
+                    lastSmallSma = autoSmallSmaLen;
+
+                    Console.WriteLine("Enter to continue");
+                    Console.ReadLine();
+
+                }
+                catch (Exception)
+                {
+                    Console.WriteLine("invalid input / error in calc");
+                }
+
+            }
+
+        }
+
     }
 
+    class Simulator2 : IDisposable
+    {
 
+        MovingAverage BasePrices_MA;
+        MovingAverage SmallSma_MA;
+        MovingAverage BigSma_MA;
+
+        private int COMMON_INTERVAL;
+        private int LARGE_SMA_LEN;
+        private int SMALL_SMA_LEN;
+        private int BASE_SMA_LEN;
+
+        public List<SmaData> Price;
+        public List<SmaData> BigSma;
+        public List<SmaData> SmallSma;
+
+
+
+        public Simulator2(ref TickerClient ticker, string productName, int CommonInterval = 30, int LargeSmaLen = 50, int SmallSmaLen = 12, int BasePriceSma = 10, bool downloadLatestData = false)
+        {
+            COMMON_INTERVAL = CommonInterval;
+            LARGE_SMA_LEN = LargeSmaLen;
+            SMALL_SMA_LEN = SmallSmaLen;
+
+            BASE_SMA_LEN = BasePriceSma;
+
+
+
+            BasePrices_MA = new MovingAverage(ref ticker, productName, COMMON_INTERVAL, BASE_SMA_LEN, 10, downloadLatestData, false);
+
+            //BigSma_MA = new MovingAverage(ref ticker, productName, COMMON_INTERVAL, LARGE_SMA_LEN, 10, downloadLatestData, false);
+            //SmallSma_MA = new MovingAverage(ref ticker, productName, COMMON_INTERVAL, SMALL_SMA_LEN, 10, downloadLatestData, false);
+
+
+
+            var smaDtPoints_BasePrice = getSmaWithDataPts(BasePrices_MA, BASE_SMA_LEN);
+
+            var SmaDtPoints_Big = getSmaWithDataPts(BasePrices_MA, LARGE_SMA_LEN);
+
+            var SmaDtPoints_Small = getSmaWithDataPts(BasePrices_MA, SMALL_SMA_LEN);
+
+
+            var firstCommonDate = SmaDtPoints_Big.First().Time;
+
+            Price = smaDtPoints_BasePrice.Where(d => d.Time >= firstCommonDate).ToList();
+
+            BigSma = SmaDtPoints_Big.Where(d => d.Time >= firstCommonDate).ToList();
+
+            SmallSma = SmaDtPoints_Small.Where(d => d.Time >= firstCommonDate).ToList();
+
+
+
+        }
+
+        private List<SmaData> getSmaWithDataPts(MovingAverage inputMA, int Input_SMA_LEN)
+        {
+
+            var smaDtPtsReversed = inputMA.SmaDataPts_Candle.OrderBy((d) => d.Time);
+
+            var smaPoints = smaDtPtsReversed.Select((d) => (double)d.Close).ToList().SMA(Input_SMA_LEN).ToList();
+
+            var requiredSmaDtPts = smaDtPtsReversed.Skip(Input_SMA_LEN - 1).ToList();
+
+
+            var smaWithDataPts = smaPoints.Select((d, i) => new SmaData
+            {
+                SmaValue = d,
+                ActualPrice = requiredSmaDtPts.ElementAt(i).Close,
+                Time = requiredSmaDtPts.ElementAt(i).Time
+            }).ToList();
+
+            return smaWithDataPts;
+        }
+
+
+        public void Calculate(DateTime simStartDate, DateTime simEndDate, bool printTrades = true)
+        {
+
+            Price = Price.Where(p => (p.Time >= simStartDate) && (p.Time < simEndDate)).ToList();
+            BigSma = BigSma.Where(p => (p.Time >= simStartDate) && (p.Time < simEndDate)).ToList();
+            SmallSma = SmallSma.Where(p => (p.Time >= simStartDate) && (p.Time < simEndDate)).ToList();
+
+            var allBuys = Price.Where((d, i) => (d.SmaValue > BigSma.ElementAt(i).SmaValue) && d.SmaValue > SmallSma.ElementAt(i).SmaValue).ToList();
+
+            var allSells = Price.Where((d, i) => (d.SmaValue < SmallSma.ElementAt(i).SmaValue)).ToList();
+
+            Utilities crossCalc = new Utilities();
+
+            var strtTimer2 = DateTime.Now;
+
+            var crossList = crossCalc.Getcrossings_Linq(allBuys, allSells);
+
+            var timeTaken2 = (DateTime.Now - strtTimer2).Milliseconds;
+            Console.WriteLine("linq time taken (ms): " + timeTaken2.ToString());
+
+
+            CalculatePl_Compounding(crossList, printTrades);
+
+        }
+
+
+
+        void CalculatePl_Compounding(List<CrossData> allCrossings, bool printTrade = true)
+        {
+            if (allCrossings.Count() == 0)
+            {
+                Console.WriteLine("No crossing data!");
+                return;
+            }
+
+            allCrossings = allCrossings.OrderByDescending((d) => d.dt).ToList();
+
+            decimal curProdSize = 0;
+            decimal USDbalance = 8000;
+            const decimal FEE_PERCENTAGE = 0.003m;
+            decimal totalFee = 0.0m;
+
+            if (allCrossings.First().Action == "buy")
+            {
+                allCrossings.RemoveAt(allCrossings.IndexOf(allCrossings.First()));
+            }
+
+            if (allCrossings.Last().Action == "sell")
+            {
+                allCrossings.RemoveAt(allCrossings.IndexOf(allCrossings.Last()));
+            }
+
+            StringBuilder trans = new StringBuilder();
+
+            StringBuilder transCsv = new StringBuilder();
+
+            if (printTrade)
+            {
+                //Console.WriteLine("Time\t\t\taction\t\tPrice\t\tFee\t\tSize\tPL\t\tBalance");
+                trans.AppendLine("Time\t\t\t\taction\t\tPrice\t\tFee\t\t\tSize\tPL\t\t\tBalance");
+                transCsv.AppendLine("Time\tAction\tPrice\tFee\tSize\tPL\tBalance");
+            }
+
+
+            var plList = new List<decimal>();
+
+            var buyAtPrice = 0.0m;
+            var sellAtPrice = 0.0m;
+
+            var buyFee = 0.0m;
+            var sellFee = 0.0m;
+
+            const decimal BUFFER = 0.60m;//1.20m;//1.50m;//1.0m; //0.75m;
+
+
+            const decimal STOP_LOSS_PERCENTAGE = 0.02m;
+
+            var lastAction = "";
+
+            int stopLossSale = 0;
+
+
+
+            for (int i = allCrossings.Count() - 1; i >= 0; i--)
+            {
+                var cross = allCrossings[i];
+
+                if (lastAction == cross.Action)
+                {
+                    Console.WriteLine("\n\t\t\t<<<- Potential error here ->>>\n");
+                }
+
+                if (cross.Action == "buy")
+                {
+                    buyAtPrice = cross.CrossingPrice + BUFFER;
+
+                    buyFee = (USDbalance) * FEE_PERCENTAGE;
+                    curProdSize = (USDbalance - buyFee) / buyAtPrice;
+                    totalFee += buyFee;
+
+                    USDbalance = USDbalance - (curProdSize * buyAtPrice) - buyFee;
+
+                    cross.CalculatedBalance = Convert.ToDouble(USDbalance);
+
+                    if (printTrade)
+                    {
+                        var buyMsg = cross.dt.ToString(@"yyyy-MM-dd HH:mm:ss") + "\t"
+                            + cross.Action + ((cross.comment != null) ? "_M" : "") + "\t\t\t"
+                            + Math.Round(buyAtPrice, 2).ToString() + "\t\t"
+                            + Math.Round(buyFee, 2).ToString() + "\t\t"
+                            + Math.Round(curProdSize, 2).ToString() + "\t\t\t\t"
+                            + Math.Round(USDbalance, 2).ToString();
+                        //Console.WriteLine(buyMsg);
+                        trans.AppendLine(buyMsg);
+
+
+                        var buyMsgCsv = cross.dt.ToString(@"yyyy-MM-dd HH:mm:ss") + "\t"
+                            + cross.Action + ((cross.comment != null) ? "_M" : "") + "\t"
+                            + Math.Round(buyAtPrice, 2).ToString() + "\t"
+                            + Math.Round(buyFee, 2).ToString() + "\t"
+                            + Math.Round(curProdSize, 2).ToString() + "\t"
+                            + Math.Round(USDbalance, 2).ToString();
+                        //Console.WriteLine(buyMsg);
+                        transCsv.AppendLine(buyMsgCsv);
+                    }
+
+                    lastAction = "buy";
+                }
+
+                if (cross.Action == "sell")
+                {
+                    bool isStopLossSale = false;
+                    sellAtPrice = cross.CrossingPrice - BUFFER;
+
+                    var stopLossPrice = buyAtPrice - (buyAtPrice * STOP_LOSS_PERCENTAGE);
+                    if (sellAtPrice < stopLossPrice)
+                    {
+                        sellAtPrice = stopLossPrice - BUFFER;
+                        stopLossSale++;
+                        isStopLossSale = true;
+                    }
+
+                    sellFee = (curProdSize * sellAtPrice) * FEE_PERCENTAGE;
+                    USDbalance = USDbalance + (curProdSize * sellAtPrice) - sellFee;
+
+                    totalFee += sellFee;
+
+
+
+                    var netpl = ((sellAtPrice - buyAtPrice) * curProdSize) - (buyFee + sellFee);
+
+
+                    cross.CalculatedBalance = Math.Round(Convert.ToDouble(USDbalance), 2);
+                    cross.CalculatedNetPL = Math.Round(Convert.ToDouble(netpl), 2);
+
+                    var sellingPrice = Math.Round(sellAtPrice, 2).ToString();
+
+                    if (isStopLossSale)
+                    {
+                        sellingPrice = sellingPrice + "*";
+                    }
+
+                    if (printTrade)
+                    {
+                        var sellMsg = cross.dt.ToString(@"yyyy-MM-dd HH:mm:ss") + "\t"
+                            + cross.Action + ((cross.comment != null) ? "_M" : "") + "\t\t"
+                            + sellingPrice + "\t\t"
+                            + Math.Round(sellFee, 2).ToString() + "\t\t"
+                            + Math.Round(curProdSize, 2).ToString() + "\t"
+                            + Math.Round(netpl, 2).ToString() + "\t\t"
+                            + Math.Round(USDbalance, 2).ToString();
+                        trans.AppendLine(sellMsg);
+
+
+                        var sellMsgCsv = cross.dt.ToString(@"yyyy-MM-dd HH:mm:ss") + "\t"
+                            + cross.Action + ((cross.comment != null) ? "_M" : "") + "\t"
+                            + sellingPrice + "\t"
+                            + Math.Round(sellFee, 2).ToString() + "\t"
+                            + Math.Round(curProdSize, 2).ToString() + "\t"
+                            + Math.Round(netpl, 2).ToString() + "\t"
+                            + Math.Round(USDbalance, 2).ToString();
+                        transCsv.AppendLine(sellMsgCsv);
+                    }
+
+
+                    plList.Add(netpl);
+                    lastAction = "sell";
+                }
+            }
+
+
+            Console.WriteLine("\n");
+
+            var msg = "";
+            msg = "" +
+                "\nFrom: " + allCrossings.Last().dt.Date.ToString("yyyy-MMM-dd") + " To: " + allCrossings.First().dt.Date.ToString("yyyy-MMM-dd") + "\n" +
+                "Interval: " + COMMON_INTERVAL.ToString() + "\n" +
+                "Big sma: " + LARGE_SMA_LEN.ToString() + "\n" +
+                "Small sma; " + SMALL_SMA_LEN.ToString() + "\n" +
+                "Price Base sma: " + BASE_SMA_LEN.ToString() + "\n" +
+                "\nTotal Trades: " + allCrossings.Count() + "\n" +
+                "Profit/Loss: " + Math.Round(plList.Sum(), 2).ToString() + "\n" +
+                "Total Fees: " + Math.Round(totalFee, 2).ToString() + "\n" +
+                "Biggest Profit: " + Math.Round(plList.Max(), 2).ToString() + "\n" +
+                "Biggest Loss: " + Math.Round(plList.Min(), 2).ToString() + "\n" +
+                "Stop Loss Count: " + stopLossSale.ToString() + "\n" +
+                "Avg. PL / Trade: " + Math.Round(plList.Average(), 2).ToString() + "\n\n";
+
+            trans.AppendLine(msg);
+
+            transCsv.AppendLine(msg);
+
+            Logger.WriteLog("\n" + transCsv.ToString());
+
+            //Console.WriteLine("\nFrom: " + allCrossings.Last().dt.Date.ToString("yyyy-MMM-dd") + " To: " + allCrossings.First().dt.Date.ToString("yyyy-MMM-dd"));
+            //Console.WriteLine("Interval: " + COMMON_INTERVAL.ToString());
+            //Console.WriteLine("Big sma: " + LARGE_SMA_LEN.ToString());
+            //Console.WriteLine("Small sma; " + SMALL_SMA_LEN.ToString());
+            //Console.WriteLine("sma of macd: " + SignalLen.ToString());
+            //Console.WriteLine("\nTotal Trades: " + allCrossings.Count());
+            //Console.WriteLine("Profit/Loss: " + Math.Round(plList.Sum(), 2).ToString());
+            //Console.WriteLine("Total Fees: " + Math.Round(totalFee, 2).ToString());
+            //Console.WriteLine("Biggest Profit: " + Math.Round(plList.Max(), 2).ToString());
+            //Console.WriteLine("Biggest Loss: " + Math.Round(plList.Min(), 2).ToString());
+            //Console.WriteLine("Avg. PL / Trade: " + Math.Round(plList.Average(), 2).ToString() + "\n\n");
+
+        }
+
+
+
+        public void Dispose()
+        {
+            //throw new NotImplementedException();
+            BasePrices_MA?.Dispose();
+            SmallSma_MA?.Dispose();
+            BigSma_MA?.Dispose();
+        }
+    }
 
 
 
@@ -564,6 +941,8 @@ namespace Simulator
 
             List<CrossData> allCrossings_Parallel = new List<CrossData>();
 
+            var strtTimer = DateTime.Now;
+
             Parallel.ForEach(dLst, item =>
             {
                 Utilities crossingCalculator = new Utilities();
@@ -584,10 +963,16 @@ namespace Simulator
 
             Utilities.EnterMissingActions(ref allCrossings_Parallel);
 
+            var timeTaken = (DateTime.Now - strtTimer).Milliseconds;
+
+            Console.WriteLine("parallel time taken (ms): " + timeTaken.ToString());
 
 
             List<CrossData> allCrossings_Linq = new List<CrossData>();
             Utilities crossingCal = new Utilities();
+
+
+            var strtTimer2 = DateTime.Now;
 
             var requiredSmaDiffPtsLnq = SmaDiff.Where((s => s.Time >= simStartDate && s.Time < simEndTime));
 
@@ -595,6 +980,10 @@ namespace Simulator
 
             var Linqres = crossingCal.Getcrossings_Linq(requiredSmaDiffPtsLnq, requiredSignalPtsLnq, SmaDiff.First().Time, SmaDiff.Last().Time);
             allCrossings_Linq.AddRange(Linqres);
+
+            var timeTaken2 = (DateTime.Now - strtTimer2).Milliseconds;
+
+            Console.WriteLine("linq time taken (ms): " + timeTaken2.ToString());
 
             //Utilities.EnterMissingActions(ref Linqres);
 
