@@ -45,7 +45,7 @@ namespace Simulator
 
 
             _PLPlotView.Margin = new Thickness(10);
-            _PLPlotView.Height = 300;
+            _PLPlotView.Height = 600;
 
             _SmaPlotView.Margin = new Thickness(10);// (10, 171, 10, 10);
             _SmaPlotView.Height = 290; //MyWindow.Height / 2;
@@ -92,23 +92,31 @@ namespace Simulator
 
 
 
-        public void DrawSeries(List<List<SmaData>> seriesList, List<CrossData> allCrossData = null)
+        public void DrawSeries(List<SeriesDetails> seriesList, List<CrossData> allCrossData = null)
         {
 
             var PlModel = new PlotModel
             {
-                Title = "Series"
+                Title = "Trades"
             };
 
             foreach (var series in seriesList)
             {
                 var seriesData = new LineSeries
                 {
-                    Title = "",
+                    Title = series.SereiesName,
                     StrokeThickness = 1
                 };
-                var BalanceDtpts = series.Select(s => new DataPoint(Axis.ToDouble(s.Time), s.SmaValue));
-                seriesData.Points.AddRange(BalanceDtpts);
+                var seriesDtpts = series.series.Select(s => new DataPoint(Axis.ToDouble(s.Time), s.SmaValue));
+                seriesData.Points.AddRange(seriesDtpts);
+
+                if (series.SereiesName == "Price")
+                    seriesData.Color = OxyColor.FromRgb(16, 89, 206);
+                if (series.SereiesName == "Big_Sma")
+                    seriesData.Color = OxyColor.FromRgb(224, 50, 15);
+                if (series.SereiesName == "Small_Sma")
+                    seriesData.Color = OxyColor.FromRgb(8, 150, 56);
+
                 PlModel.Series.Add(seriesData);
             }
 
@@ -135,6 +143,7 @@ namespace Simulator
                 var buyPoints = allCrossData.Where(a => a.Action == "buy").Select((d) => new ScatterPoint(Axis.ToDouble(d.dt), Convert.ToDouble(d.BufferedCrossingPrice)));
                 BuyScatterSeries.Points.AddRange(buyPoints);
 
+                BuyScatterSeries.MarkerFill = OxyColor.FromRgb(224, 50, 15); //OxyColor.FromRgb(255, 0, 0);
 
                 var SellScatterSeries = new ScatterSeries
                 {
@@ -143,7 +152,7 @@ namespace Simulator
                 };
                 var SellPoints = allCrossData.Where(a => a.Action == "sell").Select((d) => new ScatterPoint(Axis.ToDouble(d.dt), Convert.ToDouble(d.BufferedCrossingPrice)));
                 SellScatterSeries.Points.AddRange(SellPoints);
-
+                SellScatterSeries.MarkerFill = OxyColor.FromRgb(8, 150, 56);// OxyColor.FromRgb(0, 255, 0);
 
 
                 PlModel.Series.Add(BuyScatterSeries);

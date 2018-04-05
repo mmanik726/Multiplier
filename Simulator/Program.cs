@@ -277,11 +277,12 @@ namespace Simulator
             //wait for ticker to get ready
             Thread.Sleep(2 * 1000);
 
-            DateTime autoStartDate = new DateTime(2017, 10, 1);
+            DateTime autoStartDate = new DateTime(2018, 3, 12);
 
+            //DateTime autoEndDate = new DateTime(2018, 2, 13);//DateTime.Now;
 
+            DateTime autoEndDate = DateTime.Now;
 
-            
 
             List<ResultData> resultList = new List<ResultData>();
 
@@ -343,7 +344,7 @@ namespace Simulator
                         }
                     }
 
-                    var plResult = S.Calculate(autoStartDate, DateTime.Now, false, true);
+                    var plResult = S.Calculate(autoStartDate, autoEndDate, false, true);
 
 
                     //lock (listLock)
@@ -370,7 +371,7 @@ namespace Simulator
 
 
 
-            Console.WriteLine("\nTop 5 results\n");
+            Console.WriteLine("\nTop 5 profit results\n");
             for (int i = 0; i < 5; i++)
             {
                 var best = resultList.Where(d => d.Pl == resultList.Max(a => a.Pl)).First();
@@ -388,6 +389,24 @@ namespace Simulator
 
             }
 
+
+            Console.WriteLine("\nTop 5 loss results\n");
+            for (int i = 0; i < 5; i++)
+            {
+                var best = resultList.Where(d => d.Pl == resultList.Min(a => a.Pl)).First();
+                var resMsg = "best result: " + i + "\n"
+                    + "PL: " + best.Pl + "\n"
+                    + "Interval: " + best.intervals.interval + "\n"
+                    + "Base price sma: " + best.intervals.basePriceSmaLen + "\n"
+                    + "big sma: " + best.intervals.bigSmaLen + "\n"
+                    + "small sma: " + best.intervals.smallSmaLen + "\n";
+
+
+                Logger.WriteLog("\n" + resMsg);
+
+                resultList.Remove(best);
+
+            }
 
 
             Console.WriteLine("time taken for " + simCount + " iterations (min): " + (DateTime.Now - startTime).TotalMinutes);
@@ -662,11 +681,18 @@ namespace Simulator
 
             if (renderGraph)
             {
-                List<List<SmaData>> allSeries = new List<List<SmaData>>();
-                allSeries.Add(Price);
-                allSeries.Add(BigSma);
-                allSeries.Add(SmallSma);
-                GraphWindow.DrawSeries(allSeries, crossList);
+                //List<List<SmaData>> allSeries = new List<List<SmaData>>();
+                List<SeriesDetails> allSereis2 = new List<SeriesDetails>();
+
+                //allSeries.Add( Price);
+                //allSeries.Add(BigSma);
+                //allSeries.Add(SmallSma);
+
+                allSereis2.Add(new SeriesDetails { series = Price, SereiesName = "Price" });
+                allSereis2.Add(new SeriesDetails { series = BigSma, SereiesName = "Big_Sma" });
+                allSereis2.Add(new SeriesDetails { series = SmallSma, SereiesName = "Small_Sma" });
+
+                GraphWindow.DrawSeries(allSereis2, crossList);
             }
 
 
@@ -895,6 +921,11 @@ namespace Simulator
         }
     }
 
+    public class SeriesDetails
+    {
+        public List<SmaData> series { get; set; }
+        public string SereiesName { get; set; }
+    }
 
 
 
