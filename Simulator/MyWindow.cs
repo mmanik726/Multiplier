@@ -89,6 +89,73 @@ namespace Simulator
 
         }
 
+
+
+
+        public void DrawSeries(List<List<SmaData>> seriesList, List<CrossData> allCrossData = null)
+        {
+
+            var PlModel = new PlotModel
+            {
+                Title = "Series"
+            };
+
+            foreach (var series in seriesList)
+            {
+                var seriesData = new LineSeries
+                {
+                    Title = "",
+                    StrokeThickness = 1
+                };
+                var BalanceDtpts = series.Select(s => new DataPoint(Axis.ToDouble(s.Time), s.SmaValue));
+                seriesData.Points.AddRange(BalanceDtpts);
+                PlModel.Series.Add(seriesData);
+            }
+
+
+            PlModel.Axes.Add(new DateTimeAxis
+            {
+                MajorGridlineThickness = 1,
+                MajorGridlineStyle = LineStyle.Solid,
+                Position = AxisPosition.Bottom
+                //Minimum = BuyScatterSeries.Points.First().X,
+                //Maximum = BuyScatterSeries.Points.Last().X
+            });
+
+
+
+            if (allCrossData != null)
+            {
+                var BuyScatterSeries = new ScatterSeries
+                {
+                    Title = "buy",
+                    MarkerType = MarkerType.Circle
+                };
+
+                var buyPoints = allCrossData.Where(a => a.Action == "buy").Select((d) => new ScatterPoint(Axis.ToDouble(d.dt), Convert.ToDouble(d.BufferedCrossingPrice)));
+                BuyScatterSeries.Points.AddRange(buyPoints);
+
+
+                var SellScatterSeries = new ScatterSeries
+                {
+                    Title = "sell",
+                    MarkerType = MarkerType.Circle
+                };
+                var SellPoints = allCrossData.Where(a => a.Action == "sell").Select((d) => new ScatterPoint(Axis.ToDouble(d.dt), Convert.ToDouble(d.BufferedCrossingPrice)));
+                SellScatterSeries.Points.AddRange(SellPoints);
+
+
+
+                PlModel.Series.Add(BuyScatterSeries);
+                PlModel.Series.Add(SellScatterSeries);
+            }
+
+
+            Dispatcher.Invoke(() => _PLPlotView.Model = PlModel);
+        }
+
+
+
         public void ShowData(IEnumerable<SmaData> smadifPts, IEnumerable<SmaData> signalPts, IEnumerable<CrossData> allCrossData)
         {
 

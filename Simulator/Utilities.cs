@@ -14,6 +14,7 @@ namespace Simulator
         public int sl; 
         public DateTime dt { get; set; }
         public decimal CrossingPrice { get; set; }
+        public double BufferedCrossingPrice { get; set; }
         public string Action { get; set; }
         public double cossDiff { get; set; }
         public double smaValue { get; set; }
