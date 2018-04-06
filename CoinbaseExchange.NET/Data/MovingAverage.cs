@@ -379,7 +379,7 @@ namespace CoinbaseExchange.NET.Data
 
             smaDataPtsList = smaDataPtsList.Where((data, i)=>i % SLICES == 0).ToList(); //take only sma datapoints that are every SLICE apart ie remove the intermediate values 
 
-            Logger.WriteLog("Time: " + TIME_INTERVAL + " Len: " + SLICES);
+            //Logger.WriteLog("Time: " + TIME_INTERVAL + " Len: " + SLICES);
 
             CurrentSMAPrice = (decimal)smaDataPtsList.First();
 
@@ -399,7 +399,7 @@ namespace CoinbaseExchange.NET.Data
         {
             try
             {
-                Logger.WriteLog(string.Format("disposing the {0} min sma timer ", this.aTimer.Interval / (60000)));
+                //Logger.WriteLog(string.Format("disposing the {0} min sma timer ", this.aTimer.Interval / (60000)));
                 this.aTimer.Stop();
                 this.aTimer.Close();
                 this.aTimer = null;

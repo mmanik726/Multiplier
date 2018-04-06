@@ -20,7 +20,13 @@ namespace Simulator
 
         static MyWindow _GraphingWindow;
 
-        static Random random = new Random();
+        static Random _random = new Random();
+
+        static HashSet<IntervalData> _TriedIntervalList = new HashSet<IntervalData>();
+
+        static string ProductName = "LTC-USD";
+
+        static object _TriedListLock = new object();
 
         static void Main(string[] args)
         {
@@ -265,26 +271,56 @@ namespace Simulator
         private static void AutoSimulate2()
         {
 
-            int lastCommonInterval = 0;
-            int lastBigSma = 0;
-            int lastSmallSma = 0;
+            _TriedIntervalList.Clear();
 
-            Simulator2 S = null;
 
-            var ProductName = "LTC-USD";
+            
             TickerClient Ticker = new TickerClient(ProductName);
 
             //wait for ticker to get ready
             Thread.Sleep(2 * 1000);
 
-            DateTime autoStartDate = new DateTime(2018, 3, 12);
+
+
+
+
+            
+            
+            DateTime dtStart = DateTime.MinValue;
+
+            while (dtStart == DateTime.MinValue)
+            {
+                Console.WriteLine("Enter simulation start date:");
+                var inDt = Console.ReadLine();
+                DateTime.TryParse(inDt, out dtStart);
+            }
+
+
+            DateTime autoStartDate = dtStart;// new DateTime(2017, 10, 1);
 
             //DateTime autoEndDate = new DateTime(2018, 2, 13);//DateTime.Now;
 
-            DateTime autoEndDate = DateTime.Now;
+
+            DateTime dtEnd = DateTime.MinValue;
+
+            while (dtEnd == DateTime.MinValue)
+            {
+                Console.WriteLine("Enter simulation end date, enter n to use todays date:");
+                var inDt = Console.ReadLine();
+
+                if (inDt == "n")
+                {
+                    dtEnd = DateTime.Now;
+                    break;
+                }
+                DateTime.TryParse(inDt, out dtEnd);
+            }
 
 
-            List<ResultData> resultList = new List<ResultData>();
+            DateTime autoEndDate = dtEnd; //DateTime.Now;
+
+
+            List<ResultData> allCombinedResultList = new List<ResultData>();
 
 
             
@@ -294,37 +330,125 @@ namespace Simulator
             int simCount = 0;
 
 
+            int Each_Sim_Count = 50;
 
             while (simCount == 0)
             {
-                Console.WriteLine("Enter number of simulation count");
+                Console.WriteLine("Enter number of simulation count, " + Each_Sim_Count + " minimun");
                 simCount = Convert.ToInt32( Console.ReadLine());
             }
 
-            HashSet<IntervalData> triedIntervalList = new HashSet<IntervalData>();
+
+            List<Task> allSimTasks = new List<Task>();
+
+            var threadCount = Math.Ceiling((simCount / (double) Each_Sim_Count)) ;
+
+            for (int i = 0; i < threadCount; i++)
+            {
+                var curTask = Task.Run(()=> 
+                {
+                    var returnedResult = RunSim_ThreadSafe(ref Ticker, autoStartDate, autoEndDate, Each_Sim_Count);
+                    allCombinedResultList.AddRange(returnedResult);
+                });
+
+                allSimTasks.Add(curTask);
+            }
+            
+            Task.WaitAll(allSimTasks.ToArray());
+            
+
+            
+
+            Console.WriteLine("\nTop 5 profit results\n");
+
+            IntervalData bestValues = null;
+
+            for (int i = 0; i < 5; i++)
+            {
+                var best = allCombinedResultList.Where(d => d.Pl == allCombinedResultList.Max(a => a.Pl)).First();
+
+                if (bestValues == null)
+                    bestValues = best.intervals;
+
+                var resMsg = "best result: " + i + "\n"
+                    + "PL: " + best.Pl + "\n"
+                    + "Interval: " + best.intervals.interval + "\n"
+                    + "Base price sma: " + best.intervals.basePriceSmaLen + "\n"
+                    + "big sma: " + best.intervals.bigSmaLen + "\n"
+                    + "small sma: " + best.intervals.smallSmaLen + "\n";
 
 
-            object listLock = new object();
-            object rndLock = new object();
+                Logger.WriteLog("\n" + resMsg);
+
+                allCombinedResultList.Remove(best);
+
+            }
 
 
 
-            //Console.WriteLine("Press enter to start ");
+            var S = new Simulator2(ref Ticker, ProductName, bestValues.interval, bestValues.bigSmaLen, bestValues.smallSmaLen, bestValues.basePriceSmaLen, false);
+            S.GraphWindow = _GraphingWindow;
+            S.Calculate(autoStartDate, autoEndDate, true, true);
+
+
+
+            //Console.WriteLine("\nTop 5 loss results\n");
+            //for (int i = 0; i < 5; i++)
+            //{
+            //    var best = allCombinedResultList.Where(d => d.Pl == allCombinedResultList.Min(a => a.Pl)).First();
+            //    var resMsg = "best result: " + i + "\n"
+            //        + "PL: " + best.Pl + "\n"
+            //        + "Interval: " + best.intervals.interval + "\n"
+            //        + "Base price sma: " + best.intervals.basePriceSmaLen + "\n"
+            //        + "big sma: " + best.intervals.bigSmaLen + "\n"
+            //        + "small sma: " + best.intervals.smallSmaLen + "\n";
+
+
+            //    Logger.WriteLog("\n" + resMsg);
+
+            //    allCombinedResultList.Remove(best);
+
+            //}
+
+
+            Console.WriteLine("time taken for " + allSimTasks.Count() * Each_Sim_Count + " iterations (min): " + (DateTime.Now - startTime).TotalMinutes);
+
             //Console.ReadLine();
 
 
+        }
+
+
+        private static List<ResultData> RunSim_ThreadSafe(ref TickerClient inputTicker, DateTime startDt, DateTime endDt, int inputSimCount)
+        {
+            int lastCommonInterval = 0;
+            int lastBigSma = 0;
+            int lastSmallSma = 0;
+
+            Simulator2 S = null;
+
+
+            TickerClient Ticker = inputTicker;
+
+
+            DateTime autoStartDate = startDt;
+
+
+            DateTime autoEndDate = endDt;
+
+
+            List<ResultData> resultList = new List<ResultData>();
+
+
+            int simCount = inputSimCount;
+
+            
             //Parallel.For(0, simCount, i =>
             for (int i = 0; i < simCount; i++)
             {
 
                 IntervalData interval = null;
-                interval = getIntervalData(ref triedIntervalList);
-                //lock (rndLock)
-                //{
-                    
-                //}
-                
-
+                interval = getIntervalData();
                 try
                 {
 
@@ -344,13 +468,8 @@ namespace Simulator
                         }
                     }
 
-                    var plResult = S.Calculate(autoStartDate, autoEndDate, false, true);
+                    var plResult = S.Calculate(autoStartDate, autoEndDate, false, false);
 
-
-                    //lock (listLock)
-                    //{
-                    //    resultList.Add(new ResultData { Pl = plResult, intervals = interval });
-                    //}
                     resultList.Add(new ResultData { Pl = plResult, intervals = interval });
 
 
@@ -358,100 +477,57 @@ namespace Simulator
                     lastBigSma = interval.bigSmaLen;
                     lastSmallSma = interval.smallSmaLen;
 
-                    //Console.WriteLine("Enter to continue");
-                    //Console.ReadLine();
-
                 }
                 catch (Exception ex)
                 {
                     Console.WriteLine("invalid input / error in calc");
                 }
 
-            };
-
-
-
-            Console.WriteLine("\nTop 5 profit results\n");
-            for (int i = 0; i < 5; i++)
-            {
-                var best = resultList.Where(d => d.Pl == resultList.Max(a => a.Pl)).First();
-                var resMsg = "best result: " + i + "\n"
-                    + "PL: " + best.Pl + "\n"
-                    + "Interval: " + best.intervals.interval + "\n"
-                    + "Base price sma: " + best.intervals.basePriceSmaLen + "\n"
-                    + "big sma: " + best.intervals.bigSmaLen + "\n"
-                    + "small sma: " + best.intervals.smallSmaLen + "\n";
-
-
-                Logger.WriteLog("\n" + resMsg);
-
-                resultList.Remove(best);
-
             }
 
-
-            Console.WriteLine("\nTop 5 loss results\n");
-            for (int i = 0; i < 5; i++)
-            {
-                var best = resultList.Where(d => d.Pl == resultList.Min(a => a.Pl)).First();
-                var resMsg = "best result: " + i + "\n"
-                    + "PL: " + best.Pl + "\n"
-                    + "Interval: " + best.intervals.interval + "\n"
-                    + "Base price sma: " + best.intervals.basePriceSmaLen + "\n"
-                    + "big sma: " + best.intervals.bigSmaLen + "\n"
-                    + "small sma: " + best.intervals.smallSmaLen + "\n";
-
-
-                Logger.WriteLog("\n" + resMsg);
-
-                resultList.Remove(best);
-
-            }
-
-
-            Console.WriteLine("time taken for " + simCount + " iterations (min): " + (DateTime.Now - startTime).TotalMinutes);
-
-            //Console.ReadLine();
-
-
+            return resultList;
         }
 
-        static IntervalData getIntervalData(ref HashSet<IntervalData> TriedList)
+
+        static IntervalData getIntervalData()
         {
             var newInterval = new IntervalData
             {
-                interval = random.Next(5, 90),
-                bigSmaLen = random.Next(20, 100),
-                smallSmaLen = random.Next(5, 50),
-                basePriceSmaLen = random.Next(2, 30)
+                interval = _random.Next(5, 90),
+                bigSmaLen = _random.Next(20, 100),
+                smallSmaLen = _random.Next(5, 50),
+                basePriceSmaLen = _random.Next(2, 30)
             };
 
-            var beforeAdding = TriedList.Count();
 
-            TriedList.Add(newInterval);
-
-            var afterAdding = TriedList.Count();
-
-            while (beforeAdding == afterAdding)
+            lock (_TriedListLock)
             {
-                newInterval = new IntervalData
+                var beforeAdding = _TriedIntervalList.Count();
+
+                _TriedIntervalList.Add(newInterval);
+
+                var afterAdding = _TriedIntervalList.Count();
+
+                while (beforeAdding == afterAdding)
                 {
-                    interval = random.Next(5, 60),
-                    bigSmaLen = random.Next(20, 100),
-                    smallSmaLen = random.Next(5, 50),
-                    basePriceSmaLen = random.Next(2, 30)
-                };
+                    newInterval = new IntervalData
+                    {
+                        interval = _random.Next(5, 60),
+                        bigSmaLen = _random.Next(20, 100),
+                        smallSmaLen = _random.Next(5, 50),
+                        basePriceSmaLen = _random.Next(2, 30)
+                    };
 
 
-                beforeAdding = TriedList.Count();
+                    beforeAdding = _TriedIntervalList.Count();
 
-                TriedList.Add(newInterval);
+                    _TriedIntervalList.Add(newInterval);
 
-                afterAdding = TriedList.Count();
+                    afterAdding = _TriedIntervalList.Count();
 
+                }
             }
-
-            //TriedList.Add(newInterval);
+            
 
             return newInterval;
         }
@@ -528,7 +604,7 @@ namespace Simulator
             }
             catch (Exception ex)
             {
-                Console.WriteLine("invalid input / error in calc");
+                Console.WriteLine("invalid input / error in calc: " + ex.Message);
             }
 
             
@@ -549,6 +625,8 @@ namespace Simulator
         private int SMALL_SMA_LEN;
         private int BASE_SMA_LEN;
 
+
+        public List<SmaData> ActualPriceList;
         public List<SmaData> Price;
         public List<SmaData> BigSma;
         public List<SmaData> SmallSma;
@@ -600,6 +678,9 @@ namespace Simulator
 
 
             var firstCommonDate = maxdate; //SmaDtPoints_Big.First().Time;
+
+
+            ActualPriceList = BasePrices_MA.SmaDataPts_Candle.Where(c => c.Time >= firstCommonDate).Select(d => new SmaData { ActualPrice = d.Close, SmaValue = (double)d.Close, Time = d.Time }).ToList();
 
             Price = smaDtPoints_BasePrice.Where(d => d.Time >= firstCommonDate).ToList();
 
@@ -655,7 +736,7 @@ namespace Simulator
 
         public double Calculate(DateTime simStartDate, DateTime simEndDate, bool printTrades = true, bool renderGraph = false)
         {
-
+            ActualPriceList = ActualPriceList.Where(p => (p.Time >= simStartDate) && (p.Time < simEndDate)).ToList();
             Price = Price.Where(p => (p.Time >= simStartDate) && (p.Time < simEndDate)).ToList();
             BigSma = BigSma.Where(p => (p.Time >= simStartDate) && (p.Time < simEndDate)).ToList();
             SmallSma = SmallSma.Where(p => (p.Time >= simStartDate) && (p.Time < simEndDate)).ToList();
@@ -687,6 +768,8 @@ namespace Simulator
                 //allSeries.Add( Price);
                 //allSeries.Add(BigSma);
                 //allSeries.Add(SmallSma);
+
+                allSereis2.Add(new SeriesDetails { series = ActualPriceList, SereiesName = "Actual Price" });
 
                 allSereis2.Add(new SeriesDetails { series = Price, SereiesName = "Price" });
                 allSereis2.Add(new SeriesDetails { series = BigSma, SereiesName = "Big_Sma" });
