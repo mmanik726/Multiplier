@@ -309,17 +309,22 @@ namespace Simulator
 
 
 
-            
+
 
             //lock (cwWriteLock)
             //{
             //    Console.WriteLine("\t\t" + simStartDate.ToString() + "\t" + simEndDate.ToString() + "(" + crossList.Count() + ")\n");
             //}
 
-            if (crossList.First().Action == "buy")
+
+            if (crossList.Count() > 0)
             {
-                crossList.RemoveAt(0);
+                if (crossList.First().Action == "buy")
+                {
+                    crossList.RemoveAt(0);
+                }
             }
+
 
             return crossList;
 

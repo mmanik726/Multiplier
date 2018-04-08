@@ -103,6 +103,9 @@ namespace CoinbaseExchange.NET
             try
             {
                 RawExchangeData = JsonConvert.DeserializeObject<List<CandleData>>(File.ReadAllText(jsonDBNamePath));
+
+                //order the data right after reading from db so its consistent everywhere
+                RawExchangeData = RawExchangeData.OrderByDescending(d => d.Time).ToList();
             }
             catch (Exception)
             {

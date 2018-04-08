@@ -353,7 +353,9 @@ namespace CoinbaseExchange.NET.Data
             //skip the first REMAINDER so that the latest data points are taken
             //as opposed to stripping of the latest data points and using old ones
             //this gurantess that the latest price is considered (latest data point is taken in calculations)
-            var tempExchangePriceDataSet = SharedRawExchangeData.Take(SharedRawExchangeData.Count() - remainder).ToList();
+            //var tempExchangePriceDataSet = SharedRawExchangeData.Take(SharedRawExchangeData.Count() - remainder).ToList();
+
+            var tempExchangePriceDataSet = SharedRawExchangeData.Skip(remainder).ToList();
 
 
 
@@ -362,8 +364,14 @@ namespace CoinbaseExchange.NET.Data
 
             //intervalData.ForEach((l) => Logger.WriteLog(l.Time + "\t" + l.Close));
 
-            var takeCount = intervalData.Count - (intervalData.Count() % SLICES);
-            var requiredIntervalData = intervalData.Take(takeCount).ToList();
+            //var takeCount = intervalData.Count - (intervalData.Count() % SLICES);
+            //var requiredIntervalData = intervalData.Take(takeCount).ToList();
+
+
+
+            var remainderSLICE = intervalData.Count() % SLICES;
+            var requiredIntervalData = intervalData.Skip(remainderSLICE).ToList();
+
 
             SmaDataPts_Candle = new List<CandleData>(requiredIntervalData);
 

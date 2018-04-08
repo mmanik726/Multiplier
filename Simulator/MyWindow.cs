@@ -34,6 +34,8 @@ namespace Simulator
         //The controls can be placed only inside a panel.
         StackPanel _stkPanel;
 
+        bool resEvendHandlerSet = false;
+
         public MyWindow()
         {
             //This is created just to show a reference , the 
@@ -43,15 +45,16 @@ namespace Simulator
             //Start();
             this.SizeChanged += MyWindow_SizeChanged;
 
+            this.Height = 1000;
 
             _PLPlotView.Margin = new Thickness(10);
-            _PLPlotView.Height = 600;
+            _PLPlotView.Height = 400;
 
             _SmaPlotView.Margin = new Thickness(10);// (10, 171, 10, 10);
-            _SmaPlotView.Height = 290; //MyWindow.Height / 2;
+            _SmaPlotView.Height = 400; //MyWindow.Height / 2;
 
             _PricePlotView.Margin = new Thickness(10);//(10,10,10,153);
-            _PricePlotView.Height = 290; // this.Height / 2;
+            _PricePlotView.Height = 400; // this.Height / 2;
 
 
 
@@ -59,17 +62,27 @@ namespace Simulator
 
         }
 
-        private void MyWindow_AxisChanged(object sender, AxisChangedEventArgs e)
+        private void MyWindow_Price_AxisChanged(object sender, AxisChangedEventArgs e)
         {
             //throw new NotImplementedException();
 
+            _SmaPlotView.Model.Axes[0].Maximum = _PricePlotView.Model.Axes[0].ActualMaximum;
+
+            _SmaPlotView.Model.Axes[0].Minimum = _PricePlotView.Model.Axes[0].ActualMinimum;
+            _SmaPlotView.InvalidatePlot(false);
+
+        }
+
+        private void MyWindow_Sma_AxisChanged(object sender, AxisChangedEventArgs e)
+        {
             _PricePlotView.Model.Axes[0].Maximum = _SmaPlotView.Model.Axes[0].ActualMaximum;
 
             _PricePlotView.Model.Axes[0].Minimum = _SmaPlotView.Model.Axes[0].ActualMinimum;
 
+            
+
             _PricePlotView.InvalidatePlot(false);
-
-
+            
         }
 
 
@@ -89,6 +102,134 @@ namespace Simulator
 
         }
 
+
+
+        public void DrawSeriesSim1(List<SeriesDetails> seriesList, List<CrossData> allCrossData = null)
+        {
+
+
+
+            var SeriesModel = new PlotModel
+            {
+                Title = "Trades"
+            };
+
+            foreach (var series in seriesList)
+            {
+
+                if (series.SereiesName == "Price")
+                    continue;
+
+                var seriesData = new LineSeries
+                {
+                    Title = series.SereiesName,
+                    StrokeThickness = 1
+                };
+                var seriesDtpts = series.series.Select(s => new DataPoint(Axis.ToDouble(s.Time), s.SmaValue));
+                seriesData.Points.AddRange(seriesDtpts);
+
+                if (series.SereiesName == "Big_Sma")
+                    seriesData.Color = OxyColor.FromRgb(224, 50, 15);
+                if (series.SereiesName == "Small_Sma")
+                    seriesData.Color = OxyColor.FromRgb(8, 150, 56);
+
+                SeriesModel.Series.Add(seriesData);
+            }
+
+
+            SeriesModel.Axes.Add(new DateTimeAxis
+            {
+                MajorGridlineThickness = 1,
+                MajorGridlineStyle = LineStyle.Solid,
+                Position = AxisPosition.Bottom
+                //Minimum = BuyScatterSeries.Points.First().X,
+                //Maximum = BuyScatterSeries.Points.Last().X
+            });
+
+
+
+            var PriceModel = new PlotModel
+            {
+                Title = "Price"
+            };
+
+            if (allCrossData != null)
+            {
+
+
+                var priceLine = new LineSeries
+                {
+                    Title = "Price",
+                    StrokeThickness = 1
+                };
+
+                var priceDt = seriesList.Where(a => a.SereiesName == "Price");
+                if (priceDt.Count() > 0)
+                {
+                    var prices = priceDt.First().series.Select(s => new DataPoint(Axis.ToDouble(s.Time), (double)s.ActualPrice));
+                    priceLine.Points.AddRange(prices);
+                    PriceModel.Series.Add(priceLine);
+                }
+
+
+
+
+
+                var BuyScatterSeries = new ScatterSeries
+                {
+                    Title = "buy",
+                    MarkerType = MarkerType.Circle
+                };
+
+                var buyPoints = allCrossData.Where(a => a.Action == "buy").Select((d) => new ScatterPoint(Axis.ToDouble(d.dt), Convert.ToDouble(d.CrossingPrice)));
+                BuyScatterSeries.Points.AddRange(buyPoints);
+
+                BuyScatterSeries.MarkerFill = OxyColor.FromRgb(224, 50, 15); //OxyColor.FromRgb(255, 0, 0);
+
+                var SellScatterSeries = new ScatterSeries
+                {
+                    Title = "sell",
+                    MarkerType = MarkerType.Circle
+                };
+                var SellPoints = allCrossData.Where(a => a.Action == "sell").Select((d) => new ScatterPoint(Axis.ToDouble(d.dt), Convert.ToDouble(d.CrossingPrice)));
+                SellScatterSeries.Points.AddRange(SellPoints);
+                SellScatterSeries.MarkerFill = OxyColor.FromRgb(8, 150, 56);// OxyColor.FromRgb(0, 255, 0);
+
+
+                PriceModel.Series.Add(BuyScatterSeries);
+                PriceModel.Series.Add(SellScatterSeries);
+
+                PriceModel.Axes.Add(new DateTimeAxis
+                {
+                    MajorGridlineThickness = 1,
+                    MajorGridlineStyle = LineStyle.Solid,
+                    Position = AxisPosition.Bottom
+                });
+
+            }
+
+            if (!resEvendHandlerSet)
+            {
+                PriceModel.Axes[0].AxisChanged += MyWindow_Price_AxisChanged;
+
+                SeriesModel.Axes[0].AxisChanged += MyWindow_Sma_AxisChanged;
+
+                resEvendHandlerSet = true;
+            }
+
+
+            Dispatcher.Invoke(() => 
+            {
+
+
+                _SmaPlotView.Height = 400; //MyWindow.Height / 2;
+
+                _PricePlotView.Height = 400; // this.Height / 2;
+
+                _SmaPlotView.Model = SeriesModel;
+                _PricePlotView.Model = PriceModel;
+            });
+        }
 
 
 
@@ -160,7 +301,11 @@ namespace Simulator
             }
 
 
-            Dispatcher.Invoke(() => _PLPlotView.Model = PlModel);
+            Dispatcher.Invoke(() => 
+            {
+                _PLPlotView.Height = 600;
+                _PLPlotView.Model = PlModel;
+            });
         }
 
 
@@ -339,7 +484,7 @@ namespace Simulator
 
             smaXAxis.MajorGridlineStyle = LineStyle.Solid;
 
-            smaXAxis.AxisChanged += MyWindow_AxisChanged;
+            smaXAxis.AxisChanged += MyWindow_Price_AxisChanged;
 
             SmaModel.Axes.Add(smaXAxis);
             SmaModel.Axes.Add(new LinearAxis
@@ -369,14 +514,20 @@ namespace Simulator
             _stkPanel = new StackPanel();
 
 
-            _PLPlotView = new OxyPlot.Wpf.PlotView();
-            _stkPanel.Children.Add(_PLPlotView);
-
             _PricePlotView = new OxyPlot.Wpf.PlotView();
             _stkPanel.Children.Add(_PricePlotView);
 
+
             _SmaPlotView = new OxyPlot.Wpf.PlotView();
             _stkPanel.Children.Add(_SmaPlotView);
+
+
+            _PLPlotView = new OxyPlot.Wpf.PlotView();
+            _stkPanel.Children.Add(_PLPlotView);
+
+
+
+             
 
 
 
