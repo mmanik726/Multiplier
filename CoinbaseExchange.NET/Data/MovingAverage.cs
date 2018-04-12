@@ -370,7 +370,7 @@ namespace CoinbaseExchange.NET.Data
 
 
             var remainderSLICE = intervalData.Count() % SLICES;
-            var requiredIntervalData = intervalData.Skip(remainderSLICE).ToList();
+            var requiredIntervalData = intervalData; //intervalData.Skip(remainderSLICE).ToList(); MM_12Apr18
 
 
             SmaDataPts_Candle = new List<CandleData>(requiredIntervalData);

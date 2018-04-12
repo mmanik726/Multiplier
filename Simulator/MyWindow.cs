@@ -303,6 +303,8 @@ namespace Simulator
 
             Dispatcher.Invoke(() => 
             {
+                _SmaPlotView.Height = 10;
+                _PricePlotView.Height = 10;
                 _PLPlotView.Height = 600;
                 _PLPlotView.Model = PlModel;
             });

@@ -58,12 +58,12 @@ namespace Simulator
                 if (am == "m")
                 {
                     //Simulator2.ManualSimulate2();
-                    Simulator1.ManualSimulate();
+                    Simulator2.ManualSimulate2();
                 }
                 else
                 {
                     //Simulator2.AutoSimulate2();
-                    Simulator1.AutoSimulate();
+                    Simulator2.AutoSimulate2();
                 }
 
             }
@@ -300,20 +300,58 @@ namespace Simulator
 
             List<Task> allSimTasks = new List<Task>();
 
-            var threadCount = Math.Ceiling((simCount / (double)Each_Sim_Count));
 
-            for (int i = 0; i < threadCount; i++)
+            var eachBatchCount = 1000;
+
+
+            var lastBatchCompletionTime = DateTime.Now;
+
+            Int32 SLEEP_TIME_SEC = 30 * 1000;
+
+
+            for (int batch = eachBatchCount; batch < simCount + eachBatchCount; batch += eachBatchCount)
             {
-                var curTask = Task.Factory.StartNew(() =>
-                {
-                    var returnedResult = RunSim_ThreadSafe(ref Ticker, autoStartDate, autoEndDate, Each_Sim_Count);
-                    allCombinedResultList.AddRange(returnedResult);
-                });
 
-                allSimTasks.Add(curTask);
+
+                Console.WriteLine("starting batch: " + (batch - eachBatchCount) + " - " + batch);
+                Thread.Sleep(SLEEP_TIME_SEC);
+
+                var threadCount = Math.Ceiling((eachBatchCount / (double)Each_Sim_Count));
+
+
+                for (int i = 0; i < threadCount; i++)
+                {
+                    var curTask = Task.Factory.StartNew(() =>
+                    {
+                        var returnedResult = RunSim_ThreadSafe(ref Ticker, autoStartDate, autoEndDate, Each_Sim_Count);
+                        allCombinedResultList.AddRange(returnedResult);
+                    });
+
+                    allSimTasks.Add(curTask);
+                }
+
+
+
+                Task.WaitAll(allSimTasks.ToArray());
+
+
+                if (batch >= eachBatchCount)
+                {
+                    var timeTakenLastBatch = (DateTime.Now - lastBatchCompletionTime).TotalMinutes;
+                    Console.WriteLine("Time taken to complete last batch (min): " + timeTakenLastBatch);
+
+                    var expectedCompletionTime = (timeTakenLastBatch + ((SLEEP_TIME_SEC / 1000) / 60)) * ((simCount - batch) / eachBatchCount);
+                    Console.WriteLine("Expected completion time: " + expectedCompletionTime + " min, " + DateTime.Now.AddMinutes(expectedCompletionTime));
+                    lastBatchCompletionTime = DateTime.Now;
+                }
             }
 
-            Task.WaitAll(allSimTasks.ToArray());
+
+
+
+
+
+
 
 
 

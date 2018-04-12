@@ -26,6 +26,9 @@ namespace Simulator
         private int LARGE_SMA_LEN;
         private int SMALL_SMA_LEN;
 
+        static DateTime _ActualInputStartDate = DateTime.Now;
+        static DateTime _ActualInputEndDate = DateTime.Now;
+
         static MyWindow _GraphingWindow;
 
         static Random _random = new Random();
@@ -62,16 +65,23 @@ namespace Simulator
                     am = Console.ReadLine();
                 }
 
+                bool useCompounding = false;
+                Console.WriteLine("Enter y for compounding n for non compounding");
+                var inputBool = Console.ReadLine();
+                if (inputBool == "y")
+                    useCompounding = true;
+                else
+                    useCompounding = false;
 
                 if (am == "m")
                 {
                     //Simulator2.ManualSimulate2();
-                    Simulator1.ManualSimulate();
+                    Simulator1.ManualSimulate(useCompounding);
                 }
                 else
                 {
                     //Simulator2.AutoSimulate2();
-                    Simulator1.AutoSimulate();
+                    Simulator1.AutoSimulate(useCompounding);
                 }
 
             }
@@ -79,9 +89,14 @@ namespace Simulator
         }
 
 
-        private static void ReadTriedIntervalList()
+        private static void ReadTriedIntervalList(DateTime simStart, DateTime simEnd)
         {
-            var fileNamePah  = Path.GetDirectoryName(System.Reflection.Assembly.GetEntryAssembly().Location) + @"\" + ProductName + "_TriedResultsList.json";
+
+            var s = simStart.ToString("yyyy-MMM-dd");
+            var e = simEnd.ToString("yyyy-MMM-dd");
+
+            var fileNamePah  = Path.GetDirectoryName(System.Reflection.Assembly.GetEntryAssembly().Location) 
+                + @"\" + ProductName + "_TriedResultsList_S1_" + s + "_to_" + e +".json";
 
             Logger.WriteLog("Reading already tried list of intervals");
 
@@ -104,16 +119,49 @@ namespace Simulator
             }
         }
 
-        private static void WriteTriedIntervalList(List<ResultData> triedList)
+        private static void WriteTriedIntervalList(List<ResultData> triedList, DateTime simStart, DateTime simEnd)
         {
-            var fileNamePah = Path.GetDirectoryName(System.Reflection.Assembly.GetEntryAssembly().Location) + @"\" + ProductName + "_TriedResultsList.json";
+
+            var s = simStart.ToString("yyyy-MMM-dd");
+            var e = simEnd.ToString("yyyy-MMM-dd");
+            //
+            var fileNamePah = Path.GetDirectoryName(System.Reflection.Assembly.GetEntryAssembly().Location)
+                + @"\" + ProductName + "_TriedResultsList_S1_" + s + "_to_" + e + ".json";
+            //var fileNamePah = Path.GetDirectoryName(System.Reflection.Assembly.GetEntryAssembly().Location) + @"\" + ProductName + "_TriedResultsList_S1.json";
 
             Logger.WriteLog("Updating tried list of intervals");
 
             try
             {
 
-                string json = JsonConvert.SerializeObject(triedList, Formatting.Indented);
+                var previouslyTriedLst = new List<ResultData>();
+
+                if (File.Exists(fileNamePah))
+                {
+                    previouslyTriedLst.AddRange(JsonConvert.DeserializeObject<List<ResultData>>(File.ReadAllText(fileNamePah)));
+                }
+
+
+                //public double Pl { get; set; }
+
+                //public DateTime SimStartDate { get; set; }
+
+                //public DateTime SimEndDate { get; set; }
+
+                //public IntervalData intervals { get; set; }
+
+                var temp = triedList.Select(a => new { a.Pl, a.SimStartDate, a.SimEndDate, a.intervals });
+
+                var newTriedList = temp;
+                previouslyTriedLst.AddRange(triedList);
+
+
+                previouslyTriedLst = previouslyTriedLst.OrderByDescending(a => a.Pl).ToList();
+
+                string json = JsonConvert.SerializeObject(previouslyTriedLst, Formatting.Indented);
+
+                //File.Copy(fileNamePah, Path.GetDirectoryName(System.Reflection.Assembly.GetEntryAssembly().Location) + @"\" + ProductName + "_TriedResultsList_S1_backup.json", true);
+                //File.AppendAllText(fileNamePah, json);
                 File.WriteAllText(fileNamePah, json);
             }
             catch (Exception ex)
@@ -132,6 +180,8 @@ namespace Simulator
             COMMON_INTERVAL = CommonInterval;
             LARGE_SMA_LEN = LargeSmaLen;
             SMALL_SMA_LEN = SmallSmaLen;
+
+
 
 
             BigSma = new MovingAverage(ref ticker, productName, COMMON_INTERVAL, LARGE_SMA_LEN, 10, downloadLatestData, false);
@@ -294,19 +344,34 @@ namespace Simulator
 
 
 
-        static IntervalData getIntervalData()
+        static IntervalData getIntervalData(IntervalRange range)
         {
             var newInterval = new IntervalData
             {
+
+                interval = _random.Next(range.interval_min, range.interval_max),
+                bigSmaLen = _random.Next(range.bigSmaLen_min, range.bigSmaLen_max),
+                smallSmaLen = _random.Next(range.smallSmaLen_min, range.smallSmaLen_max),
+                SignalLen = _random.Next(range.SignalLen_min, range.SignalLen_max)
+
                 //interval = _random.Next(20, 50),
                 //bigSmaLen = _random.Next(80, 250),
                 //smallSmaLen = _random.Next(25, 70),
-                //SignalLen = _random.Next(2, 10)
+                //SignalLen = _random.Next(2, 15)
 
-                interval = _random.Next(15, 30),
-                bigSmaLen = _random.Next(80, 150),
-                smallSmaLen = _random.Next(55, 75),
-                SignalLen = _random.Next(5, 10)
+                //interval = _random.Next(15, 30),
+                //bigSmaLen = _random.Next(80, 150),
+                //smallSmaLen = _random.Next(55, 75),
+                //SignalLen = _random.Next(5, 10)
+
+                //Interval: 22
+                //Big sma: 88
+                //Small sma; 56
+                //sma of macd: 9
+                //interval = _random.Next(18, 26),
+                //bigSmaLen = _random.Next(80, 95),
+                //smallSmaLen = _random.Next(50, 62),
+                //SignalLen = _random.Next(5, 15)
 
             };
 
@@ -322,18 +387,32 @@ namespace Simulator
                 while (beforeAdding == afterAdding)
                 {
 
-                    Console.WriteLine("\t\t\t***");
+                    //Console.WriteLine("\t\t\t***");
+
+                    Logger.WriteLog("looking for distinct interval");
+
                     newInterval = new IntervalData
                     {
+
+                        interval = _random.Next(range.interval_min, range.interval_max),
+                        bigSmaLen = _random.Next(range.bigSmaLen_min, range.bigSmaLen_min),
+                        smallSmaLen = _random.Next(range.smallSmaLen_min, range.smallSmaLen_max),
+                        SignalLen = _random.Next(range.SignalLen_min, range.SignalLen_max)
+
                         //interval = _random.Next(20, 50),
                         //bigSmaLen = _random.Next(80, 250),
                         //smallSmaLen = _random.Next(25, 70),
-                        //SignalLen = _random.Next(2, 10)
+                        //SignalLen = _random.Next(2, 15)
 
-                        interval = _random.Next(15, 30),
-                        bigSmaLen = _random.Next(80, 150),
-                        smallSmaLen = _random.Next(55, 75),
-                        SignalLen = _random.Next(5, 10)
+                        //interval = _random.Next(15, 30),
+                        //bigSmaLen = _random.Next(80, 150),
+                        //smallSmaLen = _random.Next(55, 75),
+                        //SignalLen = _random.Next(5, 10)
+
+                        //interval = _random.Next(18, 26),
+                        //bigSmaLen = _random.Next(80, 95),
+                        //smallSmaLen = _random.Next(50, 62),
+                        //SignalLen = _random.Next(5, 15)
                     };
 
 
@@ -367,7 +446,7 @@ namespace Simulator
             thread.Start();
 
         }
-        public static void ManualSimulate()
+        public static void ManualSimulate(bool useCompoundingCalc = true)
         {
             int lastCommonInterval = 0;
             int lastBigSma = 0;
@@ -460,7 +539,10 @@ namespace Simulator
                     }
                 }
 
-                S.Calculate(dt, autoEndDate, inputSmaLen, true, true);
+                _ActualInputStartDate = dt;
+                _ActualInputEndDate = autoEndDate;
+
+                S.Calculate(dt, autoEndDate, inputSmaLen, true, true, useCompoundingCalc);
 
                 lastCommonInterval = inputCommonInterval;
                 lastBigSma = inputBigSmaLen;
@@ -476,7 +558,7 @@ namespace Simulator
         }
 
 
-        private static List<ResultData> AutoSim1_ThreadSafe(ref TickerClient inputTicker, DateTime startDt, DateTime endDt, int inputSimCount)
+        private static List<ResultData> AutoSim1_ThreadSafe(ref TickerClient inputTicker, DateTime startDt, DateTime endDt, int inputSimCount, IntervalRange inputRndRange, bool useCompounding = true)
         {
 
             int lastCommonInterval = 0;
@@ -505,7 +587,7 @@ namespace Simulator
             for (int i = 0; i < inputSimCount; i++)
             {
 
-                IntervalData curIntervals = getIntervalData();
+                IntervalData curIntervals = getIntervalData(inputRndRange);
 
 
                 try
@@ -527,9 +609,9 @@ namespace Simulator
                         }
                     }
 
-                    var curPl = S.Calculate(autoStartDate, autoEndDate, curIntervals.SignalLen, false, false);
+                    var curPl = S.Calculate(autoStartDate, autoEndDate, curIntervals.SignalLen, false, false, useCompounding);
 
-                    resultList.Add(new ResultData { Pl = curPl, intervals = curIntervals, SimStartDate = autoStartDate, SimEndDate = autoEndDate });
+                    resultList.Add(new ResultData { Pl = curPl, intervals = curIntervals, SimStartDate = autoStartDate, SimEndDate = autoEndDate, intervalRange = inputRndRange });
 
                     lastCommonInterval = curIntervals.interval;
                     lastBigSma = curIntervals.bigSmaLen;
@@ -548,12 +630,12 @@ namespace Simulator
 
         }
 
-        public static void AutoSimulate()
+        public static void AutoSimulate(bool useCompoundingCalc = true)
         {
             //_TriedIntervalList.Clear();
 
 
-            ReadTriedIntervalList();
+            
 
             //ShowGraphingForm();
 
@@ -561,7 +643,6 @@ namespace Simulator
 
             //wait for ticker to get ready
             Thread.Sleep(2 * 1000);
-
 
             DateTime dtStart = DateTime.MinValue;
 
@@ -597,10 +678,13 @@ namespace Simulator
             DateTime autoEndDate = dtEnd; //DateTime.Now;
 
 
+
+            ReadTriedIntervalList(autoStartDate, autoEndDate);
+
             List<ResultData> allCombinedResultList = new List<ResultData>();
 
 
-
+            
 
             var startTime = DateTime.Now;
 
@@ -618,20 +702,115 @@ namespace Simulator
 
             List<Task> allSimTasks = new List<Task>();
 
-            var threadCount = Math.Ceiling((simCount / (double)Each_Sim_Count));
 
-            for (int i = 0; i < threadCount; i++)
+            var eachBatchCount = 1000;
+
+
+            var lastBatchCompletionTime = DateTime.Now;
+
+            Int32 SLEEP_TIME_SEC = 15 * 1000;
+
+
+
+            //interval = _random.Next(20, 50),
+            //bigSmaLen = _random.Next(80, 250),
+            //smallSmaLen = _random.Next(25, 70),
+            //SignalLen = _random.Next(2, 15)
+
+            IntervalRange rndRange = new IntervalRange
             {
-                var curTask = Task.Factory.StartNew(() =>
-                {
-                    var returnedResult = AutoSim1_ThreadSafe(ref Ticker, autoStartDate, autoEndDate, Each_Sim_Count); //RunSim_ThreadSafe(ref Ticker, autoStartDate, autoEndDate, Each_Sim_Count);
-                    allCombinedResultList.AddRange(returnedResult);
-                });
+                //interval_min = 20,
+                //interval_max = 60,
 
-                allSimTasks.Add(curTask);
+                //bigSmaLen_min = 60,
+                //bigSmaLen_max = 200,
+
+                //smallSmaLen_min = 25,
+                //smallSmaLen_max = 60,
+
+                //SignalLen_min = 2,
+                //SignalLen_max = 14
+
+
+                interval_min = 20,
+                interval_max = 60,
+
+                bigSmaLen_min = 20,
+                bigSmaLen_max = 50,
+
+                smallSmaLen_min = 51,
+                smallSmaLen_max = 100,
+
+                SignalLen_min = 2,
+                SignalLen_max = 14
+
+            };
+
+
+            Console.WriteLine("Using initial range: \n");
+            rndRange.PrintRange();
+
+
+            double lastBest = 0;
+
+            for (int batch = eachBatchCount; batch < simCount + eachBatchCount; batch+= eachBatchCount)
+            {
+
+
+                Console.WriteLine("starting batch: " + (batch - eachBatchCount) + " - " + batch);
+                Thread.Sleep(SLEEP_TIME_SEC);
+
+                var threadCount = Math.Ceiling((eachBatchCount / (double)Each_Sim_Count));
+
+                for (int i = 0; i < threadCount; i++)
+                {
+                    var curTask = Task.Factory.StartNew(() =>
+                    {
+                        var returnedResult = AutoSim1_ThreadSafe(ref Ticker, autoStartDate, autoEndDate, Each_Sim_Count, rndRange, useCompoundingCalc); //RunSim_ThreadSafe(ref Ticker, autoStartDate, autoEndDate, Each_Sim_Count);
+                        allCombinedResultList.AddRange(returnedResult);
+                    });
+
+                    allSimTasks.Add(curTask);
+                }
+
+                Task.WaitAll(allSimTasks.ToArray());
+
+
+                if (batch >= eachBatchCount)
+                {
+                    var timeTakenLastBatch = (DateTime.Now - lastBatchCompletionTime).TotalMinutes ;
+                    Console.WriteLine("Time taken to complete last batch (min): " + timeTakenLastBatch);
+
+                    var expectedCompletionTime = (timeTakenLastBatch + ((SLEEP_TIME_SEC/1000)/60)) * ((simCount - batch) / eachBatchCount);
+                    Console.WriteLine("Expected completion time: " + expectedCompletionTime + " min, " + DateTime.Now.AddMinutes(expectedCompletionTime));
+                    lastBatchCompletionTime = DateTime.Now;
+                }
+
+                if (batch >= (simCount / 2))
+                {
+
+                    var best_AfterHalf = allCombinedResultList.Where(d => d.Pl == allCombinedResultList.Max(a => a.Pl)).First();
+
+                    Console.WriteLine("best result so far: " + best_AfterHalf.Pl);
+
+                    if (lastBest == 0 || best_AfterHalf.Pl > lastBest)
+                    {
+                        rndRange = IntervalRange.GetaHalfRange(best_AfterHalf.intervalRange, best_AfterHalf.intervals);
+
+                        Console.WriteLine("using new range: \n");
+                        rndRange.PrintRange();
+
+                    }
+
+
+                    lastBest = best_AfterHalf.Pl;
+
+                }
+
             }
 
-            Task.WaitAll(allSimTasks.ToArray());
+
+
 
 
 
@@ -666,9 +845,14 @@ namespace Simulator
 
 
 
+
+
+            _ActualInputStartDate = autoStartDate;
+            _ActualInputEndDate = autoEndDate;
+
             var S = new Simulator1(ref Ticker, ProductName, bestValues.interval, bestValues.bigSmaLen, bestValues.smallSmaLen, true);
             S.GraphWindow = _GraphingWindow;
-            S.Calculate(autoStartDate, autoEndDate, bestValues.SignalLen, true, true);
+            S.Calculate(autoStartDate, autoEndDate, bestValues.SignalLen, true, true, useCompoundingCalc);
 
 
 
@@ -693,13 +877,13 @@ namespace Simulator
 
             Console.WriteLine("time taken for " + allSimTasks.Count() * Each_Sim_Count + " iterations (min): " + (DateTime.Now - startTime).TotalMinutes);
 
-            WriteTriedIntervalList(triedListCopy);
+            WriteTriedIntervalList(triedListCopy, autoStartDate, autoEndDate);
 
         }
 
 
 
-        internal double Calculate(DateTime simStartDate, DateTime inputEndDate, int inputSignalLen = 2, bool printTrades = true, bool renderGraph = false)
+        internal double Calculate(DateTime simStartDate, DateTime inputEndDate, int inputSignalLen = 2, bool printTrades = true, bool renderGraph = false, bool useCompounding = true)
         {
 
             _SignalLen = inputSignalLen;
@@ -749,7 +933,16 @@ namespace Simulator
             //Console.ReadLine();
 
 
-            var Pl = CalculatePl_Compounding(allCrossings_Linq, printTrades);
+            var Pl = 0.0;
+            if (useCompounding)
+            {
+                Pl = CalculatePl_Compounding(allCrossings_Linq, printTrades);
+            }
+            else
+            {
+                Pl = CalculatePl_NonCompounding(allCrossings_Linq, printTrades);
+            }
+            
 
 
             if (renderGraph)
@@ -762,7 +955,7 @@ namespace Simulator
                 //allSeries.Add(SmallSma);
 
                 //allSereis2.Add(new SeriesDetails { series = ActualPriceList, SereiesName = "Actual Price" });
-
+                //BigSma.SmaDataPts_Candle
 
                 var PriceLine = requiredMacdPtsLnq.Select(p => new SmaData { ActualPrice = p.ActualPrice, Time = p.Time }).ToList();
                 allSereis2.Add(new SeriesDetails { series = PriceLine, SereiesName = "Price" });
@@ -1235,7 +1428,7 @@ namespace Simulator
 
             var msg = "";
             msg = "" +
-                "\nFrom: " + allCrossings.Last().dt.Date.ToString("yyyy-MMM-dd") + " To: " + allCrossings.First().dt.Date.ToString("yyyy-MMM-dd") + "\n" +
+                "\nFrom: " + _ActualInputStartDate.Date.ToString("yyyy-MMM-dd") + " To: " + _ActualInputEndDate.Date.ToString("yyyy-MMM-dd") + "\n" +
                 "Interval: " + COMMON_INTERVAL.ToString() + "\n" +
                 "Big sma: " + LARGE_SMA_LEN.ToString() + "\n" +
                 "Small sma; " + SMALL_SMA_LEN.ToString() + "\n" +
@@ -1271,13 +1464,20 @@ namespace Simulator
         }
 
 
-        void CalculatePl_NonCompounding(List<CrossData> allCrossings)
+
+        double CalculatePl_NonCompounding(List<CrossData> allCrossings, bool printTrade = true)
         {
+            if (allCrossings.Count() == 0)
+            {
+                Console.WriteLine("No crossing data!");
+                return 0;
+            }
 
+            allCrossings = allCrossings.OrderByDescending((d) => d.dt).ToList();
 
-            const int AMOUNT = 50;
-            decimal pl = 0;
-            const decimal FEE = 0.003m;
+            decimal curProdSize = 0;
+            decimal USDbalance = 8000;
+            const decimal FEE_PERCENTAGE = 0.003m;
             decimal totalFee = 0.0m;
 
             if (allCrossings.First().Action == "buy")
@@ -1290,62 +1490,268 @@ namespace Simulator
                 allCrossings.RemoveAt(allCrossings.IndexOf(allCrossings.Last()));
             }
 
-            Console.WriteLine("Time\t\t\taction\t\tPrice\t\tFee\t\tPL\t\tBalance");
+            StringBuilder trans = new StringBuilder();
+
+            StringBuilder transCsv = new StringBuilder();
+
+            if (printTrade)
+            {
+                //Console.WriteLine("Time\t\t\taction\t\tPrice\t\tFee\t\tSize\tPL\t\tBalance");
+                trans.AppendLine("Time\t\t\t\taction\t\tPrice\t\tFee\t\t\tSize\tPL\t\t\tBalance");
+                transCsv.AppendLine("Time\tAction\tPrice\tFee\tSize\tPL\tBalance");
+            }
+
 
             var plList = new List<decimal>();
 
-            var curPl = 0.0m;
+            var buyAtPrice = 0.0m;
+            var sellAtPrice = 0.0m;
+
+            const decimal AMOUNT = 50.0m;
+
+            var buyFee = 0.0m;
+            var sellFee = 0.0m;
+
+            const decimal BUFFER = 0.60m;//1.20m;//1.50m;//1.0m; //0.75m;
+
+
+            const decimal STOP_LOSS_PERCENTAGE = 0.02m;
+
+            var lastAction = "";
+
+            int stopLossSale = 0;
+
 
 
             for (int i = allCrossings.Count() - 1; i >= 0; i--)
             {
                 var cross = allCrossings[i];
-                var curFee = (AMOUNT * cross.CrossingPrice) * FEE;
 
-                totalFee += curFee;
+                if (lastAction == cross.Action)
+                {
+                    Console.WriteLine("\n\t\t\t<<<- Potential error here ->>>\n");
+                }
+
                 if (cross.Action == "buy")
                 {
-                    pl = pl - (AMOUNT * cross.CrossingPrice) + curFee;
+                    buyAtPrice = cross.CrossingPrice + BUFFER;
 
-                    curPl = (AMOUNT * cross.CrossingPrice) + curFee;
+                    buyFee = AMOUNT * buyAtPrice * FEE_PERCENTAGE;//(USDbalance) * FEE_PERCENTAGE;
+                    curProdSize = AMOUNT; //(USDbalance - buyFee) / buyAtPrice;
+                    totalFee += buyFee;
 
-                    Console.WriteLine(cross.dt.ToString() + "\t"
-                        + cross.Action + "\t\t"
-                        + cross.CrossingPrice.ToString() + "\t\t"
-                        + Math.Round(curFee, 2).ToString() + "\t\t"
-                        + "\t\t"
-                        + pl.ToString());
+                    USDbalance = USDbalance - (curProdSize * buyAtPrice) - buyFee;
+
+                    cross.CalculatedBalance = Convert.ToDouble(USDbalance);
+
+                    if (printTrade)
+                    {
+                        var buyMsg = cross.dt.ToString(@"yyyy-MM-dd HH:mm:ss") + "\t"
+                            + cross.Action + ((cross.comment != null) ? "_M" : "") + "\t\t\t"
+                            + Math.Round(buyAtPrice, 2).ToString() + "\t\t"
+                            + Math.Round(buyFee, 2).ToString() + "\t\t"
+                            + Math.Round(curProdSize, 2).ToString() + "\t\t\t\t"
+                            + Math.Round(USDbalance, 2).ToString();
+                        //Console.WriteLine(buyMsg);
+                        trans.AppendLine(buyMsg);
+
+
+                        var buyMsgCsv = cross.dt.ToString(@"yyyy-MM-dd HH:mm:ss") + "\t"
+                            + cross.Action + ((cross.comment != null) ? "_M" : "") + "\t"
+                            + Math.Round(buyAtPrice, 2).ToString() + "\t"
+                            + Math.Round(buyFee, 2).ToString() + "\t"
+                            + Math.Round(curProdSize, 2).ToString() + "\t"
+                            + Math.Round(USDbalance, 2).ToString();
+                        //Console.WriteLine(buyMsg);
+                        transCsv.AppendLine(buyMsgCsv);
+                    }
+
+                    lastAction = "buy";
                 }
 
                 if (cross.Action == "sell")
                 {
-                    pl = pl + (AMOUNT * cross.CrossingPrice) - curFee;
+                    bool isStopLossSale = false;
+                    sellAtPrice = cross.CrossingPrice - BUFFER;
 
-                    var netpl = ((AMOUNT * cross.CrossingPrice) - curFee) - curPl;
+                    var stopLossPrice = buyAtPrice - (buyAtPrice * STOP_LOSS_PERCENTAGE);
+                    if (sellAtPrice < stopLossPrice)
+                    {
+                        sellAtPrice = stopLossPrice - BUFFER;
+                        stopLossSale++;
+                        isStopLossSale = true;
+                    }
 
-                    Console.WriteLine(cross.dt.ToString() + "\t"
-                        + cross.Action + "\t\t"
-                        + cross.CrossingPrice.ToString() + "\t\t"
-                        + Math.Round(curFee, 2).ToString() + "\t\t"
-                        + Math.Round(netpl, 2).ToString() + "\t\t"
-                        + pl.ToString());
+                    sellFee = AMOUNT * sellAtPrice * FEE_PERCENTAGE; //(curProdSize * sellAtPrice) * FEE_PERCENTAGE;
+                    USDbalance = USDbalance + (curProdSize * sellAtPrice) - sellFee;
+
+                    totalFee += sellFee;
+
+
+
+                    var netpl = ((sellAtPrice - buyAtPrice) * curProdSize) - (buyFee + sellFee);
+
+
+                    cross.CalculatedBalance = Math.Round(Convert.ToDouble(USDbalance), 2);
+                    cross.CalculatedNetPL = Math.Round(Convert.ToDouble(netpl), 2);
+
+                    var sellingPrice = Math.Round(sellAtPrice, 2).ToString();
+
+                    if (isStopLossSale)
+                    {
+                        sellingPrice = sellingPrice + "*";
+                    }
+
+                    if (printTrade)
+                    {
+                        var sellMsg = cross.dt.ToString(@"yyyy-MM-dd HH:mm:ss") + "\t"
+                            + cross.Action + ((cross.comment != null) ? "_M" : "") + "\t\t"
+                            + sellingPrice + "\t\t"
+                            + Math.Round(sellFee, 2).ToString() + "\t\t"
+                            + Math.Round(curProdSize, 2).ToString() + "\t"
+                            + Math.Round(netpl, 2).ToString() + "\t\t"
+                            + Math.Round(USDbalance, 2).ToString();
+                        trans.AppendLine(sellMsg);
+
+
+                        var sellMsgCsv = cross.dt.ToString(@"yyyy-MM-dd HH:mm:ss") + "\t"
+                            + cross.Action + ((cross.comment != null) ? "_M" : "") + "\t"
+                            + sellingPrice + "\t"
+                            + Math.Round(sellFee, 2).ToString() + "\t"
+                            + Math.Round(curProdSize, 2).ToString() + "\t"
+                            + Math.Round(netpl, 2).ToString() + "\t"
+                            + Math.Round(USDbalance, 2).ToString();
+                        transCsv.AppendLine(sellMsgCsv);
+                    }
+
 
                     plList.Add(netpl);
+                    lastAction = "sell";
                 }
             }
 
 
+            Console.WriteLine("\n");
 
-            Console.WriteLine("Total Trades: " + allCrossings.Count());
-            Console.WriteLine("Profit/Loss: " + plList.Sum().ToString());
-            Console.WriteLine("Total Fees: " + totalFee.ToString());
-            Console.WriteLine("Biggest Profit: " + plList.Max().ToString());
-            Console.WriteLine("Biggest Profit: " + plList.Min().ToString());
+            var msg = "";
+            msg = "" +
+                "\nFrom: " + _ActualInputStartDate.Date.ToString("yyyy-MMM-dd") + " To: " + _ActualInputEndDate.Date.ToString("yyyy-MMM-dd") + "\n" +
+                "Interval: " + COMMON_INTERVAL.ToString() + "\n" +
+                "Big sma: " + LARGE_SMA_LEN.ToString() + "\n" +
+                "Small sma; " + SMALL_SMA_LEN.ToString() + "\n" +
+                "sma of macd: " + _SignalLen.ToString() + "\n" +
+                "\nTotal Trades: " + allCrossings.Count() + "\n" +
+                "Profit/Loss: " + Math.Round(plList.Sum(), 2).ToString() + "\n" +
+                "Total Fees: " + Math.Round(totalFee, 2).ToString() + "\n" +
+                "Biggest Profit: " + Math.Round(plList.Max(), 2).ToString() + "\n" +
+                "Biggest Loss: " + Math.Round(plList.Min(), 2).ToString() + "\n" +
+                "Stop Loss Count: " + stopLossSale.ToString() + "\n" +
+                "Avg. PL / Trade: " + Math.Round(plList.Average(), 2).ToString() + "\n\n";
+
+
+            //"\nFrom: " + allCrossings.Last().dt.Date.ToString("yyyy-MMM-dd") + " To: " + allCrossings.First().dt.Date.ToString("yyyy-MMM-dd") + "\n" +
+
+            trans.AppendLine(msg);
+
+            transCsv.AppendLine(msg);
+
+            Logger.WriteLog("\n Non compounding results:\n" + trans.ToString());
+
+            //Console.WriteLine("\nFrom: " + allCrossings.Last().dt.Date.ToString("yyyy-MMM-dd") + " To: " + allCrossings.First().dt.Date.ToString("yyyy-MMM-dd"));
+            //Console.WriteLine("Interval: " + COMMON_INTERVAL.ToString());
+            //Console.WriteLine("Big sma: " + LARGE_SMA_LEN.ToString());
+            //Console.WriteLine("Small sma; " + SMALL_SMA_LEN.ToString());
+            //Console.WriteLine("sma of macd: " + SignalLen.ToString());
+            //Console.WriteLine("\nTotal Trades: " + allCrossings.Count());
+            //Console.WriteLine("Profit/Loss: " + Math.Round(plList.Sum(), 2).ToString());
+            //Console.WriteLine("Total Fees: " + Math.Round(totalFee, 2).ToString());
+            //Console.WriteLine("Biggest Profit: " + Math.Round(plList.Max(), 2).ToString());
+            //Console.WriteLine("Biggest Loss: " + Math.Round(plList.Min(), 2).ToString());
+            //Console.WriteLine("Avg. PL / Trade: " + Math.Round(plList.Average(), 2).ToString() + "\n\n");
+
+            return (double)plList.Sum();
 
         }
 
 
+        //void CalculatePl_NonCompounding(List<CrossData> allCrossings)
+        //{
+
+
+        //    const int AMOUNT = 50;
+        //    decimal pl = 0;
+        //    const decimal FEE = 0.003m;
+        //    decimal totalFee = 0.0m;
+
+        //    if (allCrossings.First().Action == "buy")
+        //    {
+        //        allCrossings.RemoveAt(allCrossings.IndexOf(allCrossings.First()));
+        //    }
+
+        //    if (allCrossings.Last().Action == "sell")
+        //    {
+        //        allCrossings.RemoveAt(allCrossings.IndexOf(allCrossings.Last()));
+        //    }
+
+        //    Console.WriteLine("Time\t\t\taction\t\tPrice\t\tFee\t\tPL\t\tBalance");
+
+        //    var plList = new List<decimal>();
+
+        //    var curPl = 0.0m;
+
+
+        //    for (int i = allCrossings.Count() - 1; i >= 0; i--)
+        //    {
+        //        var cross = allCrossings[i];
+        //        var curFee = (AMOUNT * cross.CrossingPrice) * FEE;
+
+        //        totalFee += curFee;
+        //        if (cross.Action == "buy")
+        //        {
+        //            pl = pl - (AMOUNT * cross.CrossingPrice) + curFee;
+
+        //            curPl = (AMOUNT * cross.CrossingPrice) + curFee;
+
+        //            Console.WriteLine(cross.dt.ToString() + "\t"
+        //                + cross.Action + "\t\t"
+        //                + cross.CrossingPrice.ToString() + "\t\t"
+        //                + Math.Round(curFee, 2).ToString() + "\t\t"
+        //                + "\t\t"
+        //                + pl.ToString());
+        //        }
+
+        //        if (cross.Action == "sell")
+        //        {
+        //            pl = pl + (AMOUNT * cross.CrossingPrice) - curFee;
+
+        //            var netpl = ((AMOUNT * cross.CrossingPrice) - curFee) - curPl;
+
+        //            Console.WriteLine(cross.dt.ToString() + "\t"
+        //                + cross.Action + "\t\t"
+        //                + cross.CrossingPrice.ToString() + "\t\t"
+        //                + Math.Round(curFee, 2).ToString() + "\t\t"
+        //                + Math.Round(netpl, 2).ToString() + "\t\t"
+        //                + pl.ToString());
+
+        //            plList.Add(netpl);
+        //        }
+        //    }
+
+
+
+        //    Console.WriteLine("Total Trades: " + allCrossings.Count());
+        //    Console.WriteLine("Profit/Loss: " + plList.Sum().ToString());
+        //    Console.WriteLine("Total Fees: " + totalFee.ToString());
+        //    Console.WriteLine("Biggest Profit: " + plList.Max().ToString());
+        //    Console.WriteLine("Biggest Profit: " + plList.Min().ToString());
+
+        //}
+
+
     }
+
+
+
 }
 
 
