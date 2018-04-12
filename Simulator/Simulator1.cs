@@ -957,6 +957,9 @@ namespace Simulator
                 //allSereis2.Add(new SeriesDetails { series = ActualPriceList, SereiesName = "Actual Price" });
                 //BigSma.SmaDataPts_Candle
 
+                //enter moving average data to graph needed
+
+
                 var PriceLine = requiredMacdPtsLnq.Select(p => new SmaData { ActualPrice = p.ActualPrice, Time = p.Time }).ToList();
                 allSereis2.Add(new SeriesDetails { series = PriceLine, SereiesName = "Price" });
                 allSereis2.Add(new SeriesDetails { series = requiredMacdPtsLnq, SereiesName = "macd" });
