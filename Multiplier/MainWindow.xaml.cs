@@ -28,6 +28,7 @@ using Newtonsoft.Json.Linq;
 
 
 using CoinbaseExchange.NET.Endpoints.Funds;
+using System.Threading;
 
 namespace Multiplier
 {
@@ -37,8 +38,8 @@ namespace Multiplier
     public partial class MainWindow : Window
     {
 
-        
 
+        GraphWindow _graphWindow;
 
         Manager ProductManager;
 
@@ -64,8 +65,10 @@ namespace Multiplier
 
             InitializeComponent();
 
-            StartWindow a = new StartWindow();
-            a.Show();
+            _graphWindow = new GraphWindow();
+
+            //StartWindow a = new StartWindow();
+            //a.Show();
 
 
 
@@ -1201,6 +1204,38 @@ namespace Multiplier
                     ProductManager.TickerConnectedHandler(null, null);
 
                 });
+
+        }
+
+        private void btnShowGraph_Click(object sender, RoutedEventArgs e)
+        {
+
+            //Task.Run(()=> 
+            //{
+
+            //});
+
+            
+            _graphWindow = new GraphWindow();
+
+            _graphWindow.Height = 900;
+            _graphWindow.Width = 1500;
+            _graphWindow.Show();
+
+            Task.Run(()=> 
+            {
+                ProductManager.ShowGraph(_graphWindow);
+            });
+
+            //Thread thread = new Thread(() =>
+            //{
+
+            //    ProductManager.ShowGraph();
+
+
+            //});
+            //thread.SetApartmentState(ApartmentState.STA);
+            //thread.Start();
 
         }
 

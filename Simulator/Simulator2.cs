@@ -465,7 +465,7 @@ namespace Simulator
                         }
                     }
 
-                    var plResult = S.Calculate(autoStartDate, autoEndDate, false, false);
+                    var plResult = S.Calculate(autoStartDate, autoEndDate, false, true);
 
                     resultList.Add(new ResultData { Pl = plResult, intervals = interval });
 

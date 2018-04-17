@@ -24,6 +24,8 @@ namespace CoinbaseExchange.NET.Data
         private int SLICES;
         private int TIME_INTERVAL;
 
+        private int SMA_UPDATE_INTERVAL_SEC;
+
         private string Product;
 
         private bool isBusyUpdatingMA;
@@ -52,7 +54,7 @@ namespace CoinbaseExchange.NET.Data
 
         public decimal CurrentConfidenceIntervalBuffer;
 
-        public System.Timers.Timer aTimer;
+        public System.Timers.Timer smaUpdateTimer;
 
         //private bool ForceRedownloadData;
 
@@ -86,6 +88,8 @@ namespace CoinbaseExchange.NET.Data
                 SharedRawExchangeData = new List<CandleData>();
 
             TIME_INTERVAL = timeInterValInMin;
+
+            SMA_UPDATE_INTERVAL_SEC = TIME_INTERVAL * 60; //time interval in seconds
 
             SLICES = smaSlices;
 
@@ -123,18 +127,23 @@ namespace CoinbaseExchange.NET.Data
                 //throw new Exception("SMAInitError");
             }
 
-            if(aTimer != null) //timer already in place
+            if(smaUpdateTimer != null) //timer already in place
             {
-                aTimer.Elapsed -= UpdateSMA;
-                aTimer.Stop();
-                aTimer = null;
+                smaUpdateTimer.Elapsed -= UpdateSMA;
+                smaUpdateTimer.Stop();
+                smaUpdateTimer = null;
             }
 
-            aTimer = new System.Timers.Timer();
-            aTimer.Elapsed += UpdateSMA;
-            aTimer.Interval = updateInterval * 60 * 1000;
-            aTimer.Enabled = true;
-            aTimer.Start();
+            //in seconds 
+            var t_interval_sec = SMA_UPDATE_INTERVAL_SEC - (((DateTime.Now.Minute * 60) + DateTime.Now.Second) % SMA_UPDATE_INTERVAL_SEC);
+
+            //Logger.WriteLog(updateInterval +  " min SMA updated, next update in " + ((double)(t_interval_sec)) / 60 + " min at " + DateTime.Now.AddSeconds(t_interval_sec));
+
+            smaUpdateTimer = new System.Timers.Timer();
+            smaUpdateTimer.Elapsed += UpdateSMA;
+            smaUpdateTimer.Interval = t_interval_sec * 1000; //in miliseconds //updateInterval * 60 * 1000;
+            smaUpdateTimer.Enabled = true;
+            smaUpdateTimer.Start();
 
             NotifyListener(new MAUpdateEventArgs
             {
@@ -174,7 +183,7 @@ namespace CoinbaseExchange.NET.Data
 
         private void UpdateSMA(object sender, System.Timers.ElapsedEventArgs e)
         {
-            //Logger.WriteLog("Updating SMA");
+
 
             //const int SLICES = 40;
             if (isBusyUpdatingMA)
@@ -182,6 +191,14 @@ namespace CoinbaseExchange.NET.Data
                 Logger.WriteLog("Already busy updating sma");
                 return;
             }
+
+
+            var t_interval_sec = SMA_UPDATE_INTERVAL_SEC - (((DateTime.Now.Minute * 60) + DateTime.Now.Second) % SMA_UPDATE_INTERVAL_SEC);
+            //Console.WriteLine("waiting " + t_interval + " seconds for next event fire");
+            smaUpdateTimer.Interval = t_interval_sec * 1000;
+            //Logger.WriteLog("Updating SMA, next update in " + ((double)(t_interval_sec))/60 + " min at " + DateTime.Now.AddSeconds(t_interval_sec));
+            
+
 
             isBusyUpdatingMA = true;
 
@@ -285,8 +302,10 @@ namespace CoinbaseExchange.NET.Data
 
         private void NotifyListener(MAUpdateEventArgs args)
         {
-            if (MovingAverageUpdatedEvent != null)
-                MovingAverageUpdatedEvent(this, args);
+            //if (MovingAverageUpdatedEvent != null)
+            //    MovingAverageUpdatedEvent(this, args);
+
+            MovingAverageUpdatedEvent?.Invoke(this, args);
 
         }
 
@@ -355,8 +374,9 @@ namespace CoinbaseExchange.NET.Data
             //this gurantess that the latest price is considered (latest data point is taken in calculations)
             //var tempExchangePriceDataSet = SharedRawExchangeData.Take(SharedRawExchangeData.Count() - remainder).ToList();
 
-            var tempExchangePriceDataSet = SharedRawExchangeData.Skip(remainder).ToList();
-
+            
+            //var tempExchangePriceDataSet = SharedRawExchangeData.Skip(remainder - 1).ToList();
+            var tempExchangePriceDataSet = SharedRawExchangeData.Skip(remainder - 1).ToList();
 
 
 
@@ -369,16 +389,36 @@ namespace CoinbaseExchange.NET.Data
 
 
 
-            var remainderSLICE = intervalData.Count() % SLICES;
+            //var remainderSLICE = intervalData.Count() % SLICES;
             var requiredIntervalData = intervalData; //intervalData.Skip(remainderSLICE).ToList(); MM_12Apr18
 
 
             SmaDataPts_Candle = new List<CandleData>(requiredIntervalData);
 
+            //StringBuilder test = new StringBuilder();
+            //test.Clear();
+            //requiredIntervalData.ForEach(d=> test.AppendLine(d.Time + "\t" + d.Close));
+            //System.IO.File.WriteAllText(System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetEntryAssembly().Location) + @"\Test.txt",
+            //    test.ToString());
+
+
+
             var priceDataPoints = requiredIntervalData.Select((d) => (double)d.Close).ToList(); //transfer candle data close values to pure list of doubles
+
+            //test.Clear();
+            //priceDataPoints.ForEach(d => test.AppendLine(d.ToString()));
+            //System.IO.File.WriteAllText(System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetEntryAssembly().Location) + @"\Test.txt",
+            //    test.ToString());
+
 
             var smaDataPtsList = priceDataPoints.SMA(SLICES).ToList(); //return the continuous sma using the list of doubles (NOT candle data)
 
+
+
+            //test.Clear();
+            //smaDataPtsList.ForEach(d => test.AppendLine(d.ToString()));
+            //System.IO.File.WriteAllText(System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetEntryAssembly().Location) + @"\Test.txt",
+            //    test.ToString());
             //var emadataPtsList = priceDataPoints.EMA(SLICES).ToList();
 
             SmaDataPoints = new List<double>(smaDataPtsList);
@@ -408,9 +448,9 @@ namespace CoinbaseExchange.NET.Data
             try
             {
                 //Logger.WriteLog(string.Format("disposing the {0} min sma timer ", this.aTimer.Interval / (60000)));
-                this.aTimer.Stop();
-                this.aTimer.Close();
-                this.aTimer = null;
+                this.smaUpdateTimer.Stop();
+                this.smaUpdateTimer.Close();
+                this.smaUpdateTimer = null;
             }
             catch (Exception)
             {
@@ -419,7 +459,7 @@ namespace CoinbaseExchange.NET.Data
             }
             finally
             {
-                this.aTimer = null;
+                this.smaUpdateTimer = null;
 
                 if (clearSharedExDataOnDispose)
                 {

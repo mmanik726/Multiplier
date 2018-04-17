@@ -51,6 +51,10 @@ namespace CoinbaseExchange.NET
                 {
                     Update();
                 }
+
+                firstDataPointDateTime = RawExchangeData.First().Time;
+                lastDataPointDateTime = RawExchangeData.Last().Time;
+
             }
             else
             {
@@ -84,6 +88,7 @@ namespace CoinbaseExchange.NET
         private bool WriteToFile(string fileNamePath, List<CandleData> CandleDataList)
         {
             //write to file 
+            Logger.WriteLog("Writing to Json DB");
             try
             {
                 var data = CandleDataList.OrderByDescending((x) => x.Time).ToList();
@@ -100,6 +105,8 @@ namespace CoinbaseExchange.NET
 
         private bool ReadFromFile()
         {
+
+            Logger.WriteLog("Reading Json DB for historic data");
             try
             {
                 RawExchangeData = JsonConvert.DeserializeObject<List<CandleData>>(File.ReadAllText(jsonDBNamePath));
@@ -119,6 +126,8 @@ namespace CoinbaseExchange.NET
 
         private bool IsDbCorrupt()
         {
+            Logger.WriteLog("Checking for in consistencies in Json DB");
+
             var mDt = RawExchangeData;//.OrderByDescending((d) => d.Time).ToList();
 
 
@@ -146,7 +155,8 @@ namespace CoinbaseExchange.NET
 
 
             //FillMissingData(invalidData.ToList());
-            FillMissingData_Dummy(invalidData.ToList());
+            if (invalidData.Count() > 0)
+                FillMissingData_Dummy(invalidData.ToList());
 
             if (invalidData.Count() > 0)
             {
@@ -518,8 +528,9 @@ namespace CoinbaseExchange.NET
 
             RawExchangeData.AddRange(extraData);
 
+            RawExchangeData = RawExchangeData.OrderByDescending(d => d.Time).ToList();
 
-            Logger.WriteLog("done downloading additional data ");
+            Logger.WriteLog("done downloading additional data from server");
 
             return true;
         }

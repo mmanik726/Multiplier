@@ -114,7 +114,7 @@ namespace CoinbaseExchange.NET.Utilities
 
 
 
-            public static void WriteLog(string message, string fileName = "")
+        public static void WriteLog(string message, string fileName = "")
         {
 
             if (_LoggerInstance == null)
@@ -157,7 +157,7 @@ namespace CoinbaseExchange.NET.Utilities
                 lock (_WriteLock)
                 {
                     File.AppendAllText(_fileNamePath, logMsg);
-                    Debug.WriteLine(logMsg);
+                    //Debug.WriteLine(logMsg);
                 }
 
 

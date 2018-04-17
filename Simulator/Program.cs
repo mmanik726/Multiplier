@@ -31,7 +31,8 @@ namespace Simulator
 
 
             Simulator1.Start();
-            
+
+            //Simulator3.Start();
 
             //Simulator2.Start();
 
@@ -85,10 +86,14 @@ namespace Simulator
 
         public void PrintRange()
         {
+            var msg = "";
+
             foreach (var prop in typeof(IntervalRange).GetProperties())
             {
-                Console.WriteLine("{0} = {1}", prop.Name, prop.GetValue(this, null));
+                msg += string.Format("{0} = {1} \n", prop.Name, prop.GetValue(this, null));
             }
+
+            Logger.WriteLog("\n" + msg);
         }
 
         //public static IntervalRange operator / (IntervalRange interval, int a)
@@ -128,6 +133,49 @@ namespace Simulator
         //}
 
 
+
+        public static IntervalRange GetaHalfRange(List<ResultData> topResultList)
+        {
+
+            //topResultList = topResultList.OrderBy(r => r.Pl).ToList();
+
+            
+            var newMin_Interval = topResultList.Select(a => a.intervals.interval).Min() - 2;
+            var newMax_Interval = topResultList.Select(a => a.intervals.interval).Max() + 2;
+
+
+            var newBigsmaMin = topResultList.Select(a => a.intervals.bigSmaLen).Min() - 2;
+            var newBigsmaMax = topResultList.Select(a => a.intervals.bigSmaLen).Max() + 2;
+
+
+            var newSmallSmaLen_min = topResultList.Select(a => a.intervals.smallSmaLen).Min() - 2;
+            var newSmallSmaLen_max = topResultList.Select(a => a.intervals.smallSmaLen).Max() + 2;
+
+
+            var newSignalLen_min = topResultList.Select(a => a.intervals.SignalLen).Min() - 2;
+            var newSignalLen_max = topResultList.Select(a => a.intervals.SignalLen).Max() + 2;
+
+
+            return new IntervalRange
+            {
+
+                interval_min = (newMin_Interval < 1) ? 1 : newMin_Interval,
+                interval_max = (newMax_Interval < 1) ? 1 : newMax_Interval,
+
+                bigSmaLen_min = (newBigsmaMin < 1) ? 1 : newBigsmaMin,
+                bigSmaLen_max = (newBigsmaMax < 1) ? 1 : newBigsmaMax,
+
+                smallSmaLen_min = (newSmallSmaLen_min < 1) ? 1 : newSmallSmaLen_min,
+                smallSmaLen_max = (newSmallSmaLen_max < 1) ? 1 : newSmallSmaLen_max,
+
+                SignalLen_min = (newSignalLen_min < 1) ? 1 : newSignalLen_min,
+                SignalLen_max = (newSignalLen_max < 1) ? 1 : newSignalLen_max
+            };
+        }
+
+
+
+
         public static IntervalRange GetaHalfRange(IntervalRange inputRange)
         {
             var mid = inputRange.interval_max - inputRange.interval_min;
@@ -150,17 +198,17 @@ namespace Simulator
             return new IntervalRange
             {
 
-                interval_min = newMin_Interval,
-                interval_max = newMax_Interval,
+                interval_min = (newMin_Interval < 1)? 1 : newMin_Interval,
+                interval_max = (newMax_Interval < 1) ? 1 : newMax_Interval,
 
-                bigSmaLen_min = newBigsmaMin,
-                bigSmaLen_max = newBigsmaMax,
+                bigSmaLen_min = (newBigsmaMin < 1) ? 1 : newBigsmaMin,
+                bigSmaLen_max = (newBigsmaMax < 1) ? 1 : newBigsmaMax,
 
-                smallSmaLen_min = newSmallSmaLen_min,
-                smallSmaLen_max = newSmallSmaLen_max,
+                smallSmaLen_min = (newSmallSmaLen_min < 1) ? 1 : newSmallSmaLen_min,
+                smallSmaLen_max = (newSmallSmaLen_max < 1) ? 1 : newSmallSmaLen_max,
 
-                SignalLen_min = newSignalLen_min,
-                SignalLen_max = newSignalLen_max
+                SignalLen_min = (newSignalLen_min < 1) ? 1 : newSignalLen_min,
+                SignalLen_max = (newSignalLen_max < 1) ? 1 : newSignalLen_max
             };
         }
 
@@ -192,18 +240,18 @@ namespace Simulator
 
             return new IntervalRange
             {
+                interval_min = (newMin_Interval < 1) ? 1 : newMin_Interval,
+                interval_max = (newMax_Interval < 1) ? 1 : newMax_Interval,
 
-                interval_min = newMin_Interval,
-                interval_max = newMax_Interval,
+                bigSmaLen_min = (newBigsmaMin < 1) ? 1 : newBigsmaMin,
+                bigSmaLen_max = (newBigsmaMax < 1) ? 1 : newBigsmaMax,
 
-                bigSmaLen_min = newBigsmaMin,
-                bigSmaLen_max = newBigsmaMax,
+                smallSmaLen_min = (newSmallSmaLen_min < 1) ? 1 : newSmallSmaLen_min,
+                smallSmaLen_max = (newSmallSmaLen_max < 1) ? 1 : newSmallSmaLen_max,
 
-                smallSmaLen_min = newSmallSmaLen_min,
-                smallSmaLen_max = newSmallSmaLen_max,
+                SignalLen_min = (newSignalLen_min < 1) ? 1 : newSignalLen_min,
+                SignalLen_max = (newSignalLen_max < 1) ? 1 : newSignalLen_max
 
-                SignalLen_min = newSignalLen_min,
-                SignalLen_max = newSignalLen_max
             };
         }
 

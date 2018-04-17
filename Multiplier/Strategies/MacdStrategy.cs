@@ -143,7 +143,7 @@ namespace Multiplier
         MovingAverage BigSma;
 
         //only one instance per class object
-        public System.Timers.Timer aTimer;
+        //public System.Timers.Timer aTimer;
 
         public System.Timers.Timer StopLossTimer;
 
@@ -204,19 +204,24 @@ namespace Multiplier
 
             contextVals = inputContextValues;
 
-            if (aTimer != null) //timer already in place
-            {
-                aTimer.Elapsed -= UpdateMacdValues;
-                aTimer.Stop();
-                aTimer = null;
-            }
+            //if (aTimer != null) //timer already in place
+            //{
+            //    aTimer.Elapsed -= UpdateMacdValues;
+            //    aTimer.Stop();
+            //    aTimer = null;
+            //}
 
 
-            aTimer = new System.Timers.Timer();
-            aTimer.Elapsed += UpdateMacdValues;
-            aTimer.Interval = updateInterval * 60 * 1000;
-            aTimer.Enabled = true;
-            aTimer.Start();
+            //aTimer = new System.Timers.Timer();
+            //aTimer.Elapsed += UpdateMacdValues;
+            //aTimer.Interval = updateInterval * 60 * 1000;
+            //aTimer.Enabled = true;
+            //aTimer.Start();
+
+
+
+            BigSma.MovingAverageUpdatedEvent += UpdateMacdValues;
+
 
             UpdateMacdValues(this, null);
 
@@ -297,7 +302,7 @@ namespace Multiplier
 
 
 
-        private void UpdateMacdValues(object sender, ElapsedEventArgs e)
+        private void UpdateMacdValues(object sender, EventArgs e)
         {
             Logger.WriteLog(String.Format("Udating {0} strategy values", _StategyName));
 
@@ -513,12 +518,12 @@ namespace Multiplier
                 StopLossTimer = null;
             }
 
-            if (aTimer != null) //timer already in place
-            {
-                aTimer.Elapsed -= UpdateMacdValues;
-                aTimer.Stop();
-                aTimer = null;
-            }
+            //if (aTimer != null) //timer already in place
+            //{
+            //    aTimer.Elapsed -= UpdateMacdValues;
+            //    aTimer.Stop();
+            //    aTimer = null;
+            //}
 
             //throw new NotImplementedException();
 

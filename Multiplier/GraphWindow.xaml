@@ -4,7 +4,5 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:Multiplier"
-        Title="GraphWindow" Height="318.705" Width="537.41">
-    <Grid>
-    </Grid>
+        Title="GraphWindow" Height="617.705" Width="1000.41">
 </Window>
