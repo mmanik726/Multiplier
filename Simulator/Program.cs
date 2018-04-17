@@ -280,13 +280,6 @@ namespace Simulator
 
 
 
-    public class SmaData
-    {
-        public double SmaValue { get; set; }
-        public decimal ActualPrice { get; set; }
-        public DateTime Time { get; set; }
-    }
-
 
 
 }

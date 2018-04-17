@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 //using static Simulator.Simulator;
+using CoinbaseExchange.NET;
 
 namespace Simulator
 {

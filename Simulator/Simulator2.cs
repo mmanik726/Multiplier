@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using CoinbaseExchange.NET.Data;
 using CoinbaseExchange.NET.Endpoints.PublicData;
 using System.Threading;
+using CoinbaseExchange.NET;
 using CoinbaseExchange.NET.Utilities;
 
 namespace Simulator

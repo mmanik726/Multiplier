@@ -14,6 +14,8 @@ using Newtonsoft.Json.Linq;
 using Newtonsoft.Json;
 using System.IO;
 
+using CoinbaseExchange.NET;
+
 namespace Simulator
 {
 

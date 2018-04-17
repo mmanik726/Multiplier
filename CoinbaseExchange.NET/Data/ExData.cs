@@ -11,6 +11,12 @@ using CoinbaseExchange.NET.Endpoints.PublicData;
 namespace CoinbaseExchange.NET
 {
 
+    public class SmaData
+    {
+        public double SmaValue { get; set; }
+        public decimal ActualPrice { get; set; }
+        public DateTime Time { get; set; }
+    }
 
     public class ExData
     {
@@ -664,6 +670,8 @@ namespace CoinbaseExchange.NET
             public CandleData LastCandle { get; set; }
             public CandleData NextCandle { get; set; }
         }
+
+
 
     }
 

@@ -13,19 +13,28 @@ using System.Threading;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json;
 using System.IO;
+using CoinbaseExchange.NET;
+
+
 
 namespace Simulator
 {
 
     public class Simulator1 : IDisposable
     {
-        MovingAverage SmallSma;
-        MovingAverage BigSma;
+        //MovingAverage SmallSma;
+        //MovingAverage BigSma;
         private int COMMON_INTERVAL;
 
         private int LARGE_SMA_LEN;
         private int SMALL_SMA_LEN;
 
+
+        public static List<CandleData> _RawData;
+
+        private static bool LoadingData;
+
+        private static object LoadingDataLock = new object();
 
         public List<SeriesDetails> CurResultsSeriesList = new List<SeriesDetails>();
         public List<CrossData> CurResultCrossList = new List<CrossData>();
@@ -38,7 +47,7 @@ namespace Simulator
 
         static Random _random = new Random();
 
-        private IEnumerable<SmaData> SmaDiff;
+        private IEnumerable<SmaData> _SmaDiff;
 
         private int _SignalLen;
 
@@ -178,185 +187,109 @@ namespace Simulator
         }
 
 
+
+        private List<SmaData> getSmaLine(ref List<CandleData> rawData, int Interval, int smaLen)
+        {
+            var remainder = rawData.Count() % Interval;
+            //            var tempExchangePriceDataSet = rawData.Skip(remainder - 1).ToList();
+            var tempExchangePriceDataSet = rawData.Take(rawData.Count() - (remainder - 1)).ToList();
+
+
+            var requiredIntervalData = tempExchangePriceDataSet.Where((candleData, i) => i % Interval == 0).ToList();// select every third item in list ie select data from every x min 
+
+
+            var t = requiredIntervalData.Last();
+
+            var priceDataPointsDbl = requiredIntervalData.Select((d) => (double)d.Close).ToList(); //transfer candle data close values to pure list of doubles
+
+            
+
+            var smaDataPtsList = priceDataPointsDbl.SMA(smaLen).ToList(); //return the continuous sma using the list of doubles (NOT candle data)
+
+
+            var requiredSmadtpts = requiredIntervalData.Skip(smaLen - 1).ToList();
+            var smaWithDataPts = smaDataPtsList.Select((d, i) => new SmaData
+            {
+                SmaValue = d,
+                ActualPrice = requiredSmadtpts.ElementAt(i).Close,
+                Time = requiredSmadtpts.ElementAt(i).Time
+            }).ToList();
+
+
+
+            return smaWithDataPts;
+
+
+
+
+        }
+
+
         public Simulator1(ref TickerClient ticker, string productName, int CommonInterval = 30, int LargeSmaLen = 100, int SmallSmaLen = 35, bool downloadLatestData = false)
         {
 
+            //while (LoadingData)
+            //{
+            //    Thread.Sleep(100);
+            //}
 
+            lock (LoadingDataLock)
+            {
+                if (_RawData == null)
+                {
+                    LoadingData = true;
+
+                    ExData a = new ExData(productName, true);
+                    _RawData = a.RawExchangeData.OrderBy(d => d.Time).ToList();
+
+                    LoadingData = false;
+
+                }
+            }
+
+
+
+
+            
             COMMON_INTERVAL = CommonInterval;
             LARGE_SMA_LEN = LargeSmaLen;
             SMALL_SMA_LEN = SmallSmaLen;
 
 
+            var biggerDate = DateTime.Now;
 
 
-            BigSma = new MovingAverage(ref ticker, productName, COMMON_INTERVAL, LARGE_SMA_LEN, 10, downloadLatestData, false);
-            SmallSma = new MovingAverage(ref ticker, productName, COMMON_INTERVAL, SMALL_SMA_LEN, 10, downloadLatestData, false);
+            var timeTaken = DateTime.Now;
+            var LargeSmaLine = getSmaLine(ref _RawData, COMMON_INTERVAL, LARGE_SMA_LEN);
 
 
-            var largeSmaDataPoints = BigSma.SmaDataPoints;
-            var smallSmaDataPoints = SmallSma.SmaDataPoints;
+            //timeTaken = DateTime.Now;
+            //var LargeSmaLine2 = _RawData.SMA_CD(COMMON_INTERVAL, LARGE_SMA_LEN).ToList();
 
-            //var x = BigSma.SmaDataPts_Candle;
-            //var y = SmallSma.SmaDataPts_Candle;
 
-            //SmaDiff =
-            //    from i in
-            //    Enumerable.Range(0, Math.Max(largeSmaDataPoints.Count, smallSmaDataPoints.Count))
-            //    select new SmaData
-            //    {
-            //        SmaValue = smallSmaDataPoints.ElementAtOrDefault(i) - largeSmaDataPoints.ElementAtOrDefault(i),
-            //        ActualPrice = MovingAverage.SharedRawExchangeData.ElementAt(i * COMMON_INTERVAL).Close,
-            //        Time = MovingAverage.SharedRawExchangeData.ElementAt(i * COMMON_INTERVAL).Time
+            var SmallSmaLine = getSmaLine(ref _RawData, COMMON_INTERVAL, SMALL_SMA_LEN);
 
-            //        //////BigSma.SmaDataPts_Candle is equal to SmallSma.SmaDataPts_Candle since common interval is the same 
-            //        ////ActualPrice = BigSma.SmaDataPts_Candle.ElementAtOrDefault(i).Close,
-            //        ////dt = BigSma.SmaDataPts_Candle.ElementAtOrDefault(i).Time
 
-            //    };
+            biggerDate = (LargeSmaLine.First().Time > SmallSmaLine.First().Time) ? LargeSmaLine.First().Time : SmallSmaLine.First().Time;
+
+            //align data on same timeline 
+            LargeSmaLine = LargeSmaLine.Where(d => d.Time >= biggerDate).ToList();
+            SmallSmaLine = SmallSmaLine.Where(d => d.Time >= biggerDate).ToList();
 
 
 
-
-            var smaDtPtsReversedBig = BigSma.SmaDataPts_Candle.OrderBy((d) => d.Time);
-
-            var smaPointsBig = smaDtPtsReversedBig.Select((d) => (double)d.Close).ToList().SMA(LARGE_SMA_LEN).ToList();
-
-            var requiredSmadtptsBig = smaDtPtsReversedBig.Skip(LARGE_SMA_LEN - 1).ToList();
+            var smaD = LargeSmaLine.Zip(SmallSmaLine, (bd, sd) => sd.SmaValue - bd.SmaValue);
 
 
-            ////var cntr = smaDtPtsReversedBig.Count() - 1;
-            ////var running = 0;
-
-            ////while (cntr >= 0 )
-            ////{
-
-
-            ////    System.Diagnostics.Debug.Write(smaDtPtsReversedBig.ElementAt(cntr).Time.ToString() + "\t");
-            ////    System.Diagnostics.Debug.Write(smaDtPtsReversedBig.ElementAt(cntr).Close + "\t");
-
-            ////    if (running >= 100)
-            ////    {
-            ////        var innerCtr = cntr  + 1;
-            ////        System.Diagnostics.Debug.Write(smaPointsBig.ElementAt(innerCtr));
-            ////    }
-
-            ////    System.Diagnostics.Debug.Write("\n");
-            ////    running++;
-            ////    cntr--;
-
-
-            ////    if (running > 200)
-            ////    {
-            ////        break;
-            ////    }
-            ////}
-
-            //System.Diagnostics.Debug.Write("\n");
-            //System.Diagnostics.Debug.Write("\n");
-
-            //for (int i = 0; i < 200; i++)
-            //{
-            //    System.Diagnostics.Debug.Write(smaDtPtsReversedBig.ElementAt(i).Time.ToString() + "\t");
-            //    System.Diagnostics.Debug.Write(smaDtPtsReversedBig.ElementAt(i).Close + "\t");
-
-            //    if (i >= LARGE_SMA_LEN - 1)
-            //    {
-            //        System.Diagnostics.Debug.Write(smaPointsBig.ElementAt(i - (LARGE_SMA_LEN - 1)));
-            //        //continue;
-            //    }
-            //    System.Diagnostics.Debug.Write("\n");
-
-            //}
-
-            //Console.WriteLine(requiredSmadtpts.Count());
-
-            var smaWithDataPtsBig = smaPointsBig.Select((d, i) => new SmaData
+            _SmaDiff = smaD.Select((d, i) => new SmaData
             {
                 SmaValue = d,
-                ActualPrice = requiredSmadtptsBig.ElementAt(i).Close,
-                Time = requiredSmadtptsBig.ElementAt(i).Time
-            }).ToList();
-
-
-
-
-
-
-            var smaDtPtsReversedSmall = SmallSma.SmaDataPts_Candle.OrderBy((d) => d.Time);
-            var smaPointsSmall = smaDtPtsReversedSmall.Select((d) => (double)d.Close).ToList().SMA(SMALL_SMA_LEN).ToList();
-            var requiredSmadtptsSmall = smaDtPtsReversedSmall.Skip(SMALL_SMA_LEN - 1).ToList();
-            var smaWithDataPtsSmall = smaPointsSmall.Select((d, i) => new SmaData
-            {
-                SmaValue = d,
-                ActualPrice = requiredSmadtptsSmall.ElementAt(i).Close,
-                Time = requiredSmadtptsSmall.ElementAt(i).Time
-            }).ToList();
-
-
-
-            //for (int i = 0; i < 150; i++)
-            //{
-            //    System.Diagnostics.Debug.WriteLine(smaWithDataPtsBig[i].Time.ToString() + "\t" + smaWithDataPtsBig[i].ActualPrice + "\t" + smaWithDataPtsBig[i].SmaValue);
-            //}
-
-            //System.Diagnostics.Debug.WriteLine("\n\n");
-
-            //for (int i = 0; i < 150; i++)
-            //{
-            //    System.Diagnostics.Debug.WriteLine(smaWithDataPtsSmall[i].Time.ToString() + "\t" + smaWithDataPtsSmall[i].ActualPrice + "\t" + smaWithDataPtsSmall[i].SmaValue);
-            //}
-
-
-            DateTime smaFirstDate = DateTime.Now;
-            if (smaWithDataPtsBig.First().Time >= smaWithDataPtsSmall.First().Time)
-                smaFirstDate = smaWithDataPtsBig.First().Time;
-            else
-                smaFirstDate = smaWithDataPtsSmall.First().Time;
-
-
-            //this ensures that both sma lines start from the same date and time
-            smaWithDataPtsSmall = smaWithDataPtsSmall.Where(f => f.Time >= smaFirstDate).ToList();
-
-            smaWithDataPtsBig = smaWithDataPtsBig.Where(f => f.Time >= smaFirstDate).ToList();
-
-            //var sameTime_smaWithDataPtsSmall = smaWithDataPtsSmall.Where(f => f.Time >= smaFirstDate).ToList();
-
-            //for (int i = 0; i < 100; i++)
-            //{
-            //    System.Diagnostics.Debug.WriteLine(sameTime_smaWithDataPtsSmall.ElementAt(i).Time + "\t" 
-            //        + +sameTime_smaWithDataPtsSmall.ElementAt(i).ActualPrice + "\t"
-            //        + sameTime_smaWithDataPtsSmall.ElementAt(i).SmaValue);
-            //}
-
-
-            var smaD = smaWithDataPtsBig.Zip(smaWithDataPtsSmall, (bd, sd) => sd.SmaValue - bd.SmaValue);
-
-
-            SmaDiff = smaD.Select((d, i) => new SmaData
-            {
-                SmaValue = d,
-                ActualPrice = smaWithDataPtsBig.ElementAt(i).ActualPrice,
-                Time = smaWithDataPtsBig.ElementAt(i).Time
+                ActualPrice = LargeSmaLine.ElementAt(i).ActualPrice,
+                Time = LargeSmaLine.ElementAt(i).Time
             });
 
 
-            //for (int i = 0; i < 100; i++)
-            //{
-            //    System.Diagnostics.Debug.WriteLine(SmaDiff.ElementAt(i).Time + "\t"
-            //        + +SmaDiff.ElementAt(i).ActualPrice + "\t"
-            //        + SmaDiff.ElementAt(i).SmaValue);
-            //}
-
         }
-
-
-        //private class SmaDetails
-        //{
-        //    public double SmaValue { get; set; }
-        //    public decimal ActualPrice { get; set; }
-        //    public DateTime Time { get; set; }
-        //}
-
 
 
         static IntervalData getIntervalData(IntervalRange range)
@@ -1267,8 +1200,8 @@ namespace Simulator
 
 
 
-            var signalLine1 = SmaDiff.Select(d => d.SmaValue).ToList().SMA(inputSignalLen);
-            var requiredSignalDtPts1 = SmaDiff.Skip(inputSignalLen - 1).ToList();
+            var signalLine1 = _SmaDiff.Select(d => d.SmaValue).ToList().SMA(inputSignalLen);
+            var requiredSignalDtPts1 = _SmaDiff.Skip(inputSignalLen - 1).ToList();
             var SignalWithDataPtsBig = signalLine1.Select((d, i) => new SmaData
             {
                 SmaValue = d,
@@ -1321,14 +1254,14 @@ namespace Simulator
 
 
 
-            SmaDiff = requiredSignalDtPts1; //SmaDiff.Skip(inputSmaOfMacdLen);
+            _SmaDiff = requiredSignalDtPts1; //SmaDiff.Skip(inputSmaOfMacdLen);
 
 
 
 
             List<CrossData> allCrossings_Linq = new List<CrossData>();
 
-            var requiredMacdPtsLnq = SmaDiff.Where((s => s.Time >= simStartDate && s.Time < simEndTime)).ToList();
+            var requiredMacdPtsLnq = _SmaDiff.Where((s => s.Time >= simStartDate && s.Time < simEndTime)).ToList();
 
             var requiredSignalPtsLnq_big = SignalWithDataPtsBig.Where((s => s.Time >= simStartDate && s.Time < simEndTime)).ToList();
 
@@ -1686,8 +1619,8 @@ namespace Simulator
         public void Dispose()
         {
             //throw new NotImplementedException();
-            BigSma?.Dispose();
-            SmallSma?.Dispose();
+            //BigSma?.Dispose();
+            //SmallSma?.Dispose();
 
         }
 

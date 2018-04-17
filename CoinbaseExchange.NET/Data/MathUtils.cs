@@ -9,6 +9,8 @@ using CoinbaseExchange.NET.Endpoints.PublicData;
 namespace CoinbaseExchange.NET.Data
 {
 
+
+
     public static class MovingAverageExtensions
     {
         public static IEnumerable<double> SMA(this List<double> source, int sampleLength)
@@ -37,6 +39,38 @@ namespace CoinbaseExchange.NET.Data
             }
         }
 
+
+        public static IEnumerable<SmaData> SMA_CD(this List<CandleData> source, int SmaInterval, int SmaLength)
+        {
+            if (source == null) throw new ArgumentNullException("source");
+            if (SmaLength <= 0) throw new ArgumentException("Invalid sample length");
+
+            return SimpleMovingAverageImpl_CD(source, SmaInterval, SmaLength);
+        }
+
+        private static IEnumerable<SmaData> SimpleMovingAverageImpl_CD(IEnumerable<CandleData> source, int SmaInterval, int sampleLength)
+        {
+            var tempSourceCopy = source.Where((candleData, i) => i % SmaInterval == 0).ToList();
+            Queue<CandleData> sample = new Queue<CandleData>(sampleLength);
+
+            foreach (var d in tempSourceCopy)
+            {
+                if (sample.Count == sampleLength)
+                {
+                    sample.Dequeue();
+                }
+                sample.Enqueue(d);
+                if (sample.Count == sampleLength)
+                {
+                    var lastItem = sample.Last();
+                    var newSmaData = new SmaData {ActualPrice = lastItem.Close , Time = lastItem.Time };
+                    newSmaData.SmaValue = (double)sample.Average(s => s.Close);
+                    yield return newSmaData;
+                }
+                    
+
+            }
+        }
 
 
 

@@ -12,7 +12,7 @@ using OxyPlot;
 using OxyPlot.Axes;
 using OxyPlot.Series;
 
-using CoinbaseExchange.NET.Data;
+using CoinbaseExchange.NET;
 //using OxyPlot.Wpf;
 namespace Simulator
 {
