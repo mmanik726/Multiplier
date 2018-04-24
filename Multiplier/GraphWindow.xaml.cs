@@ -178,12 +178,14 @@ namespace Multiplier
                 double BUFFER = 0.60;
 
 
-                var buyZero = allCrossData.Where(a => a.Action == "buy").Where(b => b.BufferedCrossingPrice == 0).First();
-                buyZero.BufferedCrossingPrice = (double)buyZero.CrossingPrice + BUFFER;
+                var buyZero = allCrossData.Where(a => a.Action == "buy").Where(b => b.BufferedCrossingPrice == 0);
+                if (buyZero.Count() > 0)
+                    buyZero.First().BufferedCrossingPrice = (double)buyZero.First().CrossingPrice + BUFFER;
 
 
-                var sellZero = allCrossData.Where(a => a.Action == "sell").Where(b => b.BufferedCrossingPrice == 0).First();
-                sellZero.BufferedCrossingPrice = (double)sellZero.CrossingPrice - BUFFER;
+                var sellZero = allCrossData.Where(a => a.Action == "sell").Where(b => b.BufferedCrossingPrice == 0);
+                if (sellZero.Count() > 0)
+                    sellZero.First().BufferedCrossingPrice = (double)sellZero.First().CrossingPrice - BUFFER;
 
                 var buyPoints = allCrossData.Where(a => a.Action == "buy").Select((d) => new ScatterPoint(Axis.ToDouble(d.dt), Convert.ToDouble(d.BufferedCrossingPrice)));
                 BuyScatterSeries.Points.AddRange(buyPoints);
@@ -203,7 +205,7 @@ namespace Multiplier
                 SellScatterSeries.MarkerFill = OxyColor.FromRgb(8, 150, 56);// OxyColor.FromRgb(0, 255, 0);
 
 
-                PriceModel.Series.Add(BuyScatterSeries);
+                //PriceModel.Series.Add(BuyScatterSeries);
                 PriceModel.Series.Add(SellScatterSeries);
 
                 PriceModel.Axes.Add(new DateTimeAxis

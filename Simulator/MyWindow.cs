@@ -318,8 +318,21 @@ namespace Simulator
                 resEvendHandlerSet = true;
             }
 
+            //Task.Run(()=> 
+            //{
+            //    Dispatcher.Invoke(() =>
+            //    {
 
-            Dispatcher.Invoke(() => 
+
+            //        _SmaPlotView.Height = 400; //MyWindow.Height / 2;
+
+            //        _PricePlotView.Height = 400; // this.Height / 2;
+
+            //        _SmaPlotView.Model = SeriesModel;
+            //        _PricePlotView.Model = PriceModel;
+            //    });
+            //});
+            Dispatcher.InvokeAsync(() =>
             {
 
 

@@ -68,7 +68,7 @@ namespace Simulator
 
             //ReadTriedIntervalList();
 
-            ShowGraphingForm();
+            //ShowGraphingForm();
 
             while (true)
             {
@@ -79,29 +79,33 @@ namespace Simulator
                     am = Console.ReadLine();
                 }
 
-                bool useCompounding = false;
-                Console.WriteLine("Enter y for compounding n for non compounding");
-                var inputBool = Console.ReadLine();
-                if (inputBool == "y")
-                    useCompounding = true;
-                else
-                    useCompounding = false;
+                bool useCompounding = true;
+                //Console.WriteLine("Enter y for compounding n for non compounding");
+                //var inputBool = Console.ReadLine();
+                //if (inputBool == "y")
+                //    useCompounding = true;
+                //else
+                //    useCompounding = false;
 
                 if (am == "m")
                 {
                     //Simulator2.ManualSimulate2();
+                    ShowGraphingForm();
+
                     Simulator1.ManualSimulate(useCompounding);
                 }
                 else
                 {
                     //Simulator2.AutoSimulate2();
                     //Simulator1.AutoSimulate_DateRange(useCompounding);
+                    ShowGraphingForm();
                     Simulator1.AutoSimulate(useCompounding);
                 }
 
             }
 
         }
+
 
 
         private static void ReadTriedIntervalList(DateTime simStart, DateTime simEnd)
@@ -120,7 +124,7 @@ namespace Simulator
                 try
                 {
                     var lst = JsonConvert.DeserializeObject<List<ResultData>>(File.ReadAllText(fileNamePah));
-
+                    Logger.WriteLog("Found " + lst.Count() + " tried records from " + s + " to " + e);
                     _TriedIntervalList.Clear();
 
                     lst.ForEach(a=>_TriedIntervalList.Add(a.intervals));
@@ -198,11 +202,15 @@ namespace Simulator
             var requiredIntervalData = tempExchangePriceDataSet.Where((candleData, i) => i % Interval == 0).ToList();// select every third item in list ie select data from every x min 
 
 
-            var t = requiredIntervalData.Last();
 
             var priceDataPointsDbl = requiredIntervalData.Select((d) => (double)d.Close).ToList(); //transfer candle data close values to pure list of doubles
 
-            
+            //StringBuilder test = new StringBuilder();
+            //test.Clear();
+            //requiredIntervalData.ForEach(d => test.AppendLine(d.Time + "\t" + d.Close));
+            //File.WriteAllText(Path.GetDirectoryName(System.Reflection.Assembly.GetEntryAssembly().Location) + @"\Test.txt",
+            //    test.ToString());
+
 
             var smaDataPtsList = priceDataPointsDbl.SMA(smaLen).ToList(); //return the continuous sma using the list of doubles (NOT candle data)
 
@@ -215,6 +223,12 @@ namespace Simulator
                 Time = requiredSmadtpts.ElementAt(i).Time
             }).ToList();
 
+
+
+            //test.Clear();
+            //smaWithDataPts.ForEach(d => test.AppendLine(d.Time + "\t" + d.SmaValue));
+            //File.WriteAllText(Path.GetDirectoryName(System.Reflection.Assembly.GetEntryAssembly().Location) + @"\Test.txt",
+            //    test.ToString());
 
 
             return smaWithDataPts;
@@ -265,6 +279,17 @@ namespace Simulator
 
             //timeTaken = DateTime.Now;
             //var LargeSmaLine2 = _RawData.SMA_CD(COMMON_INTERVAL, LARGE_SMA_LEN).ToList();
+
+
+
+
+
+            //StringBuilder test = new StringBuilder();
+            //test.Clear();
+            //LargeSmaLine2.ForEach(d => test.AppendLine(d.Time + "\t" + d.SmaValue));
+            //File.WriteAllText(Path.GetDirectoryName(System.Reflection.Assembly.GetEntryAssembly().Location) + @"\Test.txt",
+            //    test.ToString());
+
 
 
             var SmallSmaLine = getSmaLine(ref _RawData, COMMON_INTERVAL, SMALL_SMA_LEN);
@@ -382,17 +407,22 @@ namespace Simulator
         private static void ShowGraphingForm()
         {
 
-            Thread thread = new Thread(() =>
+            if (_GraphingWindow == null)
             {
 
-                _GraphingWindow = new MyWindow();
-                System.Windows.Application _wpfApplication = new System.Windows.Application();
-                _wpfApplication.Run(_GraphingWindow);
 
-            });
-            thread.SetApartmentState(ApartmentState.STA);
-            thread.Start();
+                Thread thread = new Thread(() =>
+                {
 
+                    _GraphingWindow = new MyWindow();
+                    System.Windows.Application _wpfApplication = new System.Windows.Application();
+                    _wpfApplication.Run(_GraphingWindow);
+
+                });
+                thread.SetApartmentState(ApartmentState.STA);
+                thread.Start();
+
+            }
         }
         public static void ManualSimulate(bool useCompoundingCalc = true)
         {
@@ -554,9 +584,9 @@ namespace Simulator
 
 
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
-                    Console.WriteLine("invalid input / error in calc");
+                    Console.WriteLine("invalid input / error in calc: " + ex.Message);
                 }
 
             }
@@ -651,43 +681,43 @@ namespace Simulator
             //sma of macd: 21
             IntervalRange rndRange = new IntervalRange
             {
-                interval_min = 10,
-                interval_max = 60,
+                //interval_min = 10,
+                //interval_max = 60,
 
-                bigSmaLen_min = 30,
-                bigSmaLen_max = 200,
-
-                smallSmaLen_min = 15,
-                smallSmaLen_max = 60,
-
-                SignalLen_min = 2,
-                SignalLen_max = 30
-
-
-                //interval_min = 30,
-                //interval_max = 35,
-
-                //bigSmaLen_min = 48,
-                //bigSmaLen_max = 55,
-
-                //smallSmaLen_min = 27,
-                //smallSmaLen_max = 35,
-
-                //SignalLen_min = 19,
-                //SignalLen_max = 25
-
-
-                //interval_min = 1,
-                //interval_max = 200,
-
-                //bigSmaLen_min = 1,
+                //bigSmaLen_min = 30,
                 //bigSmaLen_max = 200,
 
-                //smallSmaLen_min = 1,
-                //smallSmaLen_max = 200,
+                //smallSmaLen_min = 15,
+                //smallSmaLen_max = 60,
 
-                //SignalLen_min = 1,
-                //SignalLen_max = 200
+                //SignalLen_min = 2,
+                //SignalLen_max = 30
+
+
+                //interval_min = 150,
+                //interval_max = 200,
+
+                //bigSmaLen_min = 50,
+                //bigSmaLen_max = 80,
+
+                //smallSmaLen_min = 40,
+                //smallSmaLen_max = 60,
+
+                //SignalLen_min = 100,
+                //SignalLen_max = 150
+
+
+                interval_min = 10,
+                interval_max = 90,
+
+                bigSmaLen_min = 10,
+                bigSmaLen_max = 200,
+
+                smallSmaLen_min = 10,
+                smallSmaLen_max = 200,
+
+                SignalLen_min = 10,
+                SignalLen_max = 200
 
             };
 
@@ -696,14 +726,19 @@ namespace Simulator
             rndRange.PrintRange();
 
 
+            _ActualInputStartDate = autoStartDate;
+            _ActualInputEndDate = autoEndDate;
+
             double lastBest = 0;
 
             for (int batch = eachBatchCount; batch < simCount + eachBatchCount; batch += eachBatchCount)
             {
 
 
-                Console.WriteLine("starting batch: " + (batch - eachBatchCount) + " - " + batch);
-                Thread.Sleep(SLEEP_TIME_SEC);
+                Console.WriteLine("starting batch: " + (batch - eachBatchCount) + " - " + batch + " of " + simCount);
+
+                if (batch > eachBatchCount)
+                    Thread.Sleep(SLEEP_TIME_SEC);
 
                 var threadCount = Math.Ceiling((eachBatchCount / (double)Each_Sim_Count));
 
@@ -759,7 +794,8 @@ namespace Simulator
                         }
                         else
                         {
-                            rndRange = IntervalRange.GetaHalfRange(best_AfterHalf.intervalRange, best_AfterHalf.intervals);
+                            rndRange = IntervalRange.GetaHalfRange(topFiveResults);
+                            //rndRange = IntervalRange.GetaHalfRange(best_AfterHalf.intervalRange, best_AfterHalf.intervals);
                             Logger.WriteLog("using new range: \n");
                             rndRange.PrintRange();
                         }
@@ -815,8 +851,7 @@ namespace Simulator
 
 
 
-            _ActualInputStartDate = autoStartDate;
-            _ActualInputEndDate = autoEndDate;
+
 
             var S = new Simulator1(ref Ticker, ProductName, bestValues.interval, bestValues.bigSmaLen, bestValues.smallSmaLen, true);
             S.GraphWindow = _GraphingWindow;
@@ -1278,7 +1313,18 @@ namespace Simulator
             var allSells = requiredMacdPtsLnq.Where((d, i) => d.SmaValue < requiredSignalPtsLnq_big.ElementAt(i).SmaValue).ToList();
 
 
-            Utilities crossingCal = new Utilities();
+
+
+            //var allBuys2 = requiredMacdPtsLnq.Where((d, i) => d.SmaValue > requiredSignalPtsLnq_big.ElementAt(i).SmaValue).ToList();
+
+            //var allSells2 = requiredMacdPtsLnq.Where((d, i) => d.SmaValue < requiredSignalPtsLnq_big.ElementAt(i).SmaValue).ToList();
+
+
+
+
+
+
+            Utilities crossingCal = new Utilities(_RawData);
             //var Linqres = crossingCal.Getcrossings_Linq(requiredSmaDiffPtsLnq, requiredSignalPtsLnq, SmaDiff.First().Time, SmaDiff.Last().Time);
             var curLinqCrossres = crossingCal.Getcrossings_Linq(allBuys, allSells);
             allCrossings_Linq.AddRange(curLinqCrossres);
@@ -1315,19 +1361,43 @@ namespace Simulator
 
                 //enter moving average data to graph needed
 
+                var lastAction = allCrossings_Linq.First();
+                var firsAction = allCrossings_Linq.Last();
 
-                var PriceLine = requiredMacdPtsLnq.Select(p => new SmaData { ActualPrice = p.ActualPrice, Time = p.Time }).ToList();
-                allSereis2.Add(new SeriesDetails { series = PriceLine, SereiesName = "Price" });
-                allSereis2.Add(new SeriesDetails { series = requiredMacdPtsLnq, SereiesName = "macd" });
-                allSereis2.Add(new SeriesDetails { series = requiredSignalPtsLnq_big, SereiesName = "signal" });
-                //allSereis2.Add(new SeriesDetails { series = SmallSma, SereiesName = "Small_Sma" });
+                if (lastAction.Action == "buy")
+                    lastAction.BufferedCrossingPrice = (Double)lastAction.CrossingPrice;
 
-                CurResultsSeriesList.AddRange(allSereis2);
+                if (firsAction.Action == "sell")
+                    firsAction.BufferedCrossingPrice = (Double)firsAction.CrossingPrice;
 
-                CurResultCrossList.AddRange(allCrossings_Linq);
+                Task.Run(()=>
+                {
+                    var PriceLine = requiredMacdPtsLnq.Select(p => new SmaData { ActualPrice = p.ActualPrice, Time = p.Time }).ToList();
+                    allSereis2.Add(new SeriesDetails { series = PriceLine, SereiesName = "Price" });
+                    allSereis2.Add(new SeriesDetails { series = requiredMacdPtsLnq, SereiesName = "macd" });
+                    allSereis2.Add(new SeriesDetails { series = requiredSignalPtsLnq_big, SereiesName = "signal" });
+                    //allSereis2.Add(new SeriesDetails { series = SmallSma, SereiesName = "Small_Sma" });
 
-                if(GraphWindow != null)
-                    GraphWindow.DrawSeriesSim1(allSereis2, allCrossings_Linq);
+                    CurResultsSeriesList.AddRange(allSereis2);
+
+                    CurResultCrossList.AddRange(allCrossings_Linq);
+
+                    if (GraphWindow != null)
+                        GraphWindow.DrawSeriesSim1(allSereis2, allCrossings_Linq);
+                });
+
+                //var PriceLine = requiredMacdPtsLnq.Select(p => new SmaData { ActualPrice = p.ActualPrice, Time = p.Time }).ToList();
+                //allSereis2.Add(new SeriesDetails { series = PriceLine, SereiesName = "Price" });
+                //allSereis2.Add(new SeriesDetails { series = requiredMacdPtsLnq, SereiesName = "macd" });
+                //allSereis2.Add(new SeriesDetails { series = requiredSignalPtsLnq_big, SereiesName = "signal" });
+                ////allSereis2.Add(new SeriesDetails { series = SmallSma, SereiesName = "Small_Sma" });
+
+                //CurResultsSeriesList.AddRange(allSereis2);
+
+                //CurResultCrossList.AddRange(allCrossings_Linq);
+
+                //if(GraphWindow != null)
+                //    GraphWindow.DrawSeriesSim1(allSereis2, allCrossings_Linq);
             }
 
 
@@ -1672,13 +1742,15 @@ namespace Simulator
             const decimal BUFFER = 0.60m;//1.20m;//1.50m;//1.0m; //0.75m;
 
 
-            const decimal STOP_LOSS_PERCENTAGE = 0.02m;
+            const decimal STOP_LOSS_PERCENTAGE = 0.0m;//0.02m;
 
             var lastAction = "";
 
             int stopLossSale = 0;
 
 
+
+            //allCrossings.ForEach((a)=>System.Diagnostics.Debug.WriteLine(a.dt + "\t" + a.CrossingPrice + "\t" + a.Action ));
 
             for (int i = allCrossings.Count() - 1; i >= 0; i--)
             {
@@ -1705,7 +1777,7 @@ namespace Simulator
                     if (printTrade)
                     {
                         var buyMsg = cross.dt.ToString(@"yyyy-MM-dd HH:mm:ss") + "\t"
-                            + cross.Action + ((cross.comment != null) ? "_M" : "") + "\t\t\t"
+                            + cross.Action + ((cross.comment != null) ? "*" : "") + "\t\t\t"
                             + Math.Round(buyAtPrice, 2).ToString() + "\t\t"
                             + Math.Round(buyFee, 2).ToString() + "\t\t"
                             + Math.Round(curProdSize, 2).ToString() + "\t\t\t\t"
@@ -1715,7 +1787,7 @@ namespace Simulator
 
 
                         var buyMsgCsv = cross.dt.ToString(@"yyyy-MM-dd HH:mm:ss") + "\t"
-                            + cross.Action + ((cross.comment != null) ? "_M" : "") + "\t"
+                            + cross.Action + ((cross.comment != null) ? "*" : "") + "\t"
                             + Math.Round(buyAtPrice, 2).ToString() + "\t"
                             + Math.Round(buyFee, 2).ToString() + "\t"
                             + Math.Round(curProdSize, 2).ToString() + "\t"
@@ -1736,8 +1808,8 @@ namespace Simulator
                     var stopLossPrice = buyAtPrice - (buyAtPrice * STOP_LOSS_PERCENTAGE);
                     if (sellAtPrice < stopLossPrice)
                     {
-                        sellAtPrice = stopLossPrice - BUFFER;
-                        cross.BufferedCrossingPrice = (double)sellAtPrice;
+                        //sellAtPrice = stopLossPrice - BUFFER;
+                        //cross.BufferedCrossingPrice = (double)sellAtPrice;
                         stopLossSale++;
                         isStopLossSale = true;
                     }
@@ -1757,15 +1829,22 @@ namespace Simulator
 
                     var sellingPrice = Math.Round(sellAtPrice, 2).ToString();
 
-                    if (isStopLossSale)
+                    //if (isStopLossSale)
+                    //{
+                    //    sellingPrice = sellingPrice + "*";
+                    //}
+
+
+                    if (cross.comment == "STOP_LOSS_SALE")
                     {
                         sellingPrice = sellingPrice + "*";
                     }
 
+
                     if (printTrade)
                     {
                         var sellMsg = cross.dt.ToString(@"yyyy-MM-dd HH:mm:ss") + "\t"
-                            + cross.Action + ((cross.comment != null) ? "_M" : "") + "\t\t"
+                            + cross.Action + ((cross.comment != null) ? "" : "") + "\t\t"
                             + sellingPrice + "\t\t"
                             + Math.Round(sellFee, 2).ToString() + "\t\t"
                             + Math.Round(curProdSize, 2).ToString() + "\t"
@@ -1775,7 +1854,7 @@ namespace Simulator
 
 
                         var sellMsgCsv = cross.dt.ToString(@"yyyy-MM-dd HH:mm:ss") + "\t"
-                            + cross.Action + ((cross.comment != null) ? "_M" : "") + "\t"
+                            + cross.Action + ((cross.comment != null) ? "" : "") + "\t"
                             + sellingPrice + "\t"
                             + Math.Round(sellFee, 2).ToString() + "\t"
                             + Math.Round(curProdSize, 2).ToString() + "\t"

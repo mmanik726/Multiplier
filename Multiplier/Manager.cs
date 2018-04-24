@@ -242,7 +242,7 @@ namespace Multiplier
 
                 
 
-                S.Calculate(DateTime.Now.AddDays(-15),
+                S.Calculate(DateTime.Now.AddDays(-17),
                     DateTime.Now.AddHours(12), settings.signal, true, true);
 
                 S.Dispose();
