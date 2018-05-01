@@ -30,11 +30,11 @@ namespace Simulator
 
 
 
-            Simulator1.Start();
+            //Simulator1.Start();
 
             //Simulator3.Start();
 
-            //Simulator2.Start();
+            Simulator2.Start();
 
             //ManualSimulate();
 
@@ -62,7 +62,9 @@ namespace Simulator
         public int smallSmaLen { get; set; }
         public int basePriceSmaLen { get; set; }
         public int SignalLen { get; set; }
-            
+
+        public DateTime SimStartDate { get; set; }
+        public DateTime SimEndDate { get; set; }
     }
 
 
@@ -134,73 +136,33 @@ namespace Simulator
 
 
 
-        public static IntervalRange GetaHalfRange(List<ResultData> topResultList)
-        {
-
-
-            int BUFFER = 5;
-            int TAKE_COUNT = 10;
-
-            int temp = 0;
-            var TopResultsTemp = topResultList.Take(TAKE_COUNT).ToList();
-
-
-            temp = (int)TopResultsTemp.Select(a => a.intervals.interval).Average();
-            var newMin_Interval = temp - BUFFER;
-            var newMax_Interval = temp + BUFFER;
-
-
-            temp = (int)TopResultsTemp.Select(a => a.intervals.bigSmaLen).Average();
-            var newBigsmaMin = temp - BUFFER;
-            var newBigsmaMax = temp + BUFFER;
-
-            temp = (int)TopResultsTemp.Select(a => a.intervals.smallSmaLen).Average();
-            var newSmallSmaLen_min = temp - BUFFER;
-            var newSmallSmaLen_max = temp + BUFFER;
-
-            temp = (int)TopResultsTemp.Select(a => a.intervals.SignalLen).Average();
-            var newSignalLen_min = temp - BUFFER;
-            var newSignalLen_max = temp + BUFFER;
-
-
-            return new IntervalRange
-            {
-
-                interval_min = (newMin_Interval < 1) ? 1 : newMin_Interval,
-                interval_max = (newMax_Interval < 1) ? 1 : newMax_Interval,
-
-                bigSmaLen_min = (newBigsmaMin < 1) ? 1 : newBigsmaMin,
-                bigSmaLen_max = (newBigsmaMax < 1) ? 1 : newBigsmaMax,
-
-                smallSmaLen_min = (newSmallSmaLen_min < 1) ? 1 : newSmallSmaLen_min,
-                smallSmaLen_max = (newSmallSmaLen_max < 1) ? 1 : newSmallSmaLen_max,
-
-                SignalLen_min = (newSignalLen_min < 1) ? 1 : newSignalLen_min,
-                SignalLen_max = (newSignalLen_max < 1) ? 1 : newSignalLen_max
-            };
-        }
-
-
         //public static IntervalRange GetaHalfRange(List<ResultData> topResultList)
         //{
 
-        //    //topResultList = topResultList.OrderBy(r => r.Pl).ToList();
+
+        //    int BUFFER = 5;
+        //    int TAKE_COUNT = 10;
+
+        //    int temp = 0;
+        //    var TopResultsTemp = topResultList.Take(TAKE_COUNT).ToList();
 
 
-        //    var newMin_Interval = topResultList.Select(a => a.intervals.interval).Min() - 2;
-        //    var newMax_Interval = topResultList.Select(a => a.intervals.interval).Max() + 2;
+        //    temp = (int)TopResultsTemp.Select(a => a.intervals.interval).Average();
+        //    var newMin_Interval = temp - BUFFER;
+        //    var newMax_Interval = temp + BUFFER;
 
 
-        //    var newBigsmaMin = topResultList.Select(a => a.intervals.bigSmaLen).Min() - 2;
-        //    var newBigsmaMax = topResultList.Select(a => a.intervals.bigSmaLen).Max() + 2;
+        //    temp = (int)TopResultsTemp.Select(a => a.intervals.bigSmaLen).Average();
+        //    var newBigsmaMin = temp - BUFFER;
+        //    var newBigsmaMax = temp + BUFFER;
 
+        //    temp = (int)TopResultsTemp.Select(a => a.intervals.smallSmaLen).Average();
+        //    var newSmallSmaLen_min = temp - BUFFER;
+        //    var newSmallSmaLen_max = temp + BUFFER;
 
-        //    var newSmallSmaLen_min = topResultList.Select(a => a.intervals.smallSmaLen).Min() - 2;
-        //    var newSmallSmaLen_max = topResultList.Select(a => a.intervals.smallSmaLen).Max() + 2;
-
-
-        //    var newSignalLen_min = topResultList.Select(a => a.intervals.SignalLen).Min() - 2;
-        //    var newSignalLen_max = topResultList.Select(a => a.intervals.SignalLen).Max() + 2;
+        //    temp = (int)TopResultsTemp.Select(a => a.intervals.SignalLen).Average();
+        //    var newSignalLen_min = temp - BUFFER;
+        //    var newSignalLen_max = temp + BUFFER;
 
 
         //    return new IntervalRange
@@ -219,6 +181,46 @@ namespace Simulator
         //        SignalLen_max = (newSignalLen_max < 1) ? 1 : newSignalLen_max
         //    };
         //}
+
+
+        public static IntervalRange GetaHalfRange(List<ResultData> topResultList)
+        {
+
+            //topResultList = topResultList.OrderBy(r => r.Pl).ToList();
+
+
+            var newMin_Interval = topResultList.Select(a => a.intervals.interval).Min() - 2;
+            var newMax_Interval = topResultList.Select(a => a.intervals.interval).Max() + 2;
+
+
+            var newBigsmaMin = topResultList.Select(a => a.intervals.bigSmaLen).Min() - 2;
+            var newBigsmaMax = topResultList.Select(a => a.intervals.bigSmaLen).Max() + 2;
+
+
+            var newSmallSmaLen_min = topResultList.Select(a => a.intervals.smallSmaLen).Min() - 2;
+            var newSmallSmaLen_max = topResultList.Select(a => a.intervals.smallSmaLen).Max() + 2;
+
+
+            var newSignalLen_min = topResultList.Select(a => a.intervals.SignalLen).Min() - 2;
+            var newSignalLen_max = topResultList.Select(a => a.intervals.SignalLen).Max() + 2;
+
+
+            return new IntervalRange
+            {
+
+                interval_min = (newMin_Interval < 1) ? 1 : newMin_Interval,
+                interval_max = (newMax_Interval < 1) ? 1 : newMax_Interval,
+
+                bigSmaLen_min = (newBigsmaMin < 1) ? 1 : newBigsmaMin,
+                bigSmaLen_max = (newBigsmaMax < 1) ? 1 : newBigsmaMax,
+
+                smallSmaLen_min = (newSmallSmaLen_min < 1) ? 1 : newSmallSmaLen_min,
+                smallSmaLen_max = (newSmallSmaLen_max < 1) ? 1 : newSmallSmaLen_max,
+
+                SignalLen_min = (newSignalLen_min < 1) ? 1 : newSignalLen_min,
+                SignalLen_max = (newSignalLen_max < 1) ? 1 : newSignalLen_max
+            };
+        }
 
 
 
@@ -320,7 +322,7 @@ namespace Simulator
 
     public class SeriesDetails
     {
-        public List<SmaData> series { get; set; }
+        public List<SmaData> DataPoints { get; set; }
         public string SereiesName { get; set; }
     }
 

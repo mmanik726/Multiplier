@@ -256,7 +256,9 @@ namespace Simulator
         public List<CrossData> Getcrossings_Linq(List<SmaData> AllBuys, List<SmaData> AllSells, bool useRealTimeActualPrices = false)
         {
 
-            const decimal STOP_LOSS_PERCENTAGE = 0.04m;//0.02m;
+            const decimal STOP_LOSS_PERCENTAGE = 0.02m;//0.02m;
+
+            const decimal TAKE_PROFIT_PERCENTAGE = 0.10m;
 
             var crossList = new List<CrossData>();
 
@@ -346,91 +348,26 @@ namespace Simulator
 
 
 
-                decimal originalBuySellPrice = curBuy.ActualPrice;
+                decimal originalBuyPrice = curBuy.ActualPrice;
 
-                var priceBelowOriginalBuy = actualPriceLine.Where(p => p.ActualPrice < (1 - STOP_LOSS_PERCENTAGE) * originalBuySellPrice).ToList();
+                var priceBelowOriginalBuy = actualPriceLine.Where(p => p.ActualPrice < (1 - STOP_LOSS_PERCENTAGE) * originalBuyPrice).ToList();
+
+
+                var priceAboveTakeprofitPercent = actualPriceLine.Where(b => b.ActualPrice > ((1 + TAKE_PROFIT_PERCENTAGE) * originalBuyPrice)).ToList();
 
                 //if the price went down after buying
+
+                //if (priceAboveTakeprofitPercent.Count() > 0)
+                //{
+                //    AddTakeProfitSales(ref crossList, ref actualPriceLine, originalBuyPrice, tempSellData);
+                //}
+                //else
                 if (priceBelowOriginalBuy.Count() > 0)
                 {
-
-                    //////all the buys that are earlier than the next sell
-                    //////      and higher than the last actual buy price + buffer
-                    ////var allStopLossBuys = AllBuys.Where(s => s.Time <= curSell.Time).Where(b => b.ActualPrice > curBuy.ActualPrice).ToList();
-
-                    //////all the buys that are earlier than the next sell
-                    //////      and lower than the last actual buy price - buffer
-                    ////var allStopLossSells = AllBuys.Where(s => s.Time <= curSell.Time).Where(b => b.ActualPrice < curBuy.ActualPrice).ToList();
-
-
-
-                    //rebuy if price is above STOP_LOSS_PERCENTAGE of the original buy price 
-                    var allStopLossBuys = actualPriceLine
-                        .Where(b => b.ActualPrice > ((1 + STOP_LOSS_PERCENTAGE) * originalBuySellPrice)).ToList();
-
-                    //sell if price below STOP_LOSS_PERCENTAGE of the original buy price 
-                    var allStopLossSells = actualPriceLine
-                        .Where(b => b.ActualPrice < ((1 - STOP_LOSS_PERCENTAGE) * originalBuySellPrice)).ToList();
-
-
-
-                    while (allStopLossBuys.Count > 0 || allStopLossSells.Count() > 0)
-                    {
-                        if (allStopLossSells.Count() == 0)
-                        {
-                            crossList.Add(tempSellData);
-                            break;
-                        }
-                        var curSellSt = allStopLossSells.First();
-                        var tempSellDataSt = new CrossData
-                        {
-                            Action = "sell",
-                            comment= "STOP_LOSS_SALE",
-                            dt = curSellSt.Time,
-                            CrossingPrice = curSellSt.ActualPrice,
-                            smaValue = curSellSt.SmaValue
-                        };
-
-                        crossList.Add(tempSellDataSt);
-
-                        originalBuySellPrice = curSellSt.ActualPrice;
-
-                        allStopLossBuys = actualPriceLine.Where(p => p.Time > curSellSt.Time).ToList()
-                            .Where(b => b.ActualPrice > ((1 + STOP_LOSS_PERCENTAGE) * originalBuySellPrice)).ToList();
-                        //d.Time > allStopLossBuys.First().Time
-                        if (allStopLossBuys.Count() > 0)
-                            allStopLossSells = actualPriceLine.Where(p => p.Time > allStopLossBuys.First().Time).ToList()
-                                .Where(b => b.ActualPrice < ((1 - STOP_LOSS_PERCENTAGE) * originalBuySellPrice)).ToList();
-                        else
-                            break;
-
-
-                        var curBuySt = allStopLossBuys.First();
-                        var tempBuyDataSt = new CrossData
-                        {
-                            Action = "buy",
-                            comment = "REBUY",
-                            dt = curBuySt.Time,
-                            CrossingPrice = curBuySt.ActualPrice,
-                            smaValue = curBuySt.SmaValue
-                        };
-
-                        crossList.Add(tempBuyDataSt);
-
-                        originalBuySellPrice = curBuySt.ActualPrice; //new buy at price after rebuy. set the new original buy at price to this new price 
-
-                    }
-
-                    if (allStopLossBuys.Count == 0 && allStopLossSells.Count() == 0)
-                    {
-                        crossList.Add(tempSellData);
-                    }
-
+                    AddStopLossSales(ref crossList, ref actualPriceLine, originalBuyPrice, tempSellData);
                 }
                 else
                 {
-
-                    //crossList.Add(tempBuyData);
                     crossList.Add(tempSellData);
                 }
 
@@ -449,20 +386,202 @@ namespace Simulator
 
 
 
-            //if (crossList.Count() > 0)
-            //{
-            //    if (crossList.First().Action == "buy")
-            //    {
-            //        crossList.RemoveAt(0);
-            //    }
-            //}
-
+            //crossList.ForEach(a => Console.WriteLine(a.dt + "-" + a.Action));
 
             return crossList;
 
         }
 
 
+
+        private void AddTakeProfitSales(ref List<CrossData> crossList, ref List<SmaData> actualPriceLine, decimal originalBuySellPrice, CrossData OriginalSMASellData)
+        {
+
+            var originalSell = OriginalSMASellData;
+
+            const decimal TAKE_PROFIT_PERCENTAGE = 0.10m;
+
+            const decimal TAKE_PROFIT_REBUY_PERCENTAGE = 0.02m;
+
+
+            const decimal STOP_LOSS_PERCENTAGE = 0.02m;//0.02m;
+
+            //////all the buys that are earlier than the next sell
+            //////      and higher than the last actual buy price + buffer
+            ////var allStopLossBuys = AllBuys.Where(s => s.Time <= curSell.Time).Where(b => b.ActualPrice > curBuy.ActualPrice).ToList();
+
+            //////all the buys that are earlier than the next sell
+            //////      and lower than the last actual buy price - buffer
+            ////var allStopLossSells = AllBuys.Where(s => s.Time <= curSell.Time).Where(b => b.ActualPrice < curBuy.ActualPrice).ToList();
+
+
+
+
+            //sell if price above TAKE_PROFIT_PERCENTAGE of the original buy price 
+            var allTakeProfitSells = actualPriceLine
+                .Where(b => b.ActualPrice > ((1 + TAKE_PROFIT_PERCENTAGE) * originalBuySellPrice)).ToList();
+
+
+            //var originalSellPrice = allTakeProfitSells.First().ActualPrice;
+
+            //rebuy if price is below TAKE_PROFIT_PERCENTAGE of the original buy price 
+            //var allTakeProfitReBuys = actualPriceLine
+            //    .Where(b => b.ActualPrice > ((1 + TAKE_PROFIT_PERCENTAGE) * originalBuySellPrice)).ToList();
+
+            var allTakeProfitReBuys = new List<SmaData>();
+
+
+            while (allTakeProfitReBuys.Count > 0 || allTakeProfitSells.Count() > 0)
+            {
+                if (allTakeProfitSells.Count() == 0)
+                {
+                    crossList.Add(OriginalSMASellData);
+                    break;
+                }
+                var curSellSt = allTakeProfitSells.First();
+                var tempSellDataSt = new CrossData
+                {
+                    Action = "sell",
+                    comment = "TAKE_PROFIT_SALE",
+                    dt = curSellSt.Time,
+                    CrossingPrice = curSellSt.ActualPrice,
+                    smaValue = curSellSt.SmaValue
+                };
+
+                crossList.Add(tempSellDataSt);
+
+                originalBuySellPrice = curSellSt.ActualPrice;
+
+                allTakeProfitReBuys = actualPriceLine.Where(p => p.Time > curSellSt.Time).ToList()
+                    .Where(b => b.ActualPrice > ((1 + TAKE_PROFIT_REBUY_PERCENTAGE) * originalBuySellPrice)).ToList();
+                
+                if (allTakeProfitReBuys.Count() > 0)
+                    allTakeProfitSells = actualPriceLine.Where(p => p.Time > allTakeProfitReBuys.First().Time).ToList()
+                        .Where(b => b.ActualPrice < ((1 - STOP_LOSS_PERCENTAGE) * originalBuySellPrice)).ToList();
+                else
+                    break;
+
+
+                if (allTakeProfitSells.Count > 0)
+                {
+                    var curSell = allTakeProfitSells.First();
+                    OriginalSMASellData = new CrossData
+                    {
+                        Action = "sell",
+                        dt = curSell.Time,
+                        CrossingPrice = curSell.ActualPrice,
+                        smaValue = curSell.SmaValue
+                    };
+                }
+                else
+                {
+                    OriginalSMASellData = originalSell;
+                }
+
+
+
+                var curBuySt = allTakeProfitReBuys.First();
+                var tempBuyDataSt = new CrossData
+                {
+                    Action = "buy",
+                    comment = "TAKE_PROFIT_REBUY",
+                    dt = curBuySt.Time,
+                    CrossingPrice = curBuySt.ActualPrice,
+                    smaValue = curBuySt.SmaValue
+                };
+
+                crossList.Add(tempBuyDataSt);
+
+                originalBuySellPrice = curBuySt.ActualPrice; //new buy at price after rebuy. set the new original buy at price to this new price 
+
+            }
+
+            if (allTakeProfitReBuys.Count() == 0 && allTakeProfitSells.Count() == 0)
+            {
+                crossList.Add(OriginalSMASellData);
+            }
+
+        }
+
+
+        private void AddStopLossSales(ref List<CrossData> crossList ,  ref List<SmaData> actualPriceLine, decimal originalBuyPrice, CrossData tempSellData)
+        {
+
+            const decimal STOP_LOSS_PERCENTAGE = 0.02m;
+
+            //////all the buys that are earlier than the next sell
+            //////      and higher than the last actual buy price + buffer
+            ////var allStopLossBuys = AllBuys.Where(s => s.Time <= curSell.Time).Where(b => b.ActualPrice > curBuy.ActualPrice).ToList();
+
+            //////all the buys that are earlier than the next sell
+            //////      and lower than the last actual buy price - buffer
+            ////var allStopLossSells = AllBuys.Where(s => s.Time <= curSell.Time).Where(b => b.ActualPrice < curBuy.ActualPrice).ToList();
+
+
+
+            //rebuy if price is above STOP_LOSS_PERCENTAGE of the original buy price 
+            var allStopLossBuys = actualPriceLine
+                .Where(b => b.ActualPrice > ((1 + STOP_LOSS_PERCENTAGE) * originalBuyPrice)).ToList();
+
+            //sell if price below STOP_LOSS_PERCENTAGE of the original buy price 
+            var allStopLossSells = actualPriceLine
+                .Where(b => b.ActualPrice < ((1 - STOP_LOSS_PERCENTAGE) * originalBuyPrice)).ToList();
+
+
+
+            while (allStopLossBuys.Count > 0 || allStopLossSells.Count() > 0)
+            {
+                if (allStopLossSells.Count() == 0)
+                {
+                    crossList.Add(tempSellData);
+                    break;
+                }
+                var curSellSt = allStopLossSells.First();
+                var tempSellDataSt = new CrossData
+                {
+                    Action = "sell",
+                    comment = "STOP_LOSS_SALE",
+                    dt = curSellSt.Time,
+                    CrossingPrice = curSellSt.ActualPrice,
+                    smaValue = curSellSt.SmaValue
+                };
+
+                crossList.Add(tempSellDataSt);
+
+                //originalBuyPrice = curSellSt.ActualPrice;
+
+                allStopLossBuys = actualPriceLine.Where(p => p.Time > curSellSt.Time).ToList()
+                    .Where(b => b.ActualPrice > ((1 + STOP_LOSS_PERCENTAGE) * originalBuyPrice)).ToList();
+                //d.Time > allStopLossBuys.First().Time
+                if (allStopLossBuys.Count() > 0)
+                    allStopLossSells = actualPriceLine.Where(p => p.Time > allStopLossBuys.First().Time).ToList()
+                        .Where(b => b.ActualPrice < ((1 - STOP_LOSS_PERCENTAGE) * originalBuyPrice)).ToList();
+                else
+                    break;
+
+
+                var curBuySt = allStopLossBuys.First();
+                var tempBuyDataSt = new CrossData
+                {
+                    Action = "buy",
+                    comment = "REBUY",
+                    dt = curBuySt.Time,
+                    CrossingPrice = curBuySt.ActualPrice,
+                    smaValue = curBuySt.SmaValue
+                };
+
+                crossList.Add(tempBuyDataSt);
+
+                originalBuyPrice = curBuySt.ActualPrice; //new buy at price after rebuy. set the new original buy at price to this new price 
+
+            }
+
+            if (allStopLossBuys.Count == 0 && allStopLossSells.Count() == 0)
+            {
+                crossList.Add(tempSellData);
+            }
+
+        }
 
         //public List<CrossData> Getcrossings_Linq(List<SmaData> AllBuys, List<SmaData> AllSells)
         //{

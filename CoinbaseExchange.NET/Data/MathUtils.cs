@@ -89,37 +89,95 @@ namespace CoinbaseExchange.NET.Data
             Queue<double> sample = new Queue<double>(length);
 
 
-            double multipler = Math.Round(2d / (length + 1d),2);
+            double multipler = 2d / (length + 1d);
 
-            foreach (var d in source)
+            var lastEma = double.MinValue;
+
+
+            foreach (var curClose in source)
             {
-                var lastEma = 0d;
+                
                 if (sample.Count == length)
                 {
-                    lastEma = sample.Average();
                     sample.Dequeue();
                 }
-                
-                //if (sample.Count() > 0)
-                //    lastEma = sample.Average();
 
-                sample.Enqueue(d);
-
-
+                sample.Enqueue(curClose);
 
 
                 if (sample.Count == length)
                 {
                     double emaResult;
 
-                    if (lastEma == 0)
+                    if (lastEma == double.MinValue)
                         emaResult = sample.Average();
                     else
-                        emaResult = multipler * (d - lastEma) + lastEma;
+                        emaResult = multipler * (curClose - lastEma) + lastEma;
 
-                    System.Diagnostics.Debug.Print(d.ToString() + "\t" + emaResult.ToString());
 
                     //yield returns an intermediate value and saves to final result incrementally 
+                    lastEma = emaResult;
+                    yield return emaResult;
+
+                }
+
+            }
+        }
+
+
+
+
+        public static IEnumerable<SmaData> EMA_CD(this List<CandleData> source, int sampleLength)
+        {
+            if (source == null) throw new ArgumentNullException("source");
+            if (sampleLength <= 0) throw new ArgumentException("Invalid sample length");
+
+            return ExponentialMovingAverageImpl_CD(source, sampleLength);
+        }
+
+        private static IEnumerable<SmaData> ExponentialMovingAverageImpl_CD(List<CandleData> source, int length)
+        {
+            Queue<CandleData> sample = new Queue<CandleData>(length);
+
+
+            double multipler = 2d / (length + 1d);
+
+            var lastEma = double.MinValue;
+
+
+            foreach (var curCandle in source)
+            {
+
+                if (sample.Count == length)
+                {
+                    sample.Dequeue();
+                }
+
+                sample.Enqueue(curCandle);
+
+
+                if (sample.Count == length)
+                {
+                    SmaData emaResult;
+
+                    if (lastEma == double.MinValue)
+                    {
+                        var newSmaData = new SmaData { ActualPrice = curCandle.Close, Time = curCandle.Time };
+                        newSmaData.SmaValue = (double)sample.Average(c => c.Close);
+                        emaResult = newSmaData;
+
+                    }
+                    else
+                    {
+                        var newSmaData = new SmaData { ActualPrice = curCandle.Close, Time = curCandle.Time };
+                        newSmaData.SmaValue = multipler * ((double)curCandle.Close - lastEma) + lastEma;
+                        emaResult = newSmaData;
+
+                    }
+
+
+                    //yield returns an intermediate value and saves to final result incrementally 
+                    lastEma = emaResult.SmaValue;
                     yield return emaResult;
 
                 }
@@ -132,32 +190,6 @@ namespace CoinbaseExchange.NET.Data
     }
 
 
-    //public static class SimpleMovingAverageExtensions
-    //{
-    //    public static IEnumerable<double> SimpleMovingAverage(this List<CandleData> source, int sampleLength)
-    //    {
-    //        if (source == null) throw new ArgumentNullException("source");
-    //        if (sampleLength <= 0) throw new ArgumentException("Invalid sample length");
-
-    //        return SimpleMovingAverageImpl(source, sampleLength);
-    //    }
-
-    //    private static IEnumerable<double> SimpleMovingAverageImpl(List<CandleData> source, int sampleLength)
-    //    {
-    //        Queue<double> sample = new Queue<double>(sampleLength);
-
-    //        foreach (var d in source)
-    //        {
-    //            if (sample.Count == sampleLength)
-    //            {
-    //                sample.Dequeue();
-    //            }
-    //            sample.Enqueue((double)d.Close);
-    //            yield return sample.Average();
-    //        }
-    //    }
-
-    //}
 
 
 }

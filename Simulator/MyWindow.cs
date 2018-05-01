@@ -120,7 +120,7 @@ namespace Simulator
                     StrokeThickness = 1
                 };
 
-                var seriesDtpts = series.series.Select(s => new DataPoint(Axis.ToDouble(s.Time), s.SmaValue));
+                var seriesDtpts = series.DataPoints.Select(s => new DataPoint(Axis.ToDouble(s.Time), s.SmaValue));
                 seriesData.Points.AddRange(seriesDtpts);
 
                 if (series.SereiesName == "Big_Sma")
@@ -150,7 +150,7 @@ namespace Simulator
                 priceLine.Color = OxyColor.FromRgb(10, 84, 204);
                 if (priceDt.Count() > 0)
                 {
-                    var prices = priceDt.First().series.Select(s => new DataPoint(Axis.ToDouble(s.Time), (double)s.ActualPrice));
+                    var prices = priceDt.First().DataPoints.Select(s => new DataPoint(Axis.ToDouble(s.Time), (double)s.ActualPrice));
                     priceLine.Points.AddRange(prices);
                     PriceModel.Series.Add(priceLine);
                 }
@@ -205,20 +205,20 @@ namespace Simulator
         }
 
 
-        public void DrawSeriesSim1(List<SeriesDetails> seriesList, List<CrossData> allCrossData = null)
+        public void DrawSeriesSim1(List<SeriesDetails> seriesList, List<CrossData> allCrossData = null, double Pl = 0.0)
         {
 
 
 
             var SeriesModel = new PlotModel
             {
-                Title = "Trades"
+                Title = "Signals"
             };
 
             foreach (var series in seriesList)
             {
 
-                if (series.SereiesName == "Price")
+                if (series.SereiesName.Contains("Price"))
                     continue;
 
                 var seriesData = new LineSeries
@@ -226,13 +226,15 @@ namespace Simulator
                     Title = series.SereiesName,
                     StrokeThickness = 1
                 };
-                var seriesDtpts = series.series.Select(s => new DataPoint(Axis.ToDouble(s.Time), s.SmaValue));
+                var seriesDtpts = series.DataPoints.Select(s => new DataPoint(Axis.ToDouble(s.Time), s.SmaValue));
                 seriesData.Points.AddRange(seriesDtpts);
 
-                if (series.SereiesName == "Big_Sma")
+                if (series.SereiesName.Contains("Big_Sma"))
                     seriesData.Color = OxyColor.FromRgb(224, 50, 15);
-                if (series.SereiesName == "Small_Sma")
+                if (series.SereiesName.Contains("Small_Sma"))
                     seriesData.Color = OxyColor.FromRgb(8, 150, 56);
+
+
 
                 SeriesModel.Series.Add(seriesData);
             }
@@ -248,26 +250,28 @@ namespace Simulator
             });
 
 
+            var plStr = (Pl == 0.0) ? "" : Math.Round(Pl, 2).ToString();
+
 
             var PriceModel = new PlotModel
             {
-                Title = "Price"
+                Title = "P/L: " + plStr 
             };
 
             if (allCrossData != null)
             {
 
+                var priceDt = seriesList.Where(a => a.SereiesName.Contains("Price"));
 
                 var priceLine = new LineSeries
                 {
-                    Title = "Price",
+                    Title = priceDt.First().SereiesName,
                     StrokeThickness = 1
                 };
 
-                var priceDt = seriesList.Where(a => a.SereiesName == "Price");
                 if (priceDt.Count() > 0)
                 {
-                    var prices = priceDt.First().series.Select(s => new DataPoint(Axis.ToDouble(s.Time), (double)s.ActualPrice));
+                    var prices = priceDt.First().DataPoints.Select(s => new DataPoint(Axis.ToDouble(s.Time), (double)s.ActualPrice));
                     priceLine.Points.AddRange(prices);
                     PriceModel.Series.Add(priceLine);
                 }
@@ -362,7 +366,7 @@ namespace Simulator
                     Title = series.SereiesName,
                     StrokeThickness = 1
                 };
-                var seriesDtpts = series.series.Select(s => new DataPoint(Axis.ToDouble(s.Time), s.SmaValue));
+                var seriesDtpts = series.DataPoints.Select(s => new DataPoint(Axis.ToDouble(s.Time), s.SmaValue));
                 seriesData.Points.AddRange(seriesDtpts);
 
                 if (series.SereiesName == "Price")

@@ -843,9 +843,9 @@ namespace Simulator
 
 
                 var PriceLine = closedPrices; //requiredSmaPts_Big.Select(p => new SmaData { ActualPrice = p.ActualPrice, Time = p.Time }).ToList();
-                allSeries2.Add(new SeriesDetails { series = PriceLine, SereiesName = "Price" });
-                allSeries2.Add(new SeriesDetails { series = requiredSmaPts_Big, SereiesName = "large_sma" });
-                allSeries2.Add(new SeriesDetails { series = requiredSmaPts_Small, SereiesName = "small_sma" });
+                allSeries2.Add(new SeriesDetails { DataPoints = PriceLine, SereiesName = "Price" });
+                allSeries2.Add(new SeriesDetails { DataPoints = requiredSmaPts_Big, SereiesName = "large_sma" });
+                allSeries2.Add(new SeriesDetails { DataPoints = requiredSmaPts_Small, SereiesName = "small_sma" });
                 //allSereis2.Add(new SeriesDetails { series = SmallSma, SereiesName = "Small_Sma" });
 
                 GraphWindow.DrawSeriesSim3(allSeries2, allCrossings_Linq);

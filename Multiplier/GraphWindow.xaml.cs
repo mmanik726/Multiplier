@@ -117,7 +117,7 @@ namespace Multiplier
                     Title = series.SereiesName,
                     StrokeThickness = 1
                 };
-                var seriesDtpts = series.series.Select(s => new DataPoint(Axis.ToDouble(s.Time), s.SmaValue));
+                var seriesDtpts = series.DataPoints.Select(s => new DataPoint(Axis.ToDouble(s.Time), s.SmaValue));
                 seriesData.Points.AddRange(seriesDtpts);
 
                 if (series.SereiesName == "Big_Sma")
@@ -158,7 +158,7 @@ namespace Multiplier
                 var priceDt = seriesList.Where(a => a.SereiesName == "Price");
                 if (priceDt.Count() > 0)
                 {
-                    var prices = priceDt.First().series.Select(s => new DataPoint(Axis.ToDouble(s.Time), (double)s.ActualPrice));
+                    var prices = priceDt.First().DataPoints.Select(s => new DataPoint(Axis.ToDouble(s.Time), (double)s.ActualPrice));
                     priceLine.Points.AddRange(prices);
                     PriceModel.Series.Add(priceLine);
                 }
