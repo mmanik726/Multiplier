@@ -17,6 +17,7 @@ using CoinbaseExchange.NET;
 
 
 
+
 namespace Simulator
 {
 
@@ -52,6 +53,7 @@ namespace Simulator
         private int _SignalLen;
 
         public MyWindow GraphWindow;
+        //public Window GraphWindow;
 
         static object _TriedListLock = new object();
 
@@ -62,6 +64,8 @@ namespace Simulator
 
         static string ProductName = "LTC-USD";
 
+
+        static TickerClient Ticker = new TickerClient(ProductName);
 
         public static void Start()
         {
@@ -242,7 +246,7 @@ namespace Simulator
         }
 
 
-        public Simulator1(ref TickerClient ticker, string productName, int CommonInterval = 30, int LargeSmaLen = 100, int SmallSmaLen = 35, bool downloadLatestData = false)
+        public Simulator1(string productName, int CommonInterval = 30, int LargeSmaLen = 100, int SmallSmaLen = 35, bool downloadLatestData = false)
         {
 
             //while (LoadingData)
@@ -334,17 +338,17 @@ namespace Simulator
             };
 
 
-            while (newInterval.bigSmaLen > newInterval.smallSmaLen)
-            {
-                newInterval = new IntervalData
-                {
+            //while (newInterval.bigSmaLen > newInterval.smallSmaLen)
+            //{
+            //    newInterval = new IntervalData
+            //    {
 
-                    interval = _random.Next(range.interval_min, range.interval_max),
-                    bigSmaLen = _random.Next(range.bigSmaLen_min, range.bigSmaLen_max),
-                    smallSmaLen = _random.Next(range.smallSmaLen_min, range.smallSmaLen_max),
-                    SignalLen = _random.Next(range.SignalLen_min, range.SignalLen_max)
-                };
-            }
+            //        interval = _random.Next(range.interval_min, range.interval_max),
+            //        bigSmaLen = _random.Next(range.bigSmaLen_min, range.bigSmaLen_max),
+            //        smallSmaLen = _random.Next(range.smallSmaLen_min, range.smallSmaLen_max),
+            //        SignalLen = _random.Next(range.SignalLen_min, range.SignalLen_max)
+            //    };
+            //}
 
 
             lock (_TriedListLock)
@@ -408,6 +412,52 @@ namespace Simulator
 
             }
         }
+
+
+
+        //public static Simulator1 ManualSimulate(DateTime SimStartDate, DateTime SimEndDate, int interval, int bigSmaLen, int smallSmaLen, int SignalLen)
+        //{
+        //    Simulator1 S = null;
+
+        //    int lastCommonInterval = 0;
+        //    int lastBigSma = 0;
+        //    int lastSmallSma = 0;
+
+
+        //    if (S == null)
+        //    {
+        //        S = new Simulator1(ProductName, interval, bigSmaLen, smallSmaLen, true);
+        //        S.GraphWindow = _GraphingWindow;
+        //    }
+        //    else
+        //    {
+        //        if (!(lastCommonInterval == interval && lastBigSma == bigSmaLen && lastSmallSma == smallSmaLen))
+        //        {
+        //            S.Dispose();
+        //            S = null;
+        //            S = new Simulator1(ProductName, interval, bigSmaLen, smallSmaLen, false);
+        //            S.GraphWindow = _GraphingWindow;
+        //        }
+        //    }
+
+        //    _ActualInputStartDate = SimStartDate;
+        //    _ActualInputEndDate = SimEndDate;
+
+        //    S.Calculate(SimStartDate, SimEndDate, SignalLen, true, true, true);
+
+
+            
+
+        //    lastCommonInterval = interval;
+        //    lastBigSma = bigSmaLen;
+        //    lastSmallSma = smallSmaLen;
+
+        //    return S;
+
+        //}
+
+
+
         public static void ManualSimulate(bool useCompoundingCalc = true)
         {
             int lastCommonInterval = 0;
@@ -417,7 +467,7 @@ namespace Simulator
             Simulator1 S = null;
 
             var ProductName = "LTC-USD";
-            TickerClient Ticker = new TickerClient(ProductName);
+            //TickerClient Ticker = new TickerClient(ProductName);
 
             //wait for ticker to get ready
             Thread.Sleep(1 * 1000);
@@ -518,7 +568,7 @@ namespace Simulator
 
                 if (S == null)
                 {
-                    S = new Simulator1(ref Ticker, ProductName, intervalUsed.interval, intervalUsed.bigSmaLen, intervalUsed.smallSmaLen, true);
+                    S = new Simulator1(ProductName, intervalUsed.interval, intervalUsed.bigSmaLen, intervalUsed.smallSmaLen, true);
                     S.GraphWindow = _GraphingWindow;
                 }
                 else
@@ -527,7 +577,7 @@ namespace Simulator
                     {
                         S.Dispose();
                         S = null;
-                        S = new Simulator1(ref Ticker, ProductName, intervalUsed.interval, intervalUsed.bigSmaLen, intervalUsed.smallSmaLen, false);
+                        S = new Simulator1(ProductName, intervalUsed.interval, intervalUsed.bigSmaLen, intervalUsed.smallSmaLen, false);
                         S.GraphWindow = _GraphingWindow;
                     }
                 }
@@ -588,7 +638,7 @@ namespace Simulator
 
                     if (S == null)
                     {
-                        S = new Simulator1(ref Ticker, ProductName, curIntervals.interval, curIntervals.bigSmaLen, curIntervals.smallSmaLen, true);
+                        S = new Simulator1(ProductName, curIntervals.interval, curIntervals.bigSmaLen, curIntervals.smallSmaLen, true);
                         S.GraphWindow = _GraphingWindow;
                     }
                     else
@@ -597,7 +647,7 @@ namespace Simulator
                         {
                             S.Dispose();
                             S = null;
-                            S = new Simulator1(ref Ticker, ProductName, curIntervals.interval, curIntervals.bigSmaLen, curIntervals.smallSmaLen);
+                            S = new Simulator1(ProductName, curIntervals.interval, curIntervals.bigSmaLen, curIntervals.smallSmaLen);
                             S.GraphWindow = _GraphingWindow;
                         }
                     }
@@ -632,7 +682,7 @@ namespace Simulator
 
             //ShowGraphingForm();
 
-            TickerClient Ticker = new TickerClient(ProductName);
+            //TickerClient Ticker = new TickerClient(ProductName);
 
             //wait for ticker to get ready
             Thread.Sleep(2 * 1000);
@@ -736,16 +786,16 @@ namespace Simulator
 
 
                 interval_min = 10,
-                interval_max = 200,
+                interval_max = 250,
 
-                bigSmaLen_min = 10,
-                bigSmaLen_max = 300,
+                bigSmaLen_min = 5,
+                bigSmaLen_max = 250,
 
-                smallSmaLen_min = 10,
-                smallSmaLen_max = 300,
+                smallSmaLen_min = 5,
+                smallSmaLen_max = 250,
 
-                SignalLen_min = 10,
-                SignalLen_max = 300
+                SignalLen_min = 5,
+                SignalLen_max = 250
 
             };
 
@@ -797,7 +847,7 @@ namespace Simulator
                 if (batch >= (simCount / 2))
                 {
 
-                    List<ResultData> topFiveResults = new List<ResultData>();
+                    List<ResultData> topResults = new List<ResultData>();
 
                     var sortedResults = allCombinedResultList.OrderByDescending(r => r.Pl).ToList();
 
@@ -810,19 +860,19 @@ namespace Simulator
                     {
                         if (sortedResults.Count >= 10)
                         {
-                            topFiveResults.AddRange(sortedResults.Take(10));
+                            topResults.AddRange(sortedResults.Take(10));
 
                             Logger.WriteLog("using new range from top 10 results: \n");
 
-
-                            rndRange = IntervalRange.GetaHalfRange(topFiveResults);
+                            //get a better range for random values 
+                            rndRange = IntervalRange.GetaHalfRange(topResults);
 
                             rndRange.PrintRange();
 
                         }
                         else
                         {
-                            rndRange = IntervalRange.GetaHalfRange(topFiveResults);
+                            rndRange = IntervalRange.GetaHalfRange(topResults);
                             //rndRange = IntervalRange.GetaHalfRange(best_AfterHalf.intervalRange, best_AfterHalf.intervals);
                             Logger.WriteLog("using new range: \n");
                             rndRange.PrintRange();
@@ -883,7 +933,7 @@ namespace Simulator
 
 
 
-            var S = new Simulator1(ref Ticker, ProductName, bestValues.interval, bestValues.bigSmaLen, bestValues.smallSmaLen, true);
+            var S = new Simulator1(ProductName, bestValues.interval, bestValues.bigSmaLen, bestValues.smallSmaLen, true);
             S.GraphWindow = _GraphingWindow;
             S.Calculate(autoStartDate, autoEndDate, bestValues.SignalLen, true, true, useCompoundingCalc);
 
@@ -1059,7 +1109,7 @@ namespace Simulator
 
 
                 var bestValues = result.intervals;
-                var S = new Simulator1(ref tempTicker, ProductName, bestValues.interval, bestValues.bigSmaLen, bestValues.smallSmaLen, true);
+                var S = new Simulator1(ProductName, bestValues.interval, bestValues.bigSmaLen, bestValues.smallSmaLen, true);
                 S.GraphWindow = _GraphingWindow;
 
                 if (LastUsdBalance == 0.0m)
@@ -1239,7 +1289,7 @@ namespace Simulator
             _ActualInputStartDate = StartDateTime;
             _ActualInputEndDate = EndDateTime;
 
-            var S = new Simulator1(ref Ticker, ProductName, bestValues.interval, bestValues.bigSmaLen, bestValues.smallSmaLen, true);
+            var S = new Simulator1(ProductName, bestValues.interval, bestValues.bigSmaLen, bestValues.smallSmaLen, true);
             S.GraphWindow = _GraphingWindow;
             S.Calculate(StartDateTime, EndDateTime, bestValues.SignalLen, true, true, useCompoundingCalc);
 
@@ -1265,9 +1315,9 @@ namespace Simulator
 
 
 
-            var signalLine1 = _SmaDiff.Select(d => d.SmaValue).ToList().SMA(inputSignalLen);
+            //var signalLine1 = _SmaDiff.Select(d => d.SmaValue).ToList().SMA(inputSignalLen);
 
-            //var signalLine1 = _SmaDiff.Select(d => d.SmaValue).ToList().EMA(inputSignalLen);
+            var signalLine1 = _SmaDiff.Select(d => d.SmaValue).ToList().EMA(inputSignalLen);
 
             var requiredSignalDtPts1 = _SmaDiff.Skip(inputSignalLen - 1).ToList();
             var SignalWithDataPtsBig = signalLine1.Select((d, i) => new SmaData
@@ -1394,30 +1444,51 @@ namespace Simulator
 
                 //enter moving average data to graph needed
 
-                var lastAction = allCrossings_Linq.First();
-                var firsAction = allCrossings_Linq.Last();
-
-                if (lastAction.Action == "buy")
-                    allCrossings_Linq.Last().BufferedCrossingPrice = (Double)allCrossings_Linq.Last().CrossingPrice;
-
-                if (firsAction.Action == "sell")
-                    allCrossings_Linq.First().BufferedCrossingPrice = (Double)allCrossings_Linq.First().CrossingPrice;
-
-                Task.Run(()=>
+                if (allCrossings_Linq.Count() > 0)
                 {
-                    var PriceLine = requiredMacdPtsLnq.Select(p => new SmaData { ActualPrice = p.ActualPrice, Time = p.Time }).ToList();
-                    allSereis2.Add(new SeriesDetails { DataPoints = PriceLine, SereiesName = "Price (" + COMMON_INTERVAL + " min)" });
-                    allSereis2.Add(new SeriesDetails { DataPoints = requiredMacdPtsLnq, SereiesName = "macd (L:" + LARGE_SMA_LEN + " S:" + SMALL_SMA_LEN + ")" });
-                    allSereis2.Add(new SeriesDetails { DataPoints = requiredSignalPtsLnq_big, SereiesName = "signal (" + inputSignalLen + ")" });
-                    //allSereis2.Add(new SeriesDetails { series = SmallSma, SereiesName = "Small_Sma" });
+                    var lastAction = allCrossings_Linq.First();
+                    var firsAction = allCrossings_Linq.Last();
 
-                    CurResultsSeriesList.AddRange(allSereis2);
+                    if (lastAction.Action == "buy")
+                        allCrossings_Linq.Last().BufferedCrossingPrice = (Double)allCrossings_Linq.Last().CrossingPrice;
 
-                    CurResultCrossList.AddRange(allCrossings_Linq);
+                    if (firsAction.Action == "sell")
+                        allCrossings_Linq.First().BufferedCrossingPrice = (Double)allCrossings_Linq.First().CrossingPrice;
+                }
 
-                    if (GraphWindow != null)
-                        GraphWindow.DrawSeriesSim1(allSereis2, allCrossings_Linq, Pl);
-                });
+
+
+
+                var PriceLine = requiredMacdPtsLnq.Select(p => new SmaData { ActualPrice = p.ActualPrice, Time = p.Time }).ToList();
+                allSereis2.Add(new SeriesDetails { DataPoints = PriceLine, SereiesName = "Price (" + COMMON_INTERVAL + " min)" });
+                allSereis2.Add(new SeriesDetails { DataPoints = requiredMacdPtsLnq, SereiesName = "macd (L:" + LARGE_SMA_LEN + " S:" + SMALL_SMA_LEN + ")" });
+                allSereis2.Add(new SeriesDetails { DataPoints = requiredSignalPtsLnq_big, SereiesName = "signal (" + inputSignalLen + ")" });
+                //allSereis2.Add(new SeriesDetails { series = SmallSma, SereiesName = "Small_Sma" });
+
+                CurResultsSeriesList.Clear();
+                CurResultsSeriesList.AddRange(allSereis2);
+
+                CurResultCrossList.Clear();
+                CurResultCrossList.AddRange(allCrossings_Linq);
+
+                if (GraphWindow != null)
+                    GraphWindow.DrawSeriesSim1(allSereis2, allCrossings_Linq, Pl);
+
+                //Task.Run(()=>
+                //{
+                //    var PriceLine = requiredMacdPtsLnq.Select(p => new SmaData { ActualPrice = p.ActualPrice, Time = p.Time }).ToList();
+                //    allSereis2.Add(new SeriesDetails { DataPoints = PriceLine, SereiesName = "Price (" + COMMON_INTERVAL + " min)" });
+                //    allSereis2.Add(new SeriesDetails { DataPoints = requiredMacdPtsLnq, SereiesName = "macd (L:" + LARGE_SMA_LEN + " S:" + SMALL_SMA_LEN + ")" });
+                //    allSereis2.Add(new SeriesDetails { DataPoints = requiredSignalPtsLnq_big, SereiesName = "signal (" + inputSignalLen + ")" });
+                //    //allSereis2.Add(new SeriesDetails { series = SmallSma, SereiesName = "Small_Sma" });
+
+                //    CurResultsSeriesList.AddRange(allSereis2);
+
+                //    CurResultCrossList.AddRange(allCrossings_Linq);
+
+                //    if (GraphWindow != null)
+                //        GraphWindow.DrawSeriesSim1(allSereis2, allCrossings_Linq, Pl);
+                //});
 
                 //var PriceLine = requiredMacdPtsLnq.Select(p => new SmaData { ActualPrice = p.ActualPrice, Time = p.Time }).ToList();
                 //allSereis2.Add(new SeriesDetails { series = PriceLine, SereiesName = "Price" });

@@ -30,11 +30,11 @@ namespace Simulator
 
 
 
-            //Simulator1.Start();
+            Simulator1.Start();
 
             //Simulator3.Start();
 
-            Simulator2.Start();
+            //Simulator2.Start();
 
             //ManualSimulate();
 
@@ -188,21 +188,22 @@ namespace Simulator
 
             //topResultList = topResultList.OrderBy(r => r.Pl).ToList();
 
+            int constBuffer = 5; 
 
-            var newMin_Interval = topResultList.Select(a => a.intervals.interval).Min() - 2;
-            var newMax_Interval = topResultList.Select(a => a.intervals.interval).Max() + 2;
-
-
-            var newBigsmaMin = topResultList.Select(a => a.intervals.bigSmaLen).Min() - 2;
-            var newBigsmaMax = topResultList.Select(a => a.intervals.bigSmaLen).Max() + 2;
+            var newMin_Interval = topResultList.Select(a => a.intervals.interval).Min() - constBuffer;
+            var newMax_Interval = topResultList.Select(a => a.intervals.interval).Max() + constBuffer;
 
 
-            var newSmallSmaLen_min = topResultList.Select(a => a.intervals.smallSmaLen).Min() - 2;
-            var newSmallSmaLen_max = topResultList.Select(a => a.intervals.smallSmaLen).Max() + 2;
+            var newBigsmaMin = topResultList.Select(a => a.intervals.bigSmaLen).Min() - constBuffer;
+            var newBigsmaMax = topResultList.Select(a => a.intervals.bigSmaLen).Max() + constBuffer;
 
 
-            var newSignalLen_min = topResultList.Select(a => a.intervals.SignalLen).Min() - 2;
-            var newSignalLen_max = topResultList.Select(a => a.intervals.SignalLen).Max() + 2;
+            var newSmallSmaLen_min = topResultList.Select(a => a.intervals.smallSmaLen).Min() - constBuffer;
+            var newSmallSmaLen_max = topResultList.Select(a => a.intervals.smallSmaLen).Max() + constBuffer;
+
+
+            var newSignalLen_min = topResultList.Select(a => a.intervals.SignalLen).Min() - constBuffer;
+            var newSignalLen_max = topResultList.Select(a => a.intervals.SignalLen).Max() + constBuffer;
 
 
             return new IntervalRange

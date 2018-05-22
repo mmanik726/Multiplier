@@ -256,11 +256,19 @@ namespace Simulator
         public List<CrossData> Getcrossings_Linq(List<SmaData> AllBuys, List<SmaData> AllSells, bool useRealTimeActualPrices = false)
         {
 
+
+
             const decimal STOP_LOSS_PERCENTAGE = 0.02m;//0.02m;
 
             const decimal TAKE_PROFIT_PERCENTAGE = 0.10m;
 
             var crossList = new List<CrossData>();
+
+
+            if (AllBuys.Count == 0 || AllSells.Count() == 0)
+            {
+                return crossList;
+            }
 
             //var firstBuyDt = AllBuys.First().Time;
             AllSells = AllSells.Where(s => s.Time > AllBuys.First().Time).ToList();
@@ -431,13 +439,9 @@ namespace Simulator
             var allTakeProfitReBuys = new List<SmaData>();
 
 
-            while (allTakeProfitReBuys.Count > 0 || allTakeProfitSells.Count() > 0)
+            while (allTakeProfitSells.Count() > 0)
             {
-                if (allTakeProfitSells.Count() == 0)
-                {
-                    crossList.Add(OriginalSMASellData);
-                    break;
-                }
+
                 var curSellSt = allTakeProfitSells.First();
                 var tempSellDataSt = new CrossData
                 {
@@ -494,6 +498,23 @@ namespace Simulator
 
                 originalBuySellPrice = curBuySt.ActualPrice; //new buy at price after rebuy. set the new original buy at price to this new price 
 
+
+                allTakeProfitSells = actualPriceLine
+                    .Where(b => b.ActualPrice > ((1 + TAKE_PROFIT_PERCENTAGE) * originalBuySellPrice)).ToList();
+
+                //if the price went down after buying
+                //iterate recursvively until all of the take profits are hit
+                //if (allTakeProfitSells.Count() > 0)
+                //{
+                //    AddTakeProfitSales(ref crossList, ref actualPriceLine, originalBuySellPrice, OriginalSMASellData);
+                //}
+
+            }
+
+            if (allTakeProfitSells.Count() == 0)
+            {
+                crossList.Add(OriginalSMASellData);
+                //break;
             }
 
             if (allTakeProfitReBuys.Count() == 0 && allTakeProfitSells.Count() == 0)

@@ -224,33 +224,38 @@ namespace Multiplier
 
             //graphWindow.Show();
 
-            Simulator1 S = null;
 
+
+
+
+
+            Simulator1 S = null;
+            var pl = 0.0;
             Task.Run(() =>
             {
 
                 var settings = AppSettings.GetStrategySettings2("macd_small");
 
-                S = new Simulator1(ref CurContextValues.CurrentTicker,
-                CurContextValues.ProductName,
+                S = new Simulator1(CurContextValues.ProductName,
                 settings.time_interval,
                 settings.slow_sma,
                 settings.fast_sma, 
                 true);
 
 
+                graphWindow.FillInitialVaues(DateTime.Now.AddDays(-17), DateTime.Now.AddHours(12),
+                    settings.time_interval, settings.slow_sma, settings.fast_sma, settings.signal);
 
-                
 
-                S.Calculate(DateTime.Now.AddDays(-17),
-                    DateTime.Now.AddHours(12), settings.signal, true, true);
+                pl = S.Calculate(DateTime.Now.AddDays(-17),
+                        DateTime.Now.AddHours(12), settings.signal, true, true);
 
                 S.Dispose();
 
             }).Wait();
 
 
-            graphWindow.DrawSeriesSim1(S.CurResultsSeriesList, S.CurResultCrossList);
+            graphWindow.DrawSeriesSim1(S.CurResultsSeriesList, S.CurResultCrossList, pl);
             //Thread thread = new Thread(() =>
             //{
 

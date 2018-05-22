@@ -120,8 +120,9 @@ namespace CoinbaseExchange.NET
                 //order the data right after reading from db so its consistent everywhere
                 RawExchangeData = RawExchangeData.OrderByDescending(d => d.Time).ToList();
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                Logger.WriteLog("error: " + ex.Message);
                 throw new Exception("FileReadError");
             }
 

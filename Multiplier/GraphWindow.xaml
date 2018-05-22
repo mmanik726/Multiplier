@@ -4,5 +4,35 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:Multiplier"
-        Title="GraphWindow" Height="617.705" Width="1000.41">
+        xmlns:oxy="http://oxyplot.org/wpf"
+        Title="GraphWindow" Height="617.705" Width="1156.41">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="221*"/>
+            <ColumnDefinition Width="66*"/>
+        </Grid.ColumnDefinitions>
+
+        <Button x:Name="btnCalculate" Content="Backtest" HorizontalAlignment="Left" Margin="10,266,0,0" VerticalAlignment="Top" Width="231" Grid.Column="1" Height="20" Click="btnCalculate_Click"/>
+        <StackPanel Margin="0,0,4,0">
+            <oxy:PlotView x:Name="_PricePlotView" Height="284"/>
+            <oxy:PlotView x:Name="_SmaPlotView" Height="284"/>
+        </StackPanel>
+        <DatePicker x:Name="dtFrom" Grid.Column="1" HorizontalAlignment="Left" Margin="10,162,0,0" VerticalAlignment="Top"/>
+        <DatePicker x:Name="dtTo" Grid.Column="1" HorizontalAlignment="Left" Margin="139,162,0,0" VerticalAlignment="Top"/>
+        <Label Content="FROM" Grid.Column="1" HorizontalAlignment="Left" Margin="10,136,0,0" VerticalAlignment="Top"/>
+        <Label Content="TO" Grid.Column="1" HorizontalAlignment="Left" Margin="139,136,0,0" VerticalAlignment="Top"/>
+        <TextBox x:Name="txtSmallSma" Grid.Column="1" HorizontalAlignment="Left" Height="23" Margin="10,223,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="67" TextChanged="TextBox_TextChanged" MouseWheel="txtSmallSma_MouseWheel"/>
+        <Label Content="Small SMA" Grid.Column="1" HorizontalAlignment="Left" Margin="10,197,0,0" VerticalAlignment="Top"/>
+        <TextBox x:Name="txtLargeSma" Grid.Column="1" HorizontalAlignment="Left" Height="23" Margin="93,223,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="67" TextChanged="TextBox_TextChanged" MouseWheel="txtLargeSma_MouseWheel"/>
+        <Label Content="Large SMA" Grid.Column="1" HorizontalAlignment="Left" Margin="93,197,0,0" VerticalAlignment="Top"/>
+        <TextBox x:Name="txtSignal" Grid.Column="1" HorizontalAlignment="Left" Height="23" Margin="174,223,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="67" TextChanged="TextBox_TextChanged" MouseWheel="txtSignal_MouseWheel"/>
+        <Label Content="Signal" Grid.Column="1" HorizontalAlignment="Left" Margin="174,197,0,0" VerticalAlignment="Top"/>
+        <TextBox x:Name="txtInterval" Grid.Column="1" HorizontalAlignment="Left" Height="23" Margin="10,108,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="80" TextChanged="TextBox_TextChanged" MouseWheel="txtInterval_MouseWheel"/>
+        <Label Content="Interval (Min)" Grid.Column="1" HorizontalAlignment="Left" Margin="10,82,0,0" VerticalAlignment="Top"/>
+        <CheckBox x:Name="chkAutoCalc" Content="calc. on change" Grid.Column="1" HorizontalAlignment="Left" Margin="139,88,0,0" VerticalAlignment="Top" Width="102"/>
+        <ListBox x:Name="TriedFileList" Grid.Column="1" Height="100" Margin="12,329,10,0" VerticalAlignment="Top" SelectionChanged="TriedFileList_SelectionChanged"/>
+        <ListBox x:Name="ResulstList" Grid.Column="1" Height="93" Margin="12,463,10,0" VerticalAlignment="Top" SelectionChanged="ResulstList_SelectionChanged"/>
+        <Label Content="File" Grid.Column="1" HorizontalAlignment="Left" Margin="12,303,0,0" VerticalAlignment="Top"/>
+        <Label Content="Result" Grid.Column="1" HorizontalAlignment="Left" Margin="12,437,0,0" VerticalAlignment="Top"/>
+    </Grid>
 </Window>

@@ -1215,6 +1215,8 @@ namespace Multiplier
 
             //});
 
+            if (ProductManager == null)
+                return;
             
             _graphWindow = new GraphWindow();
 
