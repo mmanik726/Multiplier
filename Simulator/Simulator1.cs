@@ -785,17 +785,29 @@ namespace Simulator
                 //SignalLen_max = 150
 
 
-                interval_min = 10,
-                interval_max = 250,
+                //interval_min = 10,
+                //interval_max = 250,
 
-                bigSmaLen_min = 5,
-                bigSmaLen_max = 250,
+                //bigSmaLen_min = 5,
+                //bigSmaLen_max = 250,
 
-                smallSmaLen_min = 5,
-                smallSmaLen_max = 250,
+                //smallSmaLen_min = 5,
+                //smallSmaLen_max = 250,
 
-                SignalLen_min = 5,
-                SignalLen_max = 250
+                //SignalLen_min = 5,
+                //SignalLen_max = 250
+
+                interval_min = 20,
+                interval_max = 60,
+
+                bigSmaLen_min = 10,
+                bigSmaLen_max = 200,
+
+                smallSmaLen_min = 10,
+                smallSmaLen_max = 200,
+
+                SignalLen_min = 10,
+                SignalLen_max = 200
 
             };
 

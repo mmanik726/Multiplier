@@ -133,7 +133,7 @@ namespace CoinbaseExchange.NET
 
         private bool IsDbCorrupt()
         {
-            Logger.WriteLog("Checking for in consistencies in Json DB");
+            Logger.WriteLog("Checking for inconsistencies in Json DB");
 
             var mDt = RawExchangeData;//.OrderByDescending((d) => d.Time).ToList();
 
@@ -196,7 +196,7 @@ namespace CoinbaseExchange.NET
 
                 if (missingData.Difference > TimeSpan.FromMinutes(2))
                 {
-                    Console.WriteLine((missingData.Difference.ToString() + " of data missing in sequesnce"));
+                    Logger.WriteLog(($"{missingData.Difference.ToString()} min data missing starting at {startDt.ToLongDateString()}"));
                 }
 
                 //DownloadDataSegment(startDt, endDt);

@@ -136,54 +136,54 @@ namespace Simulator
 
 
 
-        //public static IntervalRange GetaHalfRange(List<ResultData> topResultList)
-        //{
-
-
-        //    int BUFFER = 5;
-        //    int TAKE_COUNT = 10;
-
-        //    int temp = 0;
-        //    var TopResultsTemp = topResultList.Take(TAKE_COUNT).ToList();
-
-
-        //    temp = (int)TopResultsTemp.Select(a => a.intervals.interval).Average();
-        //    var newMin_Interval = temp - BUFFER;
-        //    var newMax_Interval = temp + BUFFER;
-
-
-        //    temp = (int)TopResultsTemp.Select(a => a.intervals.bigSmaLen).Average();
-        //    var newBigsmaMin = temp - BUFFER;
-        //    var newBigsmaMax = temp + BUFFER;
-
-        //    temp = (int)TopResultsTemp.Select(a => a.intervals.smallSmaLen).Average();
-        //    var newSmallSmaLen_min = temp - BUFFER;
-        //    var newSmallSmaLen_max = temp + BUFFER;
-
-        //    temp = (int)TopResultsTemp.Select(a => a.intervals.SignalLen).Average();
-        //    var newSignalLen_min = temp - BUFFER;
-        //    var newSignalLen_max = temp + BUFFER;
-
-
-        //    return new IntervalRange
-        //    {
-
-        //        interval_min = (newMin_Interval < 1) ? 1 : newMin_Interval,
-        //        interval_max = (newMax_Interval < 1) ? 1 : newMax_Interval,
-
-        //        bigSmaLen_min = (newBigsmaMin < 1) ? 1 : newBigsmaMin,
-        //        bigSmaLen_max = (newBigsmaMax < 1) ? 1 : newBigsmaMax,
-
-        //        smallSmaLen_min = (newSmallSmaLen_min < 1) ? 1 : newSmallSmaLen_min,
-        //        smallSmaLen_max = (newSmallSmaLen_max < 1) ? 1 : newSmallSmaLen_max,
-
-        //        SignalLen_min = (newSignalLen_min < 1) ? 1 : newSignalLen_min,
-        //        SignalLen_max = (newSignalLen_max < 1) ? 1 : newSignalLen_max
-        //    };
-        //}
-
-
         public static IntervalRange GetaHalfRange(List<ResultData> topResultList)
+        {
+
+
+            int BUFFER = 5;
+            int TAKE_COUNT = 10;
+
+            int temp = 0;
+            var TopResultsTemp = topResultList.Take(TAKE_COUNT).ToList();
+
+
+            temp = (int)TopResultsTemp.Select(a => a.intervals.interval).Average();
+            var newMin_Interval = temp - BUFFER;
+            var newMax_Interval = temp + BUFFER;
+
+
+            temp = (int)TopResultsTemp.Select(a => a.intervals.bigSmaLen).Average();
+            var newBigsmaMin = temp - BUFFER;
+            var newBigsmaMax = temp + BUFFER;
+
+            temp = (int)TopResultsTemp.Select(a => a.intervals.smallSmaLen).Average();
+            var newSmallSmaLen_min = temp - BUFFER;
+            var newSmallSmaLen_max = temp + BUFFER;
+
+            temp = (int)TopResultsTemp.Select(a => a.intervals.SignalLen).Average();
+            var newSignalLen_min = temp - BUFFER;
+            var newSignalLen_max = temp + BUFFER;
+
+
+            return new IntervalRange
+            {
+
+                interval_min = (newMin_Interval < 1) ? 1 : newMin_Interval,
+                interval_max = (newMax_Interval < 1) ? 1 : newMax_Interval,
+
+                bigSmaLen_min = (newBigsmaMin < 1) ? 1 : newBigsmaMin,
+                bigSmaLen_max = (newBigsmaMax < 1) ? 1 : newBigsmaMax,
+
+                smallSmaLen_min = (newSmallSmaLen_min < 1) ? 1 : newSmallSmaLen_min,
+                smallSmaLen_max = (newSmallSmaLen_max < 1) ? 1 : newSmallSmaLen_max,
+
+                SignalLen_min = (newSignalLen_min < 1) ? 1 : newSignalLen_min,
+                SignalLen_max = (newSignalLen_max < 1) ? 1 : newSignalLen_max
+            };
+        }
+
+
+        public static IntervalRange GetaHalfRange2(List<ResultData> topResultList)
         {
 
             //topResultList = topResultList.OrderBy(r => r.Pl).ToList();

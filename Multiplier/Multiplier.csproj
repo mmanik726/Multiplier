@@ -196,6 +196,7 @@
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
       <SubType>Designer</SubType>
     </EmbeddedResource>
+    <None Include="bin\Debug\Mani_6.1.0.0_Settings.json" />
     <None Include="Multiplier_TemporaryKey.pfx" />
     <None Include="myKeys.7z" />
     <None Include="packages.config" />

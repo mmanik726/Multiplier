@@ -271,7 +271,8 @@ namespace Multiplier
 
 
                 DirectoryInfo di = new DirectoryInfo(fileNamePah);
-                var TriedResultfiles = di.GetFiles("LTC-USD_TriedResultsList_S1*.json").OrderByDescending(f => f.CreationTime).ToList(); 
+                //var TriedResultfiles = di.GetFiles("LTC-USD_TriedResultsList_S1*.json").OrderByDescending(f => f.CreationTime).ToList(); 
+                var TriedResultfiles = di.GetFiles("LTC-USD_TriedResultsList_S1*.json").OrderByDescending(f => f.LastWriteTime).ToList();
 
                 foreach (var file in TriedResultfiles)
                 {
@@ -690,8 +691,8 @@ namespace Multiplier
 
 
                 lst = lst.Take(50).ToList();
-                var sortedByIntervalResults = lst.OrderBy(r => r.intervals.interval).ToList();
-
+                //var sortedByIntervalResults = lst.OrderBy(r => r.intervals.interval).ToList();
+                var sortedByIntervalResults = lst;//.OrderBy(r => r.Pl).ToList();
 
                 foreach (var result in sortedByIntervalResults)
                 {

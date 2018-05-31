@@ -258,7 +258,7 @@ namespace Simulator
 
 
 
-            const decimal STOP_LOSS_PERCENTAGE = 0.02m;//0.02m;
+            const decimal STOP_LOSS_PERCENTAGE = 0.1m;//0.1m;//0.02m;//0.02m;
 
             const decimal TAKE_PROFIT_PERCENTAGE = 0.10m;
 
