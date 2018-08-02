@@ -231,9 +231,14 @@ namespace Simulator
 
         //Utilities CurInstance; 
 
-        static List<SmaData> _RealTimePrice; 
+        static List<SmaData> _RealTimePrice;
 
-        public Utilities(List<CandleData> rawData)
+
+        decimal STOP_LOSS_PERCENTAGE;
+        decimal TAKE_PROFIT_PERCENTAGE;
+        decimal TAKE_PROFIT_REBUY_PERCENTAGE;
+
+        public Utilities(List<CandleData> rawData, decimal stopLossPercent = 0.1m, decimal takeProfitPercent = 0.02m, decimal takeProfitRebuyPercent = 0.02m)
         {
             lock (dataLoadLock)
             {
@@ -244,8 +249,14 @@ namespace Simulator
                         ActualPrice = a.Close,
                         Time = a.Time
                     }).ToList();
+
+
                 }
             }
+
+            STOP_LOSS_PERCENTAGE = stopLossPercent;
+            TAKE_PROFIT_PERCENTAGE = takeProfitPercent;
+            TAKE_PROFIT_REBUY_PERCENTAGE = takeProfitRebuyPercent;
 
         }
 
@@ -253,14 +264,42 @@ namespace Simulator
         {
         }
 
+
+        public static void WriteRealtimePriceToFile(string fileNamePath, int intervalMins = 30)
+        {
+            StringBuilder sb = new StringBuilder();
+
+            if (_RealTimePrice == null)
+                return;
+
+            if (_RealTimePrice.Count() == 0)
+                return;
+
+
+
+            var remainder = _RealTimePrice.Count() % intervalMins;
+            var tempExchangePriceDataSet = _RealTimePrice.Skip(remainder - 1).ToList();
+            var priceData = tempExchangePriceDataSet.Where((candleData, i) => i % intervalMins == 0).ToList();// select every third item in list ie select data from every x min 
+
+
+
+            
+            priceData.ForEach((d) => sb.AppendLine($"{d.Time.ToString()},{d.ActualPrice.ToString()}"));
+
+            System.IO.File.WriteAllText(fileNamePath, sb.ToString());
+
+                
+        }
+
+
         public List<CrossData> Getcrossings_Linq(List<SmaData> AllBuys, List<SmaData> AllSells, bool useRealTimeActualPrices = false)
         {
 
 
 
-            const decimal STOP_LOSS_PERCENTAGE = 0.1m;//0.1m;//0.02m;//0.02m;
+            //const decimal STOP_LOSS_PERCENTAGE = 0.1m;//0.1m;//0.02m;//0.02m;
 
-            const decimal TAKE_PROFIT_PERCENTAGE = 0.10m;
+            //const decimal TAKE_PROFIT_PERCENTAGE = 0.10m;
 
             var crossList = new List<CrossData>();
 
@@ -407,12 +446,12 @@ namespace Simulator
 
             var originalSell = OriginalSMASellData;
 
-            const decimal TAKE_PROFIT_PERCENTAGE = 0.10m;
+            //const decimal TAKE_PROFIT_PERCENTAGE = 0.10m;
 
-            const decimal TAKE_PROFIT_REBUY_PERCENTAGE = 0.02m;
+            //const decimal TAKE_PROFIT_REBUY_PERCENTAGE = 0.02m;
 
 
-            const decimal STOP_LOSS_PERCENTAGE = 0.02m;//0.02m;
+            //const decimal STOP_LOSS_PERCENTAGE = 0.02m;//0.02m;
 
             //////all the buys that are earlier than the next sell
             //////      and higher than the last actual buy price + buffer
@@ -528,7 +567,7 @@ namespace Simulator
         private void AddStopLossSales(ref List<CrossData> crossList ,  ref List<SmaData> actualPriceLine, decimal originalBuyPrice, CrossData tempSellData)
         {
 
-            const decimal STOP_LOSS_PERCENTAGE = 0.02m;
+            //const decimal STOP_LOSS_PERCENTAGE = 0.02m;
 
             //////all the buys that are earlier than the next sell
             //////      and higher than the last actual buy price + buffer

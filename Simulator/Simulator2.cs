@@ -27,6 +27,8 @@ namespace Simulator
         private int SMALL_SMA_LEN;
         private int BASE_SMA_LEN;
 
+        const decimal STOP_LOSS_PERCENTAGE = 0.1m; //0.02m;
+
         static MyWindow _GraphingWindow;
         
         static HashSet<IntervalData> _TriedIntervalList = new HashSet<IntervalData>();
@@ -501,12 +503,21 @@ namespace Simulator
 
         static IntervalData getIntervalData()
         {
+            //var newInterval = new IntervalData
+            //{
+            //    interval = _random.Next(10, 200),
+            //    bigSmaLen = _random.Next(90, 200),
+            //    smallSmaLen = _random.Next(5, 100),
+            //    basePriceSmaLen = _random.Next(1, 5)
+            //};
+
+
             var newInterval = new IntervalData
             {
-                interval = _random.Next(10, 200),
-                bigSmaLen = _random.Next(90, 200),
-                smallSmaLen = _random.Next(5, 100),
-                basePriceSmaLen = _random.Next(1, 5)
+                interval = _random.Next(10, 240),
+                bigSmaLen = _random.Next(151, 300),
+                smallSmaLen = _random.Next(5, 150),
+                basePriceSmaLen = _random.Next(6, 12)
             };
 
 
@@ -670,7 +681,7 @@ namespace Simulator
             const decimal BUFFER = 0.30m;//1.20m;//1.50m;//1.0m; //0.75m;
 
 
-            const decimal STOP_LOSS_PERCENTAGE = 0.02m;
+            //const decimal STOP_LOSS_PERCENTAGE = 0.02m;
 
             var lastAction = "";
 

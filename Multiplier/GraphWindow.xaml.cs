@@ -572,13 +572,18 @@ namespace Multiplier
             }
             else
             {
-                if (!(lastCommonInterval == interval && lastBigSma == bigSmaLen && lastSmallSma == smallSmaLen))
-                {
-                    _Sim.Dispose();
-                    _Sim = null;
-                    _Sim = new Simulator1(ProductName, interval, bigSmaLen, smallSmaLen);
+                //if (!(lastCommonInterval == interval && lastBigSma == bigSmaLen && lastSmallSma == smallSmaLen))
+                //{
+                //    _Sim.Dispose();
+                //    _Sim = null;
+                //    _Sim = new Simulator1(ProductName, interval, bigSmaLen, smallSmaLen);
 
-                }
+                //}
+
+                _Sim.Dispose();
+                _Sim = null;
+                _Sim = new Simulator1(ProductName, interval, bigSmaLen, smallSmaLen);
+
             }
 
 
