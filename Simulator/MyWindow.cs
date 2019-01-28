@@ -12,7 +12,7 @@ using OxyPlot;
 using OxyPlot.Axes;
 using OxyPlot.Series;
 
-using CoinbaseExchange.NET.Data;
+using CoinbaseExchange.NET;
 //using OxyPlot.Wpf;
 namespace Simulator
 {
@@ -20,7 +20,7 @@ namespace Simulator
     //from the base class Window.
 
 
-    class MyWindow : Window
+    public class MyWindow : Window
     {
 
         //Declare some UI controls to be placed inside the
@@ -28,7 +28,6 @@ namespace Simulator
 
         OxyPlot.Wpf.PlotView _SmaPlotView;
         OxyPlot.Wpf.PlotView _PricePlotView;
-
         OxyPlot.Wpf.PlotView _PLPlotView;
 
         //The controls can be placed only inside a panel.
@@ -55,9 +54,6 @@ namespace Simulator
 
             _PricePlotView.Margin = new Thickness(10);//(10,10,10,153);
             _PricePlotView.Height = 400; // this.Height / 2;
-
-
-
 
 
         }
@@ -102,14 +98,12 @@ namespace Simulator
 
         }
 
-
-
-        public void DrawSeriesSim1(List<SeriesDetails> seriesList, List<CrossData> allCrossData = null)
+        public void DrawSeriesSim3(List<SeriesDetails> seriesList, List<CrossData> allCrossData = null)
         {
 
 
 
-            var SeriesModel = new PlotModel
+            var PriceModel = new PlotModel
             {
                 Title = "Trades"
             };
@@ -125,13 +119,122 @@ namespace Simulator
                     Title = series.SereiesName,
                     StrokeThickness = 1
                 };
-                var seriesDtpts = series.series.Select(s => new DataPoint(Axis.ToDouble(s.Time), s.SmaValue));
+
+                var seriesDtpts = series.DataPoints.Select(s => new DataPoint(Axis.ToDouble(s.Time), s.SmaValue));
                 seriesData.Points.AddRange(seriesDtpts);
 
                 if (series.SereiesName == "Big_Sma")
                     seriesData.Color = OxyColor.FromRgb(224, 50, 15);
                 if (series.SereiesName == "Small_Sma")
                     seriesData.Color = OxyColor.FromRgb(8, 150, 56);
+
+                PriceModel.Series.Add(seriesData);
+            }
+
+
+
+
+
+            if (allCrossData != null)
+            {
+
+
+                var priceLine = new LineSeries
+                {
+                    Title = "Price",
+                    StrokeThickness = 1
+                };
+                
+
+                var priceDt = seriesList.Where(a => a.SereiesName == "Price");
+                priceLine.Color = OxyColor.FromRgb(10, 84, 204);
+                if (priceDt.Count() > 0)
+                {
+                    var prices = priceDt.First().DataPoints.Select(s => new DataPoint(Axis.ToDouble(s.Time), (double)s.ActualPrice));
+                    priceLine.Points.AddRange(prices);
+                    PriceModel.Series.Add(priceLine);
+                }
+
+
+
+                var BuyScatterSeries = new ScatterSeries
+                {
+                    Title = "buy",
+                    MarkerType = MarkerType.Circle
+                };
+
+                var buyPoints = allCrossData.Where(a => a.Action == "buy").Select((d) => new ScatterPoint(Axis.ToDouble(d.dt), Convert.ToDouble(d.BufferedCrossingPrice)));
+                BuyScatterSeries.Points.AddRange(buyPoints);
+
+                BuyScatterSeries.MarkerFill = OxyColor.FromRgb(224, 50, 15); //OxyColor.FromRgb(255, 0, 0);
+
+                var SellScatterSeries = new ScatterSeries
+                {
+                    Title = "sell",
+                    MarkerType = MarkerType.Circle
+                };
+                var SellPoints = allCrossData.Where(a => a.Action == "sell").Select((d) => new ScatterPoint(Axis.ToDouble(d.dt), Convert.ToDouble(d.BufferedCrossingPrice)));
+                SellScatterSeries.Points.AddRange(SellPoints);
+                SellScatterSeries.MarkerFill = OxyColor.FromRgb(8, 150, 56);// OxyColor.FromRgb(0, 255, 0);
+
+
+                PriceModel.Series.Add(BuyScatterSeries);
+                PriceModel.Series.Add(SellScatterSeries);
+
+                PriceModel.Axes.Add(new DateTimeAxis
+                {
+                    MajorGridlineThickness = 1,
+                    MajorGridlineStyle = LineStyle.Solid,
+                    Position = AxisPosition.Bottom
+                });
+
+            }
+
+
+            Dispatcher.Invoke(() =>
+            {
+
+
+                //_SmaPlotView.Height = 10; //MyWindow.Height / 2;
+
+                _PricePlotView.Height = 800; // this.Height / 2;
+
+                
+                _PricePlotView.Model = PriceModel;
+            });
+        }
+
+
+        public void DrawSeriesSim1(List<SeriesDetails> seriesList, List<CrossData> allCrossData = null, double Pl = 0.0)
+        {
+
+
+
+            var SeriesModel = new PlotModel
+            {
+                Title = "Signals"
+            };
+
+            foreach (var series in seriesList)
+            {
+
+                if (series.SereiesName.Contains("Price"))
+                    continue;
+
+                var seriesData = new LineSeries
+                {
+                    Title = series.SereiesName,
+                    StrokeThickness = 1
+                };
+                var seriesDtpts = series.DataPoints.Select(s => new DataPoint(Axis.ToDouble(s.Time), s.SmaValue));
+                seriesData.Points.AddRange(seriesDtpts);
+
+                if (series.SereiesName.Contains("Big_Sma"))
+                    seriesData.Color = OxyColor.FromRgb(224, 50, 15);
+                if (series.SereiesName.Contains("Small_Sma"))
+                    seriesData.Color = OxyColor.FromRgb(8, 150, 56);
+
+
 
                 SeriesModel.Series.Add(seriesData);
             }
@@ -147,26 +250,28 @@ namespace Simulator
             });
 
 
+            var plStr = (Pl == 0.0) ? "" : Math.Round(Pl, 2).ToString();
+
 
             var PriceModel = new PlotModel
             {
-                Title = "Price"
+                Title = "P/L: " + plStr 
             };
 
             if (allCrossData != null)
             {
 
+                var priceDt = seriesList.Where(a => a.SereiesName.Contains("Price"));
 
                 var priceLine = new LineSeries
                 {
-                    Title = "Price",
+                    Title = priceDt.First().SereiesName,
                     StrokeThickness = 1
                 };
 
-                var priceDt = seriesList.Where(a => a.SereiesName == "Price");
                 if (priceDt.Count() > 0)
                 {
-                    var prices = priceDt.First().series.Select(s => new DataPoint(Axis.ToDouble(s.Time), (double)s.ActualPrice));
+                    var prices = priceDt.First().DataPoints.Select(s => new DataPoint(Axis.ToDouble(s.Time), (double)s.ActualPrice));
                     priceLine.Points.AddRange(prices);
                     PriceModel.Series.Add(priceLine);
                 }
@@ -181,7 +286,7 @@ namespace Simulator
                     MarkerType = MarkerType.Circle
                 };
 
-                var buyPoints = allCrossData.Where(a => a.Action == "buy").Select((d) => new ScatterPoint(Axis.ToDouble(d.dt), Convert.ToDouble(d.CrossingPrice)));
+                var buyPoints = allCrossData.Where(a => a.Action == "buy").Select((d) => new ScatterPoint(Axis.ToDouble(d.dt), Convert.ToDouble(d.BufferedCrossingPrice)));
                 BuyScatterSeries.Points.AddRange(buyPoints);
 
                 BuyScatterSeries.MarkerFill = OxyColor.FromRgb(224, 50, 15); //OxyColor.FromRgb(255, 0, 0);
@@ -191,7 +296,7 @@ namespace Simulator
                     Title = "sell",
                     MarkerType = MarkerType.Circle
                 };
-                var SellPoints = allCrossData.Where(a => a.Action == "sell").Select((d) => new ScatterPoint(Axis.ToDouble(d.dt), Convert.ToDouble(d.CrossingPrice)));
+                var SellPoints = allCrossData.Where(a => a.Action == "sell").Select((d) => new ScatterPoint(Axis.ToDouble(d.dt), Convert.ToDouble(d.BufferedCrossingPrice)));
                 SellScatterSeries.Points.AddRange(SellPoints);
                 SellScatterSeries.MarkerFill = OxyColor.FromRgb(8, 150, 56);// OxyColor.FromRgb(0, 255, 0);
 
@@ -217,8 +322,21 @@ namespace Simulator
                 resEvendHandlerSet = true;
             }
 
+            //Task.Run(()=> 
+            //{
+            //    Dispatcher.Invoke(() =>
+            //    {
 
-            Dispatcher.Invoke(() => 
+
+            //        _SmaPlotView.Height = 400; //MyWindow.Height / 2;
+
+            //        _PricePlotView.Height = 400; // this.Height / 2;
+
+            //        _SmaPlotView.Model = SeriesModel;
+            //        _PricePlotView.Model = PriceModel;
+            //    });
+            //});
+            Dispatcher.InvokeAsync(() =>
             {
 
 
@@ -248,7 +366,7 @@ namespace Simulator
                     Title = series.SereiesName,
                     StrokeThickness = 1
                 };
-                var seriesDtpts = series.series.Select(s => new DataPoint(Axis.ToDouble(s.Time), s.SmaValue));
+                var seriesDtpts = series.DataPoints.Select(s => new DataPoint(Axis.ToDouble(s.Time), s.SmaValue));
                 seriesData.Points.AddRange(seriesDtpts);
 
                 if (series.SereiesName == "Price")

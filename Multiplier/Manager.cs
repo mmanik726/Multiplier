@@ -10,8 +10,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using CoinbaseExchange.NET.Endpoints.Funds;
-
-
+using Simulator;
 
 namespace Multiplier
 {
@@ -207,6 +206,69 @@ namespace Multiplier
             AppSettings.MajorSettingsChangEvent += MajorSettingsChangedEventHandler;
 
             //writeCurrentStrategySmaValues();
+
+
+
+            //ShowGraph(gra);
+
+
+        }
+
+
+        public void ShowGraph(GraphWindow graphWindow)
+        {
+
+
+
+
+
+            //graphWindow.Show();
+
+
+
+
+
+
+            Simulator1 S = null;
+            var pl = 0.0;
+            Task.Run(() =>
+            {
+
+                var settings = AppSettings.GetStrategySettings2("macd_small");
+
+                S = new Simulator1(CurContextValues.ProductName,
+                settings.time_interval,
+                settings.slow_sma,
+                settings.fast_sma, 
+                true);
+
+
+                graphWindow.FillInitialVaues(DateTime.Now.AddDays(-17), DateTime.Now.AddHours(12),
+                    settings.time_interval, settings.slow_sma, settings.fast_sma, settings.signal);
+
+
+                pl = S.Calculate(DateTime.Now.AddDays(-17),
+                        DateTime.Now.AddHours(12), settings.signal, true, true);
+
+                S.Dispose();
+
+            }).Wait();
+
+
+            graphWindow.DrawSeriesSim1(S.CurResultsSeriesList, S.CurResultCrossList, pl);
+            //Thread thread = new Thread(() =>
+            //{
+
+
+
+
+            //});
+            //thread.SetApartmentState(ApartmentState.STA);
+            //thread.Start();
+
+
+            //thread.Join();
+
 
         }
 

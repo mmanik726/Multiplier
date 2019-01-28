@@ -61,6 +61,16 @@ namespace Multiplier.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized resource of type System.Byte[].
+        /// </summary>
+        internal static byte[] Mani_6_1_0_0_Settings {
+            get {
+                object obj = ResourceManager.GetObject("Mani_6_1_0_0_Settings", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to &lt;HTML&gt;
         ///&lt;HEAD&gt;
         ///&lt;TITLE&gt;Multiplier&lt;/TITLE&gt;

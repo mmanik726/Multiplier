@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using CoinbaseExchange.NET.Data;
 using CoinbaseExchange.NET.Endpoints.PublicData;
 using System.Threading;
+using CoinbaseExchange.NET;
 using CoinbaseExchange.NET.Utilities;
 
 namespace Simulator
@@ -26,6 +27,8 @@ namespace Simulator
         private int SMALL_SMA_LEN;
         private int BASE_SMA_LEN;
 
+        const decimal STOP_LOSS_PERCENTAGE = 0.1m; //0.02m;
+
         static MyWindow _GraphingWindow;
         
         static HashSet<IntervalData> _TriedIntervalList = new HashSet<IntervalData>();
@@ -43,6 +46,9 @@ namespace Simulator
 
         public static void Start()
         {
+
+            Console.WriteLine("Starting Simulator 2");
+
             ShowGraphingForm();
 
             while (true)
@@ -149,7 +155,8 @@ namespace Simulator
 
             var smaDtPtsReversed = inputMA.OrderBy((d) => d.Time);
 
-            var smaPoints = smaDtPtsReversed.Select((d) => d.SmaValue).ToList().SMA(Input_SMA_LEN).ToList();
+            //var smaPoints = smaDtPtsReversed.Select((d) => d.SmaValue).ToList().SMA(Input_SMA_LEN).ToList();
+            var smaPoints = smaDtPtsReversed.Select((d) => d.SmaValue).ToList().EMA(Input_SMA_LEN).ToList();
 
             var requiredSmaDtPts = smaDtPtsReversed.Skip(Input_SMA_LEN - 1).ToList();
 
@@ -169,7 +176,9 @@ namespace Simulator
 
             var smaDtPtsReversed = inputMA.SmaDataPts_Candle.OrderBy((d) => d.Time);
 
-            var smaPoints = smaDtPtsReversed.Select((d) => (double)d.Close).ToList().SMA(Input_SMA_LEN).ToList();
+            //var smaPoints = smaDtPtsReversed.Select((d) => (double)d.Close).ToList().SMA(Input_SMA_LEN).ToList();
+
+            var smaPoints = smaDtPtsReversed.Select((d) => (double)d.Close).ToList().EMA(Input_SMA_LEN).ToList();
 
             var requiredSmaDtPts = smaDtPtsReversed.Skip(Input_SMA_LEN - 1).ToList();
 
@@ -195,6 +204,11 @@ namespace Simulator
 
             var allSells = Price.Where((d, i) => (d.SmaValue < SmallSma.ElementAt(i).SmaValue)).ToList();
 
+
+            //var allBuys = Price.Where((d, i) => ((double)d.ActualPrice > BigSma.ElementAt(i).SmaValue) && d.SmaValue > SmallSma.ElementAt(i).SmaValue).ToList();
+
+            //var allSells = Price.Where((d, i) => ((double)d.ActualPrice < SmallSma.ElementAt(i).SmaValue)).ToList();
+
             Utilities crossCalc = new Utilities();
 
             var strtTimer2 = DateTime.Now;
@@ -219,11 +233,11 @@ namespace Simulator
                 //allSeries.Add(BigSma);
                 //allSeries.Add(SmallSma);
 
-                allSereis2.Add(new SeriesDetails { series = ActualPriceList, SereiesName = "Actual Price" });
+                allSereis2.Add(new SeriesDetails { DataPoints = ActualPriceList, SereiesName = "Actual Price" });
 
-                allSereis2.Add(new SeriesDetails { series = Price, SereiesName = "Price" });
-                allSereis2.Add(new SeriesDetails { series = BigSma, SereiesName = "Big_Sma" });
-                allSereis2.Add(new SeriesDetails { series = SmallSma, SereiesName = "Small_Sma" });
+                allSereis2.Add(new SeriesDetails { DataPoints = Price, SereiesName = "Price" });
+                allSereis2.Add(new SeriesDetails { DataPoints = BigSma, SereiesName = "Big_Sma" });
+                allSereis2.Add(new SeriesDetails { DataPoints = SmallSma, SereiesName = "Small_Sma" });
 
                 GraphWindow.DrawSeries(allSereis2, crossList);
             }
@@ -314,7 +328,9 @@ namespace Simulator
 
 
                 Console.WriteLine("starting batch: " + (batch - eachBatchCount) + " - " + batch);
-                Thread.Sleep(SLEEP_TIME_SEC);
+
+                if (batch > eachBatchCount)
+                    Thread.Sleep(SLEEP_TIME_SEC);
 
                 var threadCount = Math.Ceiling((eachBatchCount / (double)Each_Sim_Count));
 
@@ -465,7 +481,7 @@ namespace Simulator
                         }
                     }
 
-                    var plResult = S.Calculate(autoStartDate, autoEndDate, false, false);
+                    var plResult = S.Calculate(autoStartDate, autoEndDate, false, true);
 
                     resultList.Add(new ResultData { Pl = plResult, intervals = interval });
 
@@ -487,12 +503,21 @@ namespace Simulator
 
         static IntervalData getIntervalData()
         {
+            //var newInterval = new IntervalData
+            //{
+            //    interval = _random.Next(10, 200),
+            //    bigSmaLen = _random.Next(90, 200),
+            //    smallSmaLen = _random.Next(5, 100),
+            //    basePriceSmaLen = _random.Next(1, 5)
+            //};
+
+
             var newInterval = new IntervalData
             {
-                interval = _random.Next(5, 90),
-                bigSmaLen = _random.Next(20, 100),
-                smallSmaLen = _random.Next(5, 50),
-                basePriceSmaLen = _random.Next(2, 30)
+                interval = _random.Next(10, 240),
+                bigSmaLen = _random.Next(151, 300),
+                smallSmaLen = _random.Next(5, 150),
+                basePriceSmaLen = _random.Next(6, 12)
             };
 
 
@@ -508,10 +533,10 @@ namespace Simulator
                 {
                     newInterval = new IntervalData
                     {
-                        interval = _random.Next(5, 60),
-                        bigSmaLen = _random.Next(20, 100),
-                        smallSmaLen = _random.Next(5, 50),
-                        basePriceSmaLen = _random.Next(2, 30)
+                        interval = _random.Next(10, 200),
+                        bigSmaLen = _random.Next(90, 200),
+                        smallSmaLen = _random.Next(5, 100),
+                        basePriceSmaLen = _random.Next(1, 5)
                     };
 
 
@@ -656,7 +681,7 @@ namespace Simulator
             const decimal BUFFER = 0.30m;//1.20m;//1.50m;//1.0m; //0.75m;
 
 
-            const decimal STOP_LOSS_PERCENTAGE = 0.02m;
+            //const decimal STOP_LOSS_PERCENTAGE = 0.02m;
 
             var lastAction = "";
 

@@ -17,7 +17,7 @@ namespace CoinbaseExchange.NET.Utilities
     
     //shared logger class 
 
-    public class Logger
+    public class Logger : IDisposable
     {
         //public STATIC eventhandler 
         public static EventHandler<LoggerEventArgs> Logupdated;
@@ -30,12 +30,17 @@ namespace CoinbaseExchange.NET.Utilities
 
         public static Timer _aTimer;
 
+
+        private static StringBuilder _AllText;
+        private static int _LogMsgCount = 0;
         //private static Queue<string> writeQue;
 
         private static object _WriteLock = new object();
 
         private static void InitLogger(string logFileName = "")
         {
+            
+            _AllText = new StringBuilder();
 
             _filePath = AppDomain.CurrentDomain.BaseDirectory;//System.Reflection.Assembly.GetExecutingAssembly().Location;
 
@@ -51,7 +56,7 @@ namespace CoinbaseExchange.NET.Utilities
             _fileNamePath = _filePath +  _fileName;
 
 
-            string existingLogContent = ""; 
+            //string existingLogContent = ""; 
 
             if (File.Exists(_fileNamePath))
             {
@@ -59,8 +64,13 @@ namespace CoinbaseExchange.NET.Utilities
 
                 try
                 {
-                    existingLogContent = File.ReadAllText(_fileNamePath);
-                    onLogUpdate(existingLogContent);
+                    var existingLogContent = File.ReadAllLines(_fileNamePath, Encoding.UTF8).ToList();
+                    StringBuilder s = new StringBuilder();
+                    if (existingLogContent.Count > 500)
+                        existingLogContent.Skip(existingLogContent.Count() - 500).ToList().ForEach(a => s.AppendLine(a));
+                    else
+                        existingLogContent.ForEach(a => s.AppendLine(a));
+                    onLogUpdate(s.ToString());
                 }
                 catch (Exception ex)
                 {
@@ -114,7 +124,7 @@ namespace CoinbaseExchange.NET.Utilities
 
 
 
-            public static void WriteLog(string message, string fileName = "")
+        public static void WriteLog(string message, string fileName = "")
         {
 
             if (_LoggerInstance == null)
@@ -154,11 +164,30 @@ namespace CoinbaseExchange.NET.Utilities
                     return;
 
 
+
+                //_AllText.Append(logMsg);
+                //_LogMsgCount++;
+
+                //lock (_WriteLock)
+                //{
+                //    if (_LogMsgCount > 100)
+                //    {
+                //        File.AppendAllText(_fileNamePath, _AllText.ToString());
+                //        onLogUpdate(_AllText.ToString());
+
+                //        _AllText.Clear();
+                //        _LogMsgCount = 0;
+
+                //    }
+                //}
+
                 lock (_WriteLock)
                 {
                     File.AppendAllText(_fileNamePath, logMsg);
-                    Debug.WriteLine(logMsg);
                 }
+
+                //onLogUpdate(_AllText.ToString());
+
 
 
             }
@@ -190,5 +219,37 @@ namespace CoinbaseExchange.NET.Utilities
         }
 
 
+        public static void DumpLogToFile()
+        {
+
+            if (_LoggerInstance != null)
+            {
+                if (_LogMsgCount > 0)
+                {
+                    lock (_WriteLock)
+                    {
+                        File.AppendAllText(_fileNamePath, _AllText.ToString());
+                        onLogUpdate(_AllText.ToString());
+
+                        _AllText.Clear();
+                        _LogMsgCount = 0;
+                    }
+                }
+            }
+            
+        }
+
+        public void Dispose()
+        {
+            //throw new NotImplementedException();
+            //write the last messages in buffer before exit
+            if (_LogMsgCount > 0)
+            {
+                lock (_WriteLock)
+                {
+                    File.AppendAllText(_fileNamePath, _AllText.ToString());
+                }
+            }
+        }
     }
 }

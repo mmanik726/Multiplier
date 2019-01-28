@@ -11,6 +11,12 @@ using CoinbaseExchange.NET.Endpoints.PublicData;
 namespace CoinbaseExchange.NET
 {
 
+    public class SmaData
+    {
+        public double SmaValue { get; set; }
+        public decimal ActualPrice { get; set; }
+        public DateTime Time { get; set; }
+    }
 
     public class ExData
     {
@@ -51,6 +57,10 @@ namespace CoinbaseExchange.NET
                 {
                     Update();
                 }
+
+                firstDataPointDateTime = RawExchangeData.First().Time;
+                lastDataPointDateTime = RawExchangeData.Last().Time;
+
             }
             else
             {
@@ -84,6 +94,7 @@ namespace CoinbaseExchange.NET
         private bool WriteToFile(string fileNamePath, List<CandleData> CandleDataList)
         {
             //write to file 
+            Logger.WriteLog("Writing to Json DB");
             try
             {
                 var data = CandleDataList.OrderByDescending((x) => x.Time).ToList();
@@ -100,6 +111,8 @@ namespace CoinbaseExchange.NET
 
         private bool ReadFromFile()
         {
+
+            Logger.WriteLog("Reading Json DB for historic data");
             try
             {
                 RawExchangeData = JsonConvert.DeserializeObject<List<CandleData>>(File.ReadAllText(jsonDBNamePath));
@@ -107,8 +120,9 @@ namespace CoinbaseExchange.NET
                 //order the data right after reading from db so its consistent everywhere
                 RawExchangeData = RawExchangeData.OrderByDescending(d => d.Time).ToList();
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                Logger.WriteLog("error: " + ex.Message);
                 throw new Exception("FileReadError");
             }
 
@@ -119,6 +133,8 @@ namespace CoinbaseExchange.NET
 
         private bool IsDbCorrupt()
         {
+            Logger.WriteLog("Checking for inconsistencies in Json DB");
+
             var mDt = RawExchangeData;//.OrderByDescending((d) => d.Time).ToList();
 
 
@@ -146,7 +162,8 @@ namespace CoinbaseExchange.NET
 
 
             //FillMissingData(invalidData.ToList());
-            FillMissingData_Dummy(invalidData.ToList());
+            if (invalidData.Count() > 0)
+                FillMissingData_Dummy(invalidData.ToList());
 
             if (invalidData.Count() > 0)
             {
@@ -179,7 +196,7 @@ namespace CoinbaseExchange.NET
 
                 if (missingData.Difference > TimeSpan.FromMinutes(2))
                 {
-                    Console.WriteLine((missingData.Difference.ToString() + " of data missing in sequesnce"));
+                    Logger.WriteLog(($"{missingData.Difference.ToString()} min data missing starting at {startDt.ToLongDateString()}"));
                 }
 
                 //DownloadDataSegment(startDt, endDt);
@@ -454,7 +471,8 @@ namespace CoinbaseExchange.NET
             DateTime startDate = new DateTime();
 
             if (createNewDB)
-                startDate = DateTime.Now.AddYears(-1);//get all data from past year //new DateTime(2017,06,1,0,0,0);
+                startDate = DateTime.Now.AddMonths(-1);
+            //startDate = DateTime.Now.AddYears(-1);//get all data from past year //new DateTime(2017,06,1,0,0,0);
             else
                 startDate = RawExchangeData.First().Time.AddMinutes(1);
             
@@ -518,8 +536,9 @@ namespace CoinbaseExchange.NET
 
             RawExchangeData.AddRange(extraData);
 
+            RawExchangeData = RawExchangeData.OrderByDescending(d => d.Time).ToList();
 
-            Logger.WriteLog("done downloading additional data ");
+            Logger.WriteLog("done downloading additional data from server");
 
             return true;
         }
@@ -653,6 +672,8 @@ namespace CoinbaseExchange.NET
             public CandleData LastCandle { get; set; }
             public CandleData NextCandle { get; set; }
         }
+
+
 
     }
 

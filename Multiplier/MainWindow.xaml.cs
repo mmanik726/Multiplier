@@ -28,6 +28,7 @@ using Newtonsoft.Json.Linq;
 
 
 using CoinbaseExchange.NET.Endpoints.Funds;
+using System.Threading;
 
 namespace Multiplier
 {
@@ -37,8 +38,8 @@ namespace Multiplier
     public partial class MainWindow : Window
     {
 
-        
 
+        GraphWindow _graphWindow;
 
         Manager ProductManager;
 
@@ -64,62 +65,9 @@ namespace Multiplier
 
             InitializeComponent();
 
-            StartWindow a = new StartWindow();
-            a.Show();
+            _graphWindow = new GraphWindow();
 
-
-
-
-
-            //var d = x.Where((f)=>f.ToString() == "Value1");
-            //var s = x["Value1"].ToString();
-
-
-            //AppSettings.CreateNew();
-            //var filePath = System.IO.Path.GetFullPath(Assembly.GetExecutingAssembly().Location + @"\..\..\Resources\TradeWidgetPage.html");
-            //cefBrowser.Address = @"https://www.tradingview.com"; //@"C:\Users\bobby\Source\Repos\Multiplier\Multiplier\Resources\TradeWidgetPage.html";//@".\TradeWidgetPage.html"; //Properties.Resources.TradeWidgetPage. //"https://github.com/cefsharp/CefSharp/wiki/Frequently-asked-questions";
-
-            //cefBrowser.Address = @"C:\Users\bobby\Source\Repos\Multiplier\Multiplier\Resources\TradeWidgetPage.html";//@".\TradeWidgetPage.html"; //Properties.Resources.TradeWidgetPage. //"https://github.com/cefsharp/CefSharp/wiki/Frequently-asked-questions";
-            //cefBrowser1.Address = @"C:\Users\bobby\Source\Repos\Multiplier\Multiplier\Resources\TradeWidgetPage.html";//@".\TradeWidgetPage.html"; //Properties.Resources.TradeWidgetPage. //"https://github.com/cefsharp/CefSharp/wiki/Frequently-asked-questions";
-
-            //test
-
-            //            List<double> dbl = new List<double>() {
-            //22.27340d,
-            //22.19400d,
-            //22.08470d,
-            //22.17410d,
-            //22.18400d,
-            //22.13440d,
-            //22.23370d,
-            //22.43230d,
-            //22.24360d,
-            //22.29330d,
-            //22.15420d,
-            //22.39260d,
-            //22.38160d,
-            //22.61090d,
-            //23.35580d,
-            //24.05190d,
-            //23.75300d,
-            //23.83240d,
-            //23.95160d,
-            //23.63380d,
-            //23.82250d,
-            //23.87220d,
-            //23.65370d,
-            //23.18700d,
-            //23.09760d,
-            //23.32600d,
-            //22.68050d,
-            //23.09760d,
-            //22.40250d,
-            //22.17250d
-            //};
-            //            var a = dbl.EMA(10).ToList();
-
-            //a.ForEach((d) => Logger.WriteLog(d.ToString()));
-
+            
 
 
             LogAutoScrolling = true;
@@ -148,33 +96,6 @@ namespace Multiplier
             //btnSellAtNow.IsEnabled = false;
             btnStartByBuying.IsEnabled = false;
             btnStartBySelling.IsEnabled = false;
-
-            //////LTCManager = new Manager("LTC-USD", myPassphrase, myKey, mySecret);
-            ////////LTCManager = new Manager("BTC-USD", myPassphrase, myKey, mySecret);
-
-            //////LTCManager.BuySellAmountChangedEvent += BuySellAmountChangedEventHandler;
-            //////LTCManager.BuySellBufferChangedEvent += BuySellBufferChangedEventHandler;
-            //////LTCManager.OrderFilledEvent += OrderFilledEventHandler;
-            ////////LTCManager.SmaParametersUpdatedEvent += SmaParametersUpdatedEventHandler;
-            //////LTCManager.SmaUpdateEvent += SmaUpdateEventHandler;
-            //////LTCManager.TickerPriceUpdateEvent += TickerPriceUpdateEventHandler;
-            //////LTCManager.AutoTradingStartedEvent += AutoTradingStartedEventHandler;
-
-            //////LTCManager.TickerConnectedEvent += TickerConnectedEventHandler;
-            //////LTCManager.TickerDisConnectedEvent += TickerDisConnectedEventHandler;
-
-            //////LTCManager.InitializeManager(); 
-
-
-            //////sharedCurrentAveragePrice = 0;
-
-
-
-            //////LTCManager.UpdateBuySellAmount(0.01m);
-            //////LTCManager.UpdateBuySellBuffer(0.03m);
-
-            ////////lblBuySellBuffer.Content = sharedPriceBuffer.ToString();
-            ////////lblBuySellAmount.Content = sharedBuySellAmount; 
 
             
         }
@@ -900,6 +821,18 @@ namespace Multiplier
         Task<bool> StartApp(string inputProduct)
         {
 
+            var appVersion = Assembly.GetExecutingAssembly().GetName().Version.ToString();
+            var settingsFile = System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetEntryAssembly().Location) + @"\Mani_" + appVersion + "_Settings.json";
+
+            if (!System.IO.File.Exists(settingsFile))
+            {
+                MessageBox.Show("Application strategy settings file cannot be found. Please make sure the json settings file exists in the application dir. " +
+                    "A sample strategy json file can be found in the resource directory");
+
+                return null;
+            }
+            
+            
             //get user settings 
             var currentUser = Properties.Settings.Default.UserName;
 
@@ -950,6 +883,7 @@ namespace Multiplier
             ProductManager.TickerDisConnectedEvent += TickerDisConnectedEventHandler;
 
             ProductManager.CurrentActionChangedEvent += CurrentActionChangedEventHandler;
+
 
             ProductManager.InitializeManager(inputProduct, GetIntervals());
 
@@ -1188,19 +1122,53 @@ namespace Multiplier
             Task.Factory.StartNew(()=> ProductManager?.UpdateFunds());
         }
 
-        private void Button_Click(object sender, RoutedEventArgs e)
+        //private void Button_Click(object sender, RoutedEventArgs e)
+        //{
+
+        //    Task.Factory.StartNew(
+        //        ()=>
+        //        {
+        //            ProductManager.TickerDisconnectedHandler(null, null);
+
+        //            System.Threading.Thread.Sleep(500);
+
+        //            ProductManager.TickerConnectedHandler(null, null);
+
+        //        });
+
+        //}
+
+        private void btnShowGraph_Click(object sender, RoutedEventArgs e)
         {
 
-            Task.Factory.StartNew(
-                ()=>
-                {
-                    ProductManager.TickerDisconnectedHandler(null, null);
+            //Task.Run(()=> 
+            //{
 
-                    System.Threading.Thread.Sleep(500);
+            //});
 
-                    ProductManager.TickerConnectedHandler(null, null);
+            if (ProductManager == null)
+                return;
+            
+            _graphWindow = new GraphWindow();
 
-                });
+            _graphWindow.Height = 900;
+            _graphWindow.Width = 1500;
+            _graphWindow.Show();
+
+            Task.Run(()=> 
+            {
+                ProductManager.ShowGraph(_graphWindow);
+            });
+
+            //Thread thread = new Thread(() =>
+            //{
+
+            //    ProductManager.ShowGraph();
+
+
+            //});
+            //thread.SetApartmentState(ApartmentState.STA);
+            //thread.Start();
 
         }
 
