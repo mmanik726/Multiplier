@@ -201,7 +201,15 @@ namespace Multiplier
             UpdateBuySellAmount(0.01m); //default
             //UpdateBuySellBuffer(0.03m); //default 
 
-            UpdateFunds();
+
+            try
+            {
+                UpdateFunds();
+            }
+            catch (Exception)
+            {
+                Logger.WriteLog("Error getting available funds details, please check your gdax credentials");
+            }
 
             AppSettings.MajorSettingsChangEvent += MajorSettingsChangedEventHandler;
 
