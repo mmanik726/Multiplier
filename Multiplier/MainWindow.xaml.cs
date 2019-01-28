@@ -43,9 +43,9 @@ namespace Multiplier
 
         Manager ProductManager;
 
-        private string myPassphrase; // = "n6yci6u4i0g";
-        private string myKey; // = "b006d82554b495e227b9e7a1251ad745";
-        private string mySecret; // = "NhAb9pmbZaY9cPb2+eXOGWIILje7iFe/nF+dV9n6FOxazl6Kje2/03GuSiQYTsj3a/smh92m/lrvfu7kYkxQMg==";
+        private string myPassphrase;
+        private string myKey;
+        private string mySecret;
         LogWindow logWindow;
 
         private static decimal sharedCurrentLargeSmaPrice;

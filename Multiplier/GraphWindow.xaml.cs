@@ -685,7 +685,7 @@ namespace Multiplier
         {
             var resultList = new List<string>();
 
-            string basePath = @"C:\Users\bobby\Source\Repos\Multiplier\Simulator\bin\Debug";
+            string basePath = System.Reflection.Assembly.GetEntryAssembly().Location;
 
             var fileNamePath = basePath + @"\" + fileName;
 
