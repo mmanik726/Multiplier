@@ -1,24 +1,24 @@
-{
+﻿{
   "AppVersion": "6.1.0.0",
   "Settings": {
     "Strategies": [
       {
         "StrategyName": "macd_small",
-        "last_buy_price": "0.01",
-        "last_sell_price": "186.50000000",
+        "last_buy_price": "208.64000000",
+        "last_sell_price": "211.31000000",
         "stop_loss_percent": "4.00",
-        "time_interval": "87",
-        "fast_sma": "190",
-        "slow_sma": "133",
-        "signal": "16",
-        "my_sma": "16",
+        "time_interval": "15",
+        "fast_sma": "16",
+        "slow_sma": "100",
+        "signal": "7",
+        "my_sma": "2",
         "use_two_sma": "True",
         "use_ema": "False"
       },
       {
         "StrategyName": "macd_large",
-        "last_buy_price": "0.01",
-        "last_sell_price": "186.50000000",
+        "last_buy_price": "208.64000000",
+        "last_sell_price": "211.31000000",
         "stop_loss_percent": "4.00",
         "time_interval": "30",
         "fast_sma": "33",

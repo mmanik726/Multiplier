@@ -6,13 +6,13 @@
       <Value Profile="(Default)">Manik</Value>
     </Setting>
     <Setting Name="Passpharase" Type="System.String" Scope="User">
-      <Value Profile="(Default)">a02fosbimtft</Value>
+      <Value Profile="(Default)">YOUR_GDAX_PASSPHRASE_GOES_HERE</Value>
     </Setting>
     <Setting Name="Key" Type="System.String" Scope="User">
-      <Value Profile="(Default)">2a094a11336ae1a5fa248101e0ce60bb</Value>
+      <Value Profile="(Default)">YOUR_GDAX_KEY_GOES_HERE</Value>
     </Setting>
     <Setting Name="Secret" Type="System.String" Scope="User">
-      <Value Profile="(Default)">NXmcu07qBfmAq45L2l/Cm1jOXWHfozaMw3s9xYHKjGjmIHtbypyc2TqF62SK61NJcuAr1whiOjvDrRupEHnl5w==</Value>
+      <Value Profile="(Default)">YOUR_GDAX_SECRET_GOES_HERE</Value>
     </Setting>
     <Setting Name="UseUISmaValues" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">False</Value>

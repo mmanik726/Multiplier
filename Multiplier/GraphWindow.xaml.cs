@@ -267,7 +267,8 @@ namespace Multiplier
                 dtTo.SelectedDate = endTime;
 
 
-                var fileNamePah = @"C:\Users\bobby\Source\Repos\Multiplier\Simulator\bin\Debug";//System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetEntryAssembly().Location);
+                //var fileNamePah = @"C:\Users\bobby\Source\Repos\Multiplier\Simulator\bin\Debug";//System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetEntryAssembly().Location);
+                var fileNamePah = System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetEntryAssembly().Location);
 
 
                 DirectoryInfo di = new DirectoryInfo(fileNamePah);

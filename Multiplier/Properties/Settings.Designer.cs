@@ -12,7 +12,7 @@ namespace Multiplier.Properties {
     
     
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
-    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.VisualStudio.Editors.SettingsDesigner.SettingsSingleFileGenerator", "15.3.0.0")]
+    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.VisualStudio.Editors.SettingsDesigner.SettingsSingleFileGenerator", "15.9.0.0")]
     internal sealed partial class Settings : global::System.Configuration.ApplicationSettingsBase {
         
         private static Settings defaultInstance = ((Settings)(global::System.Configuration.ApplicationSettingsBase.Synchronized(new Settings())));
@@ -37,7 +37,7 @@ namespace Multiplier.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("a02fosbimtft")]
+        [global::System.Configuration.DefaultSettingValueAttribute("YOUR_GDAX_PASSPHRASE_GOES_HERE")]
         public string Passpharase {
             get {
                 return ((string)(this["Passpharase"]));
@@ -49,7 +49,7 @@ namespace Multiplier.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("2a094a11336ae1a5fa248101e0ce60bb")]
+        [global::System.Configuration.DefaultSettingValueAttribute("YOUR_GDAX_KEY_GOES_HERE")]
         public string Key {
             get {
                 return ((string)(this["Key"]));
@@ -61,8 +61,7 @@ namespace Multiplier.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("NXmcu07qBfmAq45L2l/Cm1jOXWHfozaMw3s9xYHKjGjmIHtbypyc2TqF62SK61NJcuAr1whiOjvDrRupE" +
-            "Hnl5w==")]
+        [global::System.Configuration.DefaultSettingValueAttribute("YOUR_GDAX_SECRET_GOES_HERE")]
         public string Secret {
             get {
                 return ((string)(this["Secret"]));

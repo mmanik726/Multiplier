@@ -471,7 +471,8 @@ namespace CoinbaseExchange.NET
             DateTime startDate = new DateTime();
 
             if (createNewDB)
-                startDate = DateTime.Now.AddYears(-1);//get all data from past year //new DateTime(2017,06,1,0,0,0);
+                startDate = DateTime.Now.AddMonths(-1);
+            //startDate = DateTime.Now.AddYears(-1);//get all data from past year //new DateTime(2017,06,1,0,0,0);
             else
                 startDate = RawExchangeData.First().Time.AddMinutes(1);
             

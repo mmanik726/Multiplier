@@ -65,8 +65,7 @@
         <Label x:Name="lblAvailableProduct" Content="" HorizontalAlignment="Left" Margin="814,125,0,0" VerticalAlignment="Top" Width="154"/>
         <Label x:Name="lblAvailableUSD" Content="" HorizontalAlignment="Left" Margin="814,151,0,0" VerticalAlignment="Top" Width="154"/>
         <Button x:Name="btnUpdateFunds" Content="Update Funds" HorizontalAlignment="Left" Margin="973,128,0,0" VerticalAlignment="Top" Width="81" Height="49" Click="btnUpdateFunds_Click"/>
-        <Button Content="Button" HorizontalAlignment="Left" Margin="249,342,0,0" VerticalAlignment="Top" Width="75" Click="Button_Click"/>
-        <Button x:Name="btnShowGraph" Content="Button" HorizontalAlignment="Left" Margin="653,137,0,0" VerticalAlignment="Top" Width="75" Click="btnShowGraph_Click"/>
+        <Button x:Name="btnShowGraph" Content="Backtest" HorizontalAlignment="Left" Margin="284,337,0,0" VerticalAlignment="Top" Width="124" Click="btnShowGraph_Click"/>
 
     </Grid>
 </Window>
