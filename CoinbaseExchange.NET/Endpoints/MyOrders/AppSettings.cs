@@ -12,6 +12,8 @@ using System.Reflection;
 using System.Security.Cryptography;
 using System.Timers;
 
+
+
 namespace CoinbaseExchange.NET.Utilities //Multiplier
 {
     public class AppSettings

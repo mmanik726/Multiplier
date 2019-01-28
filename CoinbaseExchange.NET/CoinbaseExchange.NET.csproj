@@ -79,6 +79,7 @@
     <Compile Include="Core\ExchangeClientBase.cs" />
     <Compile Include="Endpoints\Fills\FillsClient.cs" />
     <Compile Include="Endpoints\Funds\Funds.cs" />
+    <Compile Include="Endpoints\MyOrders\AppSettings.cs" />
     <Compile Include="Endpoints\MyOrders\MyOrderBook.cs" />
     <Compile Include="Endpoints\OrderBook\BidAskOrder.cs" />
     <Compile Include="Endpoints\OrderBook\GetProductOrderBookRequest.cs" />
@@ -96,7 +97,6 @@
     <Compile Include="Core\RequestPaginationType.cs" />
     <Compile Include="Data\ExData.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Utilities\AppSettings.cs" />
     <Compile Include="Utilities\DateTimeUtilities.cs" />
     <Compile Include="Utilities\Logger.cs" />
   </ItemGroup>

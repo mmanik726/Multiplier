@@ -826,10 +826,22 @@ namespace Multiplier
 
             if (!System.IO.File.Exists(settingsFile))
             {
-                MessageBox.Show("Application strategy settings file cannot be found. Please make sure the json settings file exists in the application dir. " +
-                    "A sample strategy json file can be found in the resource directory");
+                
+                
+                try
+                {
+                    //var jsonFileStr = System.Text.Encoding.UTF8.GetString(Properties.Resources.Mani_6_1_0_0_Settings);
+                    System.IO.File.WriteAllBytes(settingsFile, Properties.Resources.Mani_6_1_0_0_Settings);
+                }
+                catch (Exception)
+                {
+                    Logger.WriteLog("Error writing default strategy setttings file");
+                    //throw;
+                }
 
-                return null;
+                MessageBox.Show($"No strategy settings file was found. A default strategy file has been setup in {settingsFile}");
+
+                //return null;
             }
             
             
